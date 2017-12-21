@@ -1,48 +1,36 @@
 """
-cirrus - Cloud API Wrapper Layer exposing easier Cloud Management
-
-Current Capabilities:
-- Manage Google resources, policies, and access (specific Google APIs
-  are abstracted through a Management class that exposes needed behavior)
+Google Cloud Management
 """
+
+# Builtin libs
+import base64
 import json
-import uuid
 from datetime import datetime
 
-from googleapiclient.discovery import build
+# 3rd Party libs
 import google.auth
 from google.auth.transport.requests import AuthorizedSession
 from google.cloud import storage
-from httplib2 import Http
-from oauth2client.service_account import ServiceAccountCredentials
 import requests
 from urlparse import urljoin
 
-from config import GOOGLE_API_KEY
-from config import GOOGLE_ADMIN_EMAIL
-from config import GOOGLE_APPLICATION_CREDENTIALS
-from config import GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL
-from config import GOOGLE_IDENTITY_DOMAIN
-from config import SERVICE_KEY_EXPIRATION_IN_DAYS
+# Configuration for connecting to Google APIs
+from cirrus.config import GOOGLE_API_KEY
+from cirrus.config import GOOGLE_ADMIN_EMAIL
+from cirrus.config import GOOGLE_IDENTITY_DOMAIN
+from cirrus.config import GOOGLE_PROJECT_ID
+from cirrus.config import SERVICE_KEY_EXPIRATION_IN_DAYS
+
+from cirrus.core import CloudManager
+from cirrus.google_cloud.iam import GooglePolicy
+from cirrus.google_cloud.iam import GooglePolicyBinding
+from cirrus.google_cloud.iam import GooglePolicyRole
+from cirrus.google_cloud.iam import GooglePolicyMember
+from cirrus.google_cloud.services import GoogleAdminService
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
-
-
-class CloudManager(object):
-    """
-    Generic Class for Cloud Management
-    """
-
-    def __init__(self):
-        pass
-
-    def init_users(self, users):
-        pass
-
-    def get_access_key(self, user_id):
-        return None
 
 
 class GoogleCloudManager(CloudManager):
@@ -53,7 +41,7 @@ class GoogleCloudManager(CloudManager):
         project_id (str): Google Project ID to manage
         _authed_session (bool): Whether or not the current session is authed
             (this is set internally)
-        _directory_service (TYPE): Admin Directory API service for API access
+        _admin_service (TYPE): Admin Directory API service for API access
             (used internally)
         _storage_client (google.cloud.storage.Client): Access to Storage API through this client
             (used internally)
@@ -65,7 +53,7 @@ class GoogleCloudManager(CloudManager):
         "to automatically enter and exit authorized sessions."
     )
 
-    def __init__(self, project_id):
+    def __init__(self, project_id=None):
         """
         Construct an instance of the Manager for the given Google project ID.
 
@@ -73,7 +61,10 @@ class GoogleCloudManager(CloudManager):
             project_id (str): Google Project ID
         """
         super(GoogleCloudManager, self).__init__()
-        self.project_id = project_id
+        if project_id is not None:
+            self.project_id = project_id
+        else:
+            self.project_id = GOOGLE_PROJECT_ID
         self._authed_session = False
         self._service_account_email_domain = (
             self.project_id + ".iam.gserviceaccount.com"
@@ -90,6 +81,144 @@ class GoogleCloudManager(CloudManager):
             if not user.google_identity:
                 user.google_identity = self.create_proxy_group_for_user(user.id,
                                                                         user.username)
+
+    def create_proxy_group_for_user(self, user_id, username):
+        """
+        Creates a proxy group for the given user, creates a service account
+        for the user, and adds the service account to the group.
+
+        Args:
+            user_id (TYPE): Description
+
+        Returns:
+            str: New proxy group's ID
+        """
+        group_name = _get_proxy_group_name_for_user(user_id, username)
+
+        # Create group and service account, then add service account to group
+        new_group_response = self.create_group(name=group_name)
+        new_group_id = new_group_response["id"]
+        self.create_service_account_for_proxy_group(new_group_id,
+                                                    account_id=user_id)
+
+        return new_group_id
+
+    def get_access_key(self, account):
+        """
+        Get an access key for the given service account.
+
+        Args:
+            account (str): Unique id or email for a service account
+
+        Returns:
+            str: Service account JSON key (Google Credentials File format)
+                 This should be saved into a service-account-cred.json file
+                 to be used as authenication to Google Cloud Platform.
+
+                 NOTE: we could use the PKCS12 format here as well which is
+                       more universal
+
+            .. code-block:: python
+
+                {
+                    "type": "service_account",
+                    "project_id": "project-id",
+                    "private_key_id": "some_number",
+                    "private_key": "-----BEGIN PRIVATE KEY-----\n....
+                    =\n-----END PRIVATE KEY-----\n",
+                    "client_email": "<api-name>api@project-id.iam.gserviceaccount.com",
+                    "client_id": "...",
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://accounts.google.com/o/oauth2/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "client_x509_cert_url": "https://www.googleapis.com/...<api-name>api%40project-id.iam.gserviceaccount.com"
+                }
+        """
+        try:
+            key_info = self.create_service_account_key(account)
+            creds = self._get_service_account_cred_from_key_response(key_info)
+        except Exception as exc:
+            raise Exception("Unable to get service " +
+                            "account key for account: \n" + str(account) +
+                            "\nError: " + str(exc))
+
+        return creds
+
+    def create_service_account_for_proxy_group(self, proxy_group_id, account_id):
+        """
+        Create a service account with the given account_id, which must be unique
+        within the project. This function does not currently enforce that,
+        creation will simply fail. This will also add service account to proxy group.
+
+        Args:
+            proxy_group_id (str): Google group ID to add service account to
+            account_id (str): Unique id for the service account to create key for.
+                              Used to generate the service account email address
+                              and a stable unique id.
+
+        Returns:
+            dict: JSON response from create account API call,
+                  which should contain successfully created service account
+            `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts#ServiceAccount>`_
+
+            .. code-block:: python
+
+                {
+                    "name": string,
+                    "projectId": string,
+                    "uniqueId": string,
+                    "email": string,
+                    "displayName": string,
+                    "etag": string,
+                    "oauth2ClientId": string,
+                }
+        """
+        service_account_response = self.create_service_account(account_id)
+        service_account_id = service_account_response["uniqueId"]
+        self.add_member_to_group(service_account_id, proxy_group_id)
+        return service_account_response
+
+    def _get_service_account_cred_from_key_response(self, key_response):
+        return json.loads(base64.b64decode(key_response["privateKeyData"]))
+
+    def get_primary_service_account(self, proxy_group_id):
+        """
+        Return the email for the primary service account in the proxy group.
+
+        Args:
+            proxy_group_id (str): Google group ID for a user proxy group
+
+        Returns:
+            dict: JSON response from get API call, which should be a service account
+                  if it exists
+
+            .. code-block:: python
+
+                {
+                    "name": string,
+                    "projectId": string,
+                    "uniqueId": string,
+                    "email": string,
+                    "displayName": string,
+                    "etag": string,
+                    "oauth2ClientId": string,
+                }
+        """
+        primary_email = None
+
+        user_id = _get_user_id_from_proxy_group(proxy_group_id)
+        all_service_accounts = self.get_service_accounts_from_group(proxy_group_id)
+
+        # create dict with first part of email as key and whole email as value
+        service_account_emails = {
+            account.split("@")[0].strip(): account
+            for account in all_service_accounts
+        }
+
+        if user_id in service_account_emails:
+            primary_email = service_account_emails[user_id]
+
+        return self.get_service_account(primary_email)
 
     def get_project_organization(self):
         """
@@ -121,51 +250,6 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
-    def get_access_key(self, user_id):
-        """
-        Get an access key for the given user.
-
-        Args:
-            user_id (str): Google proxy group id or email
-
-        Returns:
-            str: User Access Key (Google Credentials File format)
-                 NOTE: we could use the PKCS12 format here as well
-        """
-        try:
-            service_account = self.get_service_account_from_group(user_id)
-            key = self.create_service_account_key(service_account)
-        except Exception as exc:
-            raise Exception("Unable to create proxy group and service " +
-                            "account for user: \n" + str(user_id) +
-                            "\nError: " + str(exc))
-
-        return key
-
-    def create_proxy_group_for_user(self, user_id, username):
-        """
-        Creates a proxy group for the given user, creates a service account
-        for the user, and adds the service account to the group.
-
-        Args:
-            user_id (TYPE): Description
-
-        Returns:
-            str: New proxy group's ID
-        """
-        group_name = username + "-" + str(user_id)
-        # Create group and service account, then add service account to group
-        new_group_response = self.create_group(name=group_name)
-        new_group_id = new_group_response["id"]
-
-        service_account_response = self.create_service_account(user_id)
-        service_account = service_account_response["uniqueId"]
-
-        add_member_response = self.add_member_to_group(service_account,
-                                                       new_group_id)
-
-        return new_group_id
-
     def get_buckets(self):
         """
         Return all the buckets for the project
@@ -187,6 +271,18 @@ class GoogleCloudManager(CloudManager):
             dict: JSON response from API call, which should be a service account
                   if it exists
             `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts/get>`_
+
+            .. code-block:: python
+
+                {
+                    "name": string,
+                    "projectId": string,
+                    "uniqueId": string,
+                    "email": string,
+                    "displayName": string,
+                    "etag": string,
+                    "oauth2ClientId": string,
+                }
         """
         api_url = _get_google_api_url("projects/" + self.project_id +
                                       "/serviceAccounts/" + account,
@@ -342,8 +438,6 @@ class GoogleCloudManager(CloudManager):
                 }
 
             NOTE: The private key WILL NOT EVER BE SHOWN AGAIN
-
-            TODO: We will need to store `name` and `private_key` somewhere...
         """
         new_service_account_url = (
             "projects/" + self.project_id + "/serviceAccounts/" + account
@@ -412,8 +506,7 @@ class GoogleCloudManager(CloudManager):
     def get_service_account_keys_info(self, account):
         """
         Get user-managed service account key(s) for the given service account.
-        NOTE: Keys don't include actual private and public key, need to use
-             `get_service_account_key` for that information
+        NOTE: Keys don't include actual private and public key
 
         Args:
             account (str): email address or the uniqueId of the service account
@@ -577,6 +670,7 @@ class GoogleCloudManager(CloudManager):
         # "etag is used for optimistic concurrency control as a way to help
         # prevent simultaneous updates of a policy from overwriting each other"
         # - Google
+        # FIXME: This is not working at the moment
         # We need to get the current policy's etag and use that for the new one
         # try:
         #     current_policy = self.get_service_account_policy(service_account_email,
@@ -637,14 +731,14 @@ class GoogleCloudManager(CloudManager):
 
         all_groups = []
         response = (
-            self._directory_service.groups()
+            self._admin_service.groups()
             .list(domain=GOOGLE_IDENTITY_DOMAIN).execute()
         ).json()
         all_groups.extend(response["groups"])
 
         while response["nextPageToken"]:
             response = (
-                self._directory_service.groups()
+                self._admin_service.groups()
                 .list(pageToken=response["nextPageToken"],
                       domain=GOOGLE_IDENTITY_DOMAIN).execute()
             ).json()
@@ -701,7 +795,45 @@ class GoogleCloudManager(CloudManager):
             "description": "",
         }
 
-        response = self._directory_service.groups().insert(body=group).execute()
+        response = self._admin_service.groups().insert(body=group).execute()
+
+        return response.json()
+
+    def add_member_to_group(self, member_email, group_id):
+        """
+        Add given member email to given group
+
+        Args:
+            member_email (str): email for member to add
+            group_id (str): Group email or unique ID
+
+        Returns:
+            dict: the member that you just added if successful
+            `Google API Reference <https://developers.google.com/admin-sdk/directory/v1/reference/members/insert>`_
+
+            .. code-block:: python
+
+                {
+                    "kind": "admin#directory#member",
+                    "etag": etag,
+                    "id": string,
+                    "email": string,
+                    "role": string,
+                    "type": string
+                }
+        """
+        if not self._authed_session:
+            raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
+
+        member_to_add = {
+            "email": member_email,
+            "role": "MEMBER"
+        }
+
+        response = (
+            self._admin_service.members().insert(groupKey=group_id,
+                                                 body=member_to_add).execute()
+        )
 
         return response.json()
 
@@ -738,7 +870,7 @@ class GoogleCloudManager(CloudManager):
         if not self._authed_session:
             raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
 
-        groups = self._directory_service.groups()
+        groups = self._admin_service.groups()
         group = groups.get(groupKey=group_id)
         response = group.execute()
 
@@ -758,7 +890,7 @@ class GoogleCloudManager(CloudManager):
         if not self._authed_session:
             raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
 
-        response = self._directory_service.groups().delete(groupKey=group_id).execute()
+        response = self._admin_service.groups().delete(groupKey=group_id).execute()
 
         return response.json()
 
@@ -792,14 +924,14 @@ class GoogleCloudManager(CloudManager):
 
         all_members = []
         response = (
-            self._directory_service.members()
+            self._admin_service.members()
             .list(groupKey=group_id).execute()
         ).json()
         all_members.extend(response["members"])
 
         while response["nextPageToken"]:
             response = (
-                self._directory_service.members()
+                self._admin_service.members()
                 .list(pageToken=response["nextPageToken"],
                       groupKey=group_id).execute()
             ).json()
@@ -807,58 +939,18 @@ class GoogleCloudManager(CloudManager):
 
         return all_members
 
-    def add_member_to_group(self, member_email, group_id):
+    def get_service_accounts_from_group(self, group_id):
         """
-        Add given member email to given group
-
-        Args:
-            member_email (str): email for member to add
-            group_id (str): Group email or unique ID
-
-        Returns:
-            dict: the member that you just added if successful
-            `Google API Reference <https://developers.google.com/admin-sdk/directory/v1/reference/members/insert>`_
-
-            .. code-block:: python
-
-                {
-                    "kind": "admin#directory#member",
-                    "etag": etag,
-                    "id": string,
-                    "email": string,
-                    "role": string,
-                    "type": string
-                }
-        """
-        if not self._authed_session:
-            raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
-
-        member_to_add = {
-            "email": member_email,
-            "role": "MEMBER"
-        }
-
-        response = (
-            self._directory_service.members().insert(groupKey=group_id,
-                                                     body=member_to_add).execute()
-        )
-
-        return response.json()
-
-    def get_service_account_from_group(self, group_id):
-        """
-        Return the service account email for a given group.
-        Assumes that there is only one service account in a group.
+        Return the service account emails for a given group.
 
         Args:
             group_id (str): Group email or unique ID
 
         Returns:
-            str: email for service account
+            List(str): emails for service accounts
 
         Raises:
-            Exception: If there are multiple service accounts in the group
-                       This currently does not handle that
+            Exception: If not authed
         """
         if not self._authed_session:
             raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
@@ -867,15 +959,7 @@ class GoogleCloudManager(CloudManager):
         emails = [member["email"]
                   for member in members_response
                   if self._service_account_email_domain in member["email"]]
-        if len(emails) == 1:
-            return emails[0]
-        elif len(emails) == 0:
-            return []
-        else:
-            # TODO what if there are multiple service account emails?
-            raise Exception("This application does not support groups that"
-                            " have multiple service accounts. Given group:\n" +
-                            str(group_id))
+        return emails
 
     def _authed_get(self, url):
         """
@@ -962,45 +1046,22 @@ class GoogleCloudManager(CloudManager):
         Returns:
             GoogleCloudManager: instance with added/modified fields
         """
+
+        admin_service = GoogleAdminService()
+        self._admin_service = admin_service.build_service()
+
+        # Setup client for Google Cloud Storage
+        # Using Google's recommended Google Cloud Client Library for Python
+        # NOTE: This library handles all the auth itself
         self._storage_client = storage.Client(self.project_id)
 
-        scopes = ["https://www.googleapis.com/auth/cloud-platform",
-                  "https://www.googleapis.com/auth/admin.directory.group",
-                  "https://www.googleapis.com/auth/admin.directory.group.readonly",
-                  "https://www.googleapis.com/auth/admin.directory.group.member",
-                  "https://www.googleapis.com/auth/admin.directory.group.member.readonly"]
+        # Finally set up a generic authorized session where arbitrary
+        # requests can be made to Google API(s)
+        scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+        # scopes.extend(admin_service.SCOPES)
+
         credentials, project = google.auth.default(scopes=scopes)
         self._authed_session = AuthorizedSession(credentials)
-
-        # store = file.Storage(GOOGLE_APP_OAUTH_SECRET_FILE)
-        # credentials = store.get()
-
-        # if not credentials or credentials.invalid:
-        #     flow = client.flow_from_clientsecrets(GOOGLE_APP_OAUTH_SECRET_FILE, scopes)
-        #     flow.user_agent = "CDIS"
-        #     if flags:
-        #         credentials = tools.run_flow(flow, store, flags)
-        #     else: # Needed only for compatibility with Python 2.6
-        #         credentials = tools.run(flow, store)
-        #     print('Storing credentials to ' + credential_path)
-
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(
-            GOOGLE_APPLICATION_CREDENTIALS, scopes=scopes
-        )
-        # credentials = ServiceAccountCredentials.from_p12_keyfile(
-        #     "cdis-admin@cdis-test-188416.iam.gserviceaccount.com",
-        #     GOOGLE_APPLICATION_CREDENTIALS_P12,
-        #     'notasecret',
-        #     scopes=['https://www.googleapis.com/auth/admin.directory.group',
-        #             "https://www.googleapis.com/auth/admin.directory.group.readonly"])
-
-        # delegated_credentials = credentials.create_delegated(GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL)
-
-        # http_auth = delegated_credentials.authorize(Http())
-        # directory_service = build('admin', 'directory_v1',
-        #                           http=http_auth, developerKey=GOOGLE_API_KEY)
-
-        # self._directory_service = directory_service
 
         return self
 
@@ -1016,170 +1077,9 @@ class GoogleCloudManager(CloudManager):
             traceback (TYPE): Description
         """
         self._authed_session.close()
-        self._authed_session = False
-
-
-class GooglePolicy(object):
-    """
-    A Google Policy with bindings between members and roles
-    """
-
-    def __init__(self, bindings, etag="", version=0):
-        """
-        Constructs a Google Policy
-
-        Args:
-            bindings (List(GooglePolicyBinding)): Connections between members and roles
-            etag (str): etag is used for optimistic concurrency control as a way to help
-                        prevent simultaneous updates of a policy from overwriting each other
-                         - Google
-            version (int): version for the policy
-        """
-        self.bindings = bindings
-        self.etag = etag
-        self.version = version
-
-    def __repr__(self):
-        """
-        Return representation of object
-
-        Returns:
-            str: Representation of the Policy which can be POSTed to Google's API
-        """
-        output_dict = dict()
-        output_dict["policy"] = dict()
-        output_dict["policy"]["bindings"] = list(self.bindings)
-        output_dict["policy"]["etag"] = self.etag
-        output_dict["policy"]["version"] = self.version
-
-        return str(output_dict)
-
-
-class GooglePolicyBinding(object):
-    """
-    A Binding for a Google Policy, which includes members and roles
-    """
-
-    def __init__(self, role, members):
-        """
-        Constructs a Binding for a Google Policy
-
-        Args:
-            role (GooglePolicyRole): A Google IAM role
-            members (List(GooglePolicyMember)): Member(s) who should have the given role
-        """
-        self.role = role
-        self.members = members
-
-    def __repr__(self):
-        """
-        Return representation of object
-
-        Returns:
-            str: Representation of the Binding which can be POSTed to Google's API
-        """
-        output_dict = dict()
-        output_dict["role"] = str(self.role)
-        output_dict["members"] = [str(member) for member in self.members]
-        return str(output_dict)
-
-
-class GooglePolicyMember(object):
-    """
-    A Member for a Google Policy
-    """
-
-    SERVICE_ACCOUNT = "serviceAccount"
-    USER = "user"
-    GROUP = "group"
-    DOMAIN = "domain"
-
-    def __init__(self, member_type, email_id=""):
-        """
-        Construct the Member for the Google Policy
-
-        Args:
-            name (str): Description
-            member_type (str): Type of member (see Google's definition below)
-
-            .. code-block:: yaml
-
-            allUsers:
-                - A special identifier that represents anyone who is on the internet;
-                  with or without a Google account.
-            allAuthenticatedUsers:
-                - A special identifier that represents anyone who is authenticated
-                  with a Google account or a service account.
-            user (requires email_id):
-                - An email address that represents a specific Google account.
-                  For example, alice@gmail.com or joe@example.com.
-            serviceAccount (requires email_id):
-                - An email address that represents a service account.
-                  For example, my-other-app@appspot.gserviceaccount.com.
-            group (requires email_id):
-                - An email address that represents a Google group.
-                  For example, admins@example.com.
-            domain (requires domain as email_id):
-                - A Google Apps domain name that represents all the users of
-                  that domain. For example, google.com or example.com.
-
-        """
-        self.member_type = member_type
-        self.email_id = email_id
-
-    def __repr__(self):
-        """
-        Return representation of object
-
-        Returns:
-            str: Representation of the Member for Google's API
-        """
-        output = "{}:{}".format(self.member_type, self.email_id)
-        return output
-
-
-class GooglePolicyRole(object):
-    """
-    A Role for use in a Google Policy
-    """
-    ROLE_PREFIX = "roles/"
-
-    def __init__(self, name):
-        """
-        Construct the Role
-
-        Args:
-            name (str): The name of the Google role
-        """
-        # If the name provided already starts with the prefix, remove it
-        if name.strip()[:len(GooglePolicyRole.ROLE_PREFIX)] == GooglePolicyRole.ROLE_PREFIX:
-            name = name.strip()[len(GooglePolicyRole.ROLE_PREFIX):]
-
-        self.name = name
-        # TODO check if it's an actual role in Google cloud
-
-    def __repr__(self):
-        """
-        Return representation of object
-
-        Returns:
-            str: Representation of the Role for Google's API
-        """
-        return "{}{}".format(GooglePolicyRole.ROLE_PREFIX, self.name)
-
-
-def get_iam_service_account_email(project_id, account_id):
-    """
-    Return the service account email given the id and project id
-
-    Args:
-        project_id (str): Project Identifier where service account lives
-        account_id (str): The account id originally provided during creation
-
-    Returns:
-        str: Service account email
-    """
-    return account_id + "@" + project_id + ".iam.gserviceaccount.com"
+        self._authed_session = None
+        self._admin_service = None
+        self._storage_client = None
 
 
 def _get_google_api_url(relative_path, root_api_url):
@@ -1198,3 +1098,14 @@ def _get_google_api_url(relative_path, root_api_url):
     api_url += "?key=" + GOOGLE_API_KEY
     return api_url
 
+
+def _get_proxy_group_name_for_user(user_id, username):
+    return str(username) + "-" + str(user_id)
+
+
+def _get_user_id_from_proxy_group(proxy_group):
+    return proxy_group.split("-")[0].strip()
+
+
+def _get_user_name_from_proxy_group(proxy_group):
+    return proxy_group.split("-")[1].strip()

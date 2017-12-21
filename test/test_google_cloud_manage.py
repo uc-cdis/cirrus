@@ -20,7 +20,7 @@ def test_cloud_manager():
     project_id = "test_project"
     manager = GoogleCloudManager(project_id)
     manager._authed_session = MagicMock()
-    manager._directory_service = MagicMock()
+    manager._admin_service = MagicMock()
     manager._storage_client = MagicMock()
     return manager
 
@@ -431,14 +431,14 @@ def test_get_group(test_cloud_manager):
     mock_config = {
         "groups.return_value.get.return_value.execute.return_value": _fake_response(200, {"id": group_id})
     }
-    test_cloud_manager._directory_service.configure_mock(**mock_config)
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
     group = test_cloud_manager.get_group(group_id)
 
     # Test #
     assert group["id"] == group_id
-    args, kwargs = test_cloud_manager._directory_service.groups.return_value.get.call_args
+    args, kwargs = test_cloud_manager._admin_service.groups.return_value.get.call_args
     assert (
         any((group_id == arg) for arg in args) or
         any((group_id == kwarg) for kwarg in kwargs.values())
@@ -460,7 +460,7 @@ def test_create_group(test_cloud_manager):
     mock_config = {
         "groups.return_value.insert.return_value.execute.return_value": _fake_response(200, group)
     }
-    test_cloud_manager._directory_service.configure_mock(**mock_config)
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
     group = test_cloud_manager.create_group(name=new_group_name,
@@ -471,7 +471,7 @@ def test_create_group(test_cloud_manager):
     assert group["name"] == new_group_name
 
     # check if new name and email are somewhere in the args to insert
-    args, kwargs = test_cloud_manager._directory_service.groups.return_value.insert.call_args
+    args, kwargs = test_cloud_manager._admin_service.groups.return_value.insert.call_args
     assert (
         any(new_group_name in str(arg) for arg in args) or
         any(new_group_name in str(kwarg) for kwarg in kwargs.values())
@@ -518,7 +518,7 @@ def test_get_group_members(test_cloud_manager):
         "members.return_value.list.return_value.execute.return_value": _fake_response(200,
                                                                                       full_response)
     }
-    test_cloud_manager._directory_service.configure_mock(**mock_config)
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
     members = test_cloud_manager.get_group_members(group_id)
@@ -530,7 +530,7 @@ def test_get_group_members(test_cloud_manager):
     assert member_2_id in all_ids
 
     # check if new name and email are somewhere in the args
-    args, kwargs = test_cloud_manager._directory_service.members.return_value.list.call_args
+    args, kwargs = test_cloud_manager._admin_service.members.return_value.list.call_args
     assert (
         any(group_id in str(arg) for arg in args) or
         any(group_id in str(kwarg) for kwarg in kwargs.values())
@@ -586,7 +586,7 @@ def test_get_group_members_pagination(test_cloud_manager):
         "members.return_value.list.return_value.execute.side_effect": two_pages,
     }
 
-    test_cloud_manager._directory_service.configure_mock(**mock_config)
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
     members = test_cloud_manager.get_group_members(group_id)
@@ -598,7 +598,7 @@ def test_get_group_members_pagination(test_cloud_manager):
     assert member_2_id in all_ids
     assert member_3_id in all_ids
     assert member_4_id in all_ids
-    args, kwargs = test_cloud_manager._directory_service.members.return_value.list.call_args
+    args, kwargs = test_cloud_manager._admin_service.members.return_value.list.call_args
     assert kwargs["pageToken"] == next_page_token
     assert (
         any(group_id in str(arg) for arg in args) or
@@ -625,7 +625,7 @@ def test_add_member_to_group(test_cloud_manager):
     mock_config = {
         "members.return_value.insert.return_value.execute.return_value": _fake_response(200, member)
     }
-    test_cloud_manager._directory_service.configure_mock(**mock_config)
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
     group = test_cloud_manager.add_member_to_group(member_email=new_member_email,
@@ -636,7 +636,7 @@ def test_add_member_to_group(test_cloud_manager):
     assert group["id"] == new_member_id
 
     # check if ngroup id and email are somewhere in the args to insert
-    args, kwargs = test_cloud_manager._directory_service.members.return_value.insert.call_args
+    args, kwargs = test_cloud_manager._admin_service.members.return_value.insert.call_args
     assert (
         any(new_member_email in str(arg) for arg in args) or
         any(new_member_email in str(kwarg) for kwarg in kwargs.values())
@@ -647,74 +647,82 @@ def test_add_member_to_group(test_cloud_manager):
     )
 
 
-def test_get_service_account_from_group(test_cloud_manager):
+def test_get_primary_service_account(test_cloud_manager):
     """
-    Test that when a group contains multiple service accounts, an exception
-    is thrown.
+    Test getting the primary account in a group.
     """
     # Setup #
-    group_id = "abc"
     test_domain = "test-domain.net"
-    new_member_1_id = "1"
-    new_member_1_email = "member1@" + test_domain
-    member1 = {
-        "kind": "admin#directory#member",
-        "etag": "",
-        "id": new_member_1_id,
-        "email": new_member_1_email,
-        "role": "",
-        "type": ""
-    }
+    primary_service_account = "primary-account" + test_domain
 
-    test_cloud_manager.get_group_members = MagicMock()
-    test_cloud_manager.get_group_members.return_value = [member1]
+    new_member_1_id = "1"
+    new_member_1_email = new_member_1_id + "@" + test_domain
+    group_id = new_member_1_id + "-testuser"  # This has to be the user's ID - Username
+
+    test_cloud_manager.get_service_accounts_from_group = MagicMock()
+    test_cloud_manager.get_service_accounts_from_group.return_value = [new_member_1_email]
+    test_cloud_manager.get_service_account = MagicMock()
+    test_cloud_manager.get_service_account.return_value = primary_service_account
     test_cloud_manager._service_account_email_domain = test_domain
 
     # Call #
-    email = test_cloud_manager.get_service_account_from_group(group_id)
+    email = test_cloud_manager.get_primary_service_account(group_id)
 
     # Test #
-    assert email == new_member_1_email
+    assert email == primary_service_account
 
     # check if group id is somewhere in the args to insert
-    args, kwargs = test_cloud_manager.get_group_members.call_args
+    args, kwargs = test_cloud_manager.get_service_accounts_from_group.call_args
     assert (
         any(group_id in str(arg) for arg in args) or
         any(group_id in str(kwarg) for kwarg in kwargs.values())
+    )
+    args, kwargs = test_cloud_manager.get_service_account.call_args
+    assert (
+        any(new_member_1_email in str(arg) for arg in args) or
+        any(new_member_1_email in str(kwarg) for kwarg in kwargs.values())
     )
 
 
 def test_get_service_account_from_group_mult_accounts(test_cloud_manager):
     """
-    Test that when a group contains multiple service accounts, an exception
-    is thrown.
+    Test that when a group contains multiple service accounts, we still
+    get the right primary account
     """
     # Setup #
-    group_id = "abc"
     test_domain = "test-domain.net"
-    new_member_1_id = "1"
-    new_member_1_email = "member1@" + test_domain
-    new_member_2_id = "2"
-    new_member_2_email = "member2@" + test_domain
-    member1 = {
-        "kind": "admin#directory#member",
-        "etag": "",
-        "id": new_member_1_id,
-        "email": new_member_1_email,
-        "role": "",
-        "type": ""
-    }
-    member2 = copy.deepcopy(member1)
-    member2["id"] = new_member_2_id
-    member2["email"] = new_member_2_email
+    primary_service_account = "primary-account" + test_domain
 
-    test_cloud_manager.get_group_members = MagicMock()
-    test_cloud_manager.get_group_members.return_value = [member1, member2]
+    new_member_1_id = "1"
+    new_member_1_email = new_member_1_id + "@" + test_domain
+    new_member_2_id = "2"
+    new_member_2_email = "2@" + test_domain
+
+    group_id = new_member_2_id + "-testuser"  # This has to be the user's ID - Username
+
+    test_cloud_manager.get_service_accounts_from_group = MagicMock()
+    test_cloud_manager.get_service_accounts_from_group.return_value = [new_member_1_email, new_member_2_email]
+    test_cloud_manager.get_service_account = MagicMock()
+    test_cloud_manager.get_service_account.return_value = primary_service_account
     test_cloud_manager._service_account_email_domain = test_domain
 
-    # Call and Test #
-    with pytest.raises(Exception):
-        test_cloud_manager.get_service_account_from_group(group_id)
+    # Call #
+    email = test_cloud_manager.get_primary_service_account(group_id)
+
+    # Test #
+    assert email == primary_service_account
+
+    # check if group id is somewhere in the args
+    args, kwargs = test_cloud_manager.get_service_accounts_from_group.call_args
+    assert (
+        any(group_id in str(arg) for arg in args) or
+        any(group_id in str(kwarg) for kwarg in kwargs.values())
+    )
+    args, kwargs = test_cloud_manager.get_service_account.call_args
+    assert (
+        any(new_member_2_email in str(arg) for arg in args) or
+        any(new_member_2_email in str(kwarg) for kwarg in kwargs.values())
+    )
 
 
 def test_get_all_groups(test_cloud_manager):
@@ -752,7 +760,7 @@ def test_get_all_groups(test_cloud_manager):
         "groups.return_value.list.return_value.execute.return_value": _fake_response(200, response),
     }
 
-    test_cloud_manager._directory_service.configure_mock(**mock_config)
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
     groups = test_cloud_manager.get_all_groups()
@@ -803,14 +811,14 @@ def test_get_all_groups_pagination(test_cloud_manager):
         "groups.return_value.list.return_value.execute.side_effect": two_pages,
     }
 
-    test_cloud_manager._directory_service.configure_mock(**mock_config)
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
     groups = test_cloud_manager.get_all_groups()
 
     # Test #
     assert len(groups) == 2
-    args, kwargs = test_cloud_manager._directory_service.groups.return_value.list.call_args
+    args, kwargs = test_cloud_manager._admin_service.groups.return_value.list.call_args
     assert kwargs["pageToken"] == next_page_token
 
 
@@ -824,14 +832,14 @@ def test_delete_group(test_cloud_manager):
     mock_config = {
         "groups.return_value.delete.return_value.execute.return_value": _fake_response(200, {})
     }
-    test_cloud_manager._directory_service.configure_mock(**mock_config)
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
     response = test_cloud_manager.delete_group(group_id)
 
     # Test #
     assert response == {}
-    args, kwargs = test_cloud_manager._directory_service.groups.return_value.delete.call_args
+    args, kwargs = test_cloud_manager._admin_service.groups.return_value.delete.call_args
     assert (
         any((group_id == arg) for arg in args) or
         any((group_id == kwarg) for kwarg in kwargs.values())
