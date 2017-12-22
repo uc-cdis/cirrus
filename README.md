@@ -142,3 +142,8 @@ export GOOGLE_API_KEY="abcdefghijklmnopqrstuvwxyz"
 - Relies less* on Google's libraries (double-edged sword)
 
 *Still uses Google libraries for auth
+
+## Python 3 Compatibility Notes
+`psutil` doesn't install correctly when doing `pip install -r requirements.txt`
+in a Python 3 venv.
+See [this](https://github.com/giampaolo/psutil/issues/1143) for fix.

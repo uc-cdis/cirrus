@@ -160,7 +160,7 @@ def test_create_service_account_valid(test_cloud_manager):
 
     # Test #
     assert service_account["uniqueId"] == service_account_unique_id
-    test_cloud_manager._authed_session.post.assert_called()
+    assert test_cloud_manager._authed_session.post.called is True
 
     # Naive check to see if the new account appears in the call to set_iam_policy
     # as any argument or keyword argument (in case API changes or kwarg not used during call)
@@ -185,7 +185,7 @@ def test_delete_service_account(test_cloud_manager):
     test_cloud_manager.delete_service_account(account)
 
     # Test #
-    test_cloud_manager._authed_session.delete.assert_called()
+    assert test_cloud_manager._authed_session.delete.called is True
 
     # Naive check to see if the new account appears in the call to delete
     args, kwargs = test_cloud_manager._authed_session.delete.call_args
@@ -219,7 +219,7 @@ def test_create_service_account_key(test_cloud_manager):
     key = test_cloud_manager.create_service_account_key(account)
 
     # Test #
-    test_cloud_manager._authed_session.post.assert_called()
+    assert test_cloud_manager._authed_session.post.called is True
 
     # Check to see if private key we returned exists in the reponse,
     # since that's all that's required
@@ -247,7 +247,7 @@ def test_delete_service_account_key(test_cloud_manager):
     test_cloud_manager.delete_service_account_key(account, key)
 
     # Test #
-    test_cloud_manager._authed_session.delete.assert_called()
+    assert test_cloud_manager._authed_session.delete.called is True
 
     # Naive check to see if the new account appears in the call to delete
     args, kwargs = test_cloud_manager._authed_session.delete.call_args
@@ -299,7 +299,7 @@ def test_get_service_account_keys_info(test_cloud_manager):
     keys = test_cloud_manager.get_service_account_keys_info(account)
 
     # Test #
-    test_cloud_manager._authed_session.get.assert_called()
+    assert test_cloud_manager._authed_session.get.called is True
     assert len(keys) == 3
 
     # Naive check to see if the new account appears in the call to delete
@@ -327,7 +327,7 @@ def test_create_service_account_key_invalid_account(test_cloud_manager):
         test_cloud_manager.create_service_account_key(account)
 
         # Test #
-        test_cloud_manager._authed_session.post.assert_called()
+        assert test_cloud_manager._authed_session.post.called is True
 
         # Naive check to see if the account appears in the call to post
         # as any argument or keyword argument (in case API changes or kwarg not used during call)

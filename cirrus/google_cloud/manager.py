@@ -12,7 +12,10 @@ import google.auth
 from google.auth.transport.requests import AuthorizedSession
 from google.cloud import storage
 import requests
-from urlparse import urljoin
+try:
+    from urllib.parse import urljoin
+except ImportError:
+    from urlparse import urljoin
 
 # Configuration for connecting to Google APIs
 from cirrus.config import GOOGLE_API_KEY
