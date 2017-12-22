@@ -9,8 +9,10 @@ import copy
 # Python 2 and 3 compatible
 try:
     from unittest.mock import MagicMock
+    from unittest.mock import patch
 except:
     from mock import MagicMock
+    from mock import patch
 
 
 @pytest.fixture
@@ -844,18 +846,19 @@ def test_delete_group(test_cloud_manager):
     )
 
 
+class NewDatetime(datetime.datetime):
+    "A manipulable date replacement"
+    def __new__(cls, *args, **kwargs):
+        return datetime.datetime.__new__(datetime.datetime, *args, **kwargs)
+
+@patch("cirrus.google_cloud.manager.datetime", NewDatetime)
 def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
     # Setup #
-    account = "some-service-account@test-domain.com"
-    monkeypatch.setattr("cirrus.config.SERVICE_KEY_EXPIRATION_IN_DAYS", 3)
-
     # Make now a specific time by faking out datetime class with custom class
     # that always returns a specific time
-    class NewDatetime(datetime.datetime):
-        @classmethod
-        def utcnow(cls):
-            return cls(2017, 12, 12, 20, 41, 56, 999439)
-    datetime.datetime = NewDatetime
+    NewDatetime.utcnow = classmethod(lambda cls: cls(2017, 12, 12, 20, 41, 56, 999439))
+    account = "some-service-account@test-domain.com"
+    monkeypatch.setattr("cirrus.config.SERVICE_KEY_EXPIRATION_IN_DAYS", 3)
 
     expired_key_name_1 = "expired1"
     expired_key_name_2 = "expired1"
@@ -887,6 +890,8 @@ def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
     test_cloud_manager.get_service_account_keys_info.return_value = keys
 
     # Call #
+    # with patch("cirrus.google_cloud.manager.datetime") as mock_date:
+    #     mock_date.return_value = NewDatetime
     test_cloud_manager.handle_expired_service_account_keys(account=account)
 
     # Test #

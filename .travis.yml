@@ -12,4 +12,8 @@ install:
    - python setup.py install
    - pip install -r dev-requirements.txt
 
-script: pytest -v test
+script:
+  - py.test -vv --cov=cirrus --cov-report xml ./test
+
+after_script:
+  - python-codacy-coverage -r coverage.xml
