@@ -18,5 +18,5 @@ class CloudManager(object):
     def init_users(self, users):
         raise NotImplementedError()
 
-    def get_access_key(self, user_id):
+    def get_access_key(self, account):
         raise NotImplementedError()

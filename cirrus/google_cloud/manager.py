@@ -136,7 +136,7 @@ class GoogleCloudManager(CloudManager):
         """
         try:
             key_info = self.create_service_account_key(account)
-            creds = self._get_service_account_cred_from_key_response(key_info)
+            creds = _get_service_account_cred_from_key_response(key_info)
         except Exception as exc:
             raise Exception("Unable to get service " +
                             "account key for account: \n" + str(account) +
@@ -177,9 +177,6 @@ class GoogleCloudManager(CloudManager):
         service_account_id = service_account_response["uniqueId"]
         self.add_member_to_group(service_account_id, proxy_group_id)
         return service_account_response
-
-    def _get_service_account_cred_from_key_response(self, key_response):
-        return json.loads(base64.b64decode(key_response["privateKeyData"]))
 
     def get_primary_service_account(self, proxy_group_id):
         """
@@ -544,48 +541,10 @@ class GoogleCloudManager(CloudManager):
         Args:
             account (str): email address or the uniqueId of the service account
         """
-        keys = self.get_service_account_keys_info()
+        keys = self.get_service_account_keys_info(account)
         for key in keys:
-            if self._is_key_expired(key, SERVICE_KEY_EXPIRATION_IN_DAYS):
+            if _is_key_expired(key, SERVICE_KEY_EXPIRATION_IN_DAYS):
                 self.delete_service_account_key(account, key["name"])
-
-    def _is_key_expired(self, key, expiration_in_days):
-        """
-        Whether or not service account key is expired based on when it was created
-        and the current time.
-
-        Args:
-            key (dict): API return for a service key
-                .. code-block:: python
-
-                    {
-                        "name": string,
-                        "privateKeyType": enum(ServiceAccountPrivateKeyType),
-                        "keyAlgorithm": enum(ServiceAccountKeyAlgorithm),
-                        "privateKeyData": string,
-                        "publicKeyData": string,
-                        "validAfterTime": string,
-                        "validBeforeTime": string,
-                    }
-            expiration_in_days (int): Days before expiration of key
-
-        Returns:
-            bool: Whether or not service account key is expired
-        """
-        expired = False
-        google_date_format = "%Y-%m-%dT%H:%M:%SZ"
-        creation_time = datetime.strptime(key["validAfterTime"], google_date_format)
-        current_time = datetime.strptime(datetime.utcnow().strftime(google_date_format),
-                                         google_date_format)
-        current_life_in_seconds = (current_time - creation_time).total_seconds()
-
-        # seconds / seconds_per_minute / minutes_per_hour / hours_per_day
-        current_life_in_days = current_life_in_seconds / 60 / 60 / 24
-
-        if current_life_in_days >= expiration_in_days:
-            expired = True
-
-        return expired
 
     def get_service_account_policy(self, account, resource):
         """
@@ -1060,7 +1019,7 @@ class GoogleCloudManager(CloudManager):
         scopes = ["https://www.googleapis.com/auth/cloud-platform"]
         # scopes.extend(admin_service.SCOPES)
 
-        credentials, project = google.auth.default(scopes=scopes)
+        credentials, _ = google.auth.default(scopes=scopes)
         self._authed_session = AuthorizedSession(credentials)
 
         return self
@@ -1099,13 +1058,96 @@ def _get_google_api_url(relative_path, root_api_url):
     return api_url
 
 
+def _is_key_expired(key, expiration_in_days):
+    """
+    Whether or not service account key is expired based on when it was created
+    and the current time.
+
+    Args:
+        key (dict): API return for a service key
+            .. code-block:: python
+
+                {
+                    "name": string,
+                    "privateKeyType": enum(ServiceAccountPrivateKeyType),
+                    "keyAlgorithm": enum(ServiceAccountKeyAlgorithm),
+                    "privateKeyData": string,
+                    "publicKeyData": string,
+                    "validAfterTime": string,
+                    "validBeforeTime": string,
+                }
+        expiration_in_days (int): Days before expiration of key
+
+    Returns:
+        bool: Whether or not service account key is expired
+    """
+    expired = False
+    google_date_format = "%Y-%m-%dT%H:%M:%SZ"
+    creation_time = datetime.strptime(key["validAfterTime"], google_date_format)
+    current_time = datetime.strptime(datetime.utcnow().strftime(google_date_format),
+                                     google_date_format)
+    current_life_in_seconds = (current_time - creation_time).total_seconds()
+
+    # seconds / seconds_per_minute / minutes_per_hour / hours_per_day
+    current_life_in_days = current_life_in_seconds / 60 / 60 / 24
+
+    if current_life_in_days >= expiration_in_days:
+        expired = True
+
+    return expired
+
+
+def _get_service_account_cred_from_key_response(key_response):
+    """
+    Return the decoded private key given the response from
+    `create_service_account_key()`. This return from this function is the
+    JSON key file contents e.g. response can be placed directly in file
+    and be used as a private key for the service account.
+
+    Args:
+        key_response (dict): response from create_service_account_key()
+
+    Returns:
+        dict: JSON Key File contents for Service account
+    """
+    return json.loads(base64.b64decode(key_response["privateKeyData"]))
+
+
 def _get_proxy_group_name_for_user(user_id, username):
+    """
+    Return a proxy group name based on user_id and username
+
+    Args:
+        user_id (str): User's uuid
+        username (str): user's name
+
+    Returns:
+        str: proxy group name
+    """
     return str(username) + "-" + str(user_id)
 
 
 def _get_user_id_from_proxy_group(proxy_group):
+    """
+    Return user id by analyzing proxy_group name
+
+    Args:
+        proxy_group (str): proxy group name
+
+    Returns:
+        str: User id
+    """
     return proxy_group.split("-")[0].strip()
 
 
 def _get_user_name_from_proxy_group(proxy_group):
+    """
+    Return username by analyzing proxy_group name
+
+    Args:
+        proxy_group (str): proxy group name
+
+    Returns:
+        str: Username
+    """
     return proxy_group.split("-")[1].strip()

@@ -9,10 +9,8 @@ import copy
 # Python 2 and 3 compatible
 try:
     from unittest.mock import MagicMock
-    from unittest.mock import patch
 except:
     from mock import MagicMock
-    from mock import patch
 
 
 @pytest.fixture
@@ -818,7 +816,7 @@ def test_get_all_groups_pagination(test_cloud_manager):
 
     # Test #
     assert len(groups) == 2
-    args, kwargs = test_cloud_manager._admin_service.groups.return_value.list.call_args
+    _, kwargs = test_cloud_manager._admin_service.groups.return_value.list.call_args
     assert kwargs["pageToken"] == next_page_token
 
 
@@ -899,7 +897,7 @@ def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
     # second key
     mock_calls = test_cloud_manager.delete_service_account_key.mock_calls
 
-    name, args, kwargs = mock_calls[0]
+    _, args, kwargs = mock_calls[0]
     assert (
         any((expired_key_name_1 == arg) for arg in args) or
         any((expired_key_name_1 == kwarg) for kwarg in kwargs.values())
