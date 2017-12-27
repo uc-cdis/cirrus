@@ -10,7 +10,7 @@ import copy
 try:
     from unittest.mock import MagicMock
     from unittest.mock import patch
-except:
+except ImportError:
     from mock import MagicMock
     from mock import patch
 
@@ -906,7 +906,7 @@ def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
         any((expired_key_name_1 == arg) for arg in args) or
         any((expired_key_name_1 == kwarg) for kwarg in kwargs.values())
     )
-    name, args, kwargs = mock_calls[1]
+    _, args, kwargs = mock_calls[1]
     assert (
         any((expired_key_name_1 == arg) for arg in args) or
         any((expired_key_name_1 == kwarg) for kwarg in kwargs.values())
