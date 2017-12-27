@@ -695,16 +695,17 @@ class GoogleCloudManager(CloudManager):
         response = (
             self._admin_service.groups()
             .list(domain=GOOGLE_IDENTITY_DOMAIN).execute()
-        ).json()
+        )
         all_groups.extend(response["groups"])
 
-        while response["nextPageToken"]:
-            response = (
-                self._admin_service.groups()
-                .list(pageToken=response["nextPageToken"],
-                      domain=GOOGLE_IDENTITY_DOMAIN).execute()
-            ).json()
-            all_groups.extend(response["groups"])
+        if "nextPageToken" in response:
+            while response["nextPageToken"]:
+                response = (
+                    self._admin_service.groups()
+                    .list(pageToken=response["nextPageToken"],
+                          domain=GOOGLE_IDENTITY_DOMAIN).execute()
+                )
+                all_groups.extend(response["groups"])
 
         return all_groups
 
@@ -759,7 +760,7 @@ class GoogleCloudManager(CloudManager):
 
         response = self._admin_service.groups().insert(body=group).execute()
 
-        return response.json()
+        return response
 
     def add_member_to_group(self, member_email, group_id):
         """
@@ -797,7 +798,7 @@ class GoogleCloudManager(CloudManager):
                                                  body=member_to_add).execute()
         )
 
-        return response.json()
+        return response
 
     def get_group(self, group_id):
         """
@@ -836,14 +837,14 @@ class GoogleCloudManager(CloudManager):
         group = groups.get(groupKey=group_id)
         response = group.execute()
 
-        return response.json()
+        return response
 
     def delete_group(self, group_id):
         """
         Delete a Google group
 
         Args:
-            group_id (str): Description
+            group_id (str): the group's email address, group alias, or the unique group ID
 
         Returns:
             dict: JSON response from API call, which should be empty
@@ -854,7 +855,7 @@ class GoogleCloudManager(CloudManager):
 
         response = self._admin_service.groups().delete(groupKey=group_id).execute()
 
-        return response.json()
+        return response
 
     def get_group_members(self, group_id):
         """
@@ -888,16 +889,17 @@ class GoogleCloudManager(CloudManager):
         response = (
             self._admin_service.members()
             .list(groupKey=group_id).execute()
-        ).json()
+        )
         all_members.extend(response["members"])
 
-        while response["nextPageToken"]:
-            response = (
-                self._admin_service.members()
-                .list(pageToken=response["nextPageToken"],
-                      groupKey=group_id).execute()
-            ).json()
-            all_members.extend(response["members"])
+        if "nextPageToken" in response:
+            while response["nextPageToken"]:
+                response = (
+                    self._admin_service.members()
+                    .list(pageToken=response["nextPageToken"],
+                          groupKey=group_id).execute()
+                )
+                all_members.extend(response["members"])
 
         return all_members
 

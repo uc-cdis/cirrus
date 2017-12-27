@@ -95,7 +95,7 @@ def test_get_service_accounts_valid(test_cloud_manager):
 
 def test_get_all_service_accounts_pagination(test_cloud_manager):
     """
-    Test that getting all groups actually gets them all, even when
+    Test that getting all sa's actually gets them all, even when
     pagination is required
     """
     # Setup #
@@ -429,7 +429,7 @@ def test_get_group(test_cloud_manager):
     # Setup #
     group_id = "123"
     mock_config = {
-        "groups.return_value.get.return_value.execute.return_value": _fake_response(200, {"id": group_id})
+        "groups.return_value.get.return_value.execute.return_value": {"id": group_id}
     }
     test_cloud_manager._admin_service.configure_mock(**mock_config)
 
@@ -458,7 +458,7 @@ def test_create_group(test_cloud_manager):
         "description": "",
     }
     mock_config = {
-        "groups.return_value.insert.return_value.execute.return_value": _fake_response(200, group)
+        "groups.return_value.insert.return_value.execute.return_value": group
     }
     test_cloud_manager._admin_service.configure_mock(**mock_config)
 
@@ -515,8 +515,7 @@ def test_get_group_members(test_cloud_manager):
         "nextPageToken": ""
     }
     mock_config = {
-        "members.return_value.list.return_value.execute.return_value": _fake_response(200,
-                                                                                      full_response)
+        "members.return_value.list.return_value.execute.return_value": full_response
     }
     test_cloud_manager._admin_service.configure_mock(**mock_config)
 
@@ -579,7 +578,7 @@ def test_get_group_members_pagination(test_cloud_manager):
     response_2["nextPageToken"] = ""
 
     two_pages = [
-        _fake_response(200, full_response), _fake_response(200, response_2)
+        full_response, response_2
     ]
 
     mock_config = {
@@ -623,7 +622,7 @@ def test_add_member_to_group(test_cloud_manager):
         "type": ""
     }
     mock_config = {
-        "members.return_value.insert.return_value.execute.return_value": _fake_response(200, member)
+        "members.return_value.insert.return_value.execute.return_value": member
     }
     test_cloud_manager._admin_service.configure_mock(**mock_config)
 
@@ -757,7 +756,7 @@ def test_get_all_groups(test_cloud_manager):
     }
 
     mock_config = {
-        "groups.return_value.list.return_value.execute.return_value": _fake_response(200, response),
+        "groups.return_value.list.return_value.execute.return_value": response,
     }
 
     test_cloud_manager._admin_service.configure_mock(**mock_config)
@@ -804,7 +803,7 @@ def test_get_all_groups_pagination(test_cloud_manager):
     response_2["nextPageToken"] = ""
 
     two_pages = [
-        _fake_response(200, response), _fake_response(200, response_2)
+        response, response_2
     ]
 
     mock_config = {
@@ -830,7 +829,7 @@ def test_delete_group(test_cloud_manager):
     # Setup #
     group_id = "123"
     mock_config = {
-        "groups.return_value.delete.return_value.execute.return_value": _fake_response(200, {})
+        "groups.return_value.delete.return_value.execute.return_value": {}
     }
     test_cloud_manager._admin_service.configure_mock(**mock_config)
 
