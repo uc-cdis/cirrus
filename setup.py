@@ -9,5 +9,5 @@ setup(
         "oauth2client<4.0dev,>=2.0.0"
     ],
     include_package_data=True,
-    packages=["cirrus"],
+    packages=["cirrus", "cirrus.google_cloud"],
 )

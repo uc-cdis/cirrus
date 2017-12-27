@@ -10,22 +10,22 @@ cirrus Configuration
 import os
 
 # The unique ID for the Google Cloud Project to manage by default
-GOOGLE_PROJECT_ID = os.environ["GOOGLE_PROJECT_ID"]
+GOOGLE_PROJECT_ID = os.environ.get("GOOGLE_PROJECT_ID", "")
 
 # Path to credentialso for accessing the Google Cloud Project
-GOOGLE_APPLICATION_CREDENTIALS = os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+GOOGLE_APPLICATION_CREDENTIALS = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
 
 # Admin email for Google Cloud Project
-GOOGLE_ADMIN_EMAIL = os.environ["GOOGLE_ADMIN_EMAIL"]
+GOOGLE_ADMIN_EMAIL = os.environ.get("GOOGLE_ADMIN_EMAIL", "")
 
 # Domain for group management
-GOOGLE_IDENTITY_DOMAIN = os.environ["GOOGLE_IDENTITY_DOMAIN"]
+GOOGLE_IDENTITY_DOMAIN = os.environ.get("GOOGLE_IDENTITY_DOMAIN", "")
 
 # Admin email for admin domain-wide service account to act for
-GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL = os.environ["GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL"]
+GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL = os.environ.get("GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL", "")
 
 # API key to use during API calls
-GOOGLE_API_KEY = os.environ["GOOGLE_API_KEY"]
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
 
 # Maximum life for a service key
 SERVICE_KEY_EXPIRATION_IN_DAYS = 10
