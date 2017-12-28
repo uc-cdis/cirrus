@@ -177,8 +177,8 @@ class GoogleCloudManager(CloudManager):
                 }
         """
         service_account_response = self.create_service_account(account_id)
-        service_account_id = service_account_response["uniqueId"]
-        self.add_member_to_group(service_account_id, proxy_group_id)
+        service_account_email = service_account_response["email"]
+        self.add_member_to_group(service_account_email, proxy_group_id)
         return service_account_response
 
     def get_primary_service_account(self, proxy_group_id):
