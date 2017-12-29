@@ -91,10 +91,11 @@ for `GOOGLE_APPLICATION_CREDENTIALS`.
 
 For the API scopes, authorize these:
 ```
-"https://www.googleapis.com/auth/admin.directory.group",
-"https://www.googleapis.com/auth/admin.directory.group.readonly",
-"https://www.googleapis.com/auth/admin.directory.group.member",
-"https://www.googleapis.com/auth/admin.directory.group.member.readonly"
+https://www.googleapis.com/auth/admin.directory.group,
+https://www.googleapis.com/auth/admin.directory.group.readonly,
+https://www.googleapis.com/auth/admin.directory.group.member,
+https://www.googleapis.com/auth/admin.directory.group.member.readonly,
+https://www.googleapis.com/auth/admin.directory.user.security
 ```
 
 You [may need to wait](https://groups.google.com/forum/#!topic/google-apps-manager/tY_2mW5NLBk) (up to 48 hours) before access is granted.

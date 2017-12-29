@@ -50,7 +50,8 @@ class GoogleAdminService(GoogleService):
         "https://www.googleapis.com/auth/admin.directory.group",
         "https://www.googleapis.com/auth/admin.directory.group.readonly",
         "https://www.googleapis.com/auth/admin.directory.group.member",
-        "https://www.googleapis.com/auth/admin.directory.group.member.readonly"
+        "https://www.googleapis.com/auth/admin.directory.group.member.readonly",
+        "https://www.googleapis.com/auth/admin.directory.user.security"
     ]
 
     def __init__(self):
