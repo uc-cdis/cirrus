@@ -17,7 +17,7 @@ from io import open
 
 PROJECT_NAME = "cirrus"
 DOCUMENTATION_DIR = os.path.dirname(os.path.realpath(__file__))
-SOURCE_CODE_DIR = os.path.abspath(DOCUMENTATION_DIR + "/../cirrus")
+SOURCE_CODE_DIR = os.path.abspath(DOCUMENTATION_DIR + "/../")
 
 
 def main():

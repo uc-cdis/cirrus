@@ -1,16 +1,15 @@
 cirrus package
 ==============
 
+Subpackages
+-----------
+
+.. toctree::
+
+    cirrus.google_cloud
+
 Submodules
 ----------
-
-cirrus\.cirrus module
----------------------
-
-.. automodule:: cirrus.cirrus
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 cirrus\.config module
 ---------------------
@@ -20,10 +19,10 @@ cirrus\.config module
     :undoc-members:
     :show-inheritance:
 
-cirrus\.connection\_example module
-----------------------------------
+cirrus\.core module
+-------------------
 
-.. automodule:: cirrus.connection_example
+.. automodule:: cirrus.core
     :members:
     :undoc-members:
     :show-inheritance:

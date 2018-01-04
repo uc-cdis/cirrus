@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # cirrus documentation build configuration file, created by
-# sphinx-quickstart on Fri Dec 15 14:29:08 2017.
+# sphinx-quickstart on Thu Jan  4 12:06:39 2018.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -54,7 +54,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'cirrus'
-copyright = u'2017, avantol'
+copyright = u'2018, avantol'
 author = u'avantol'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -182,4 +182,4 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../../cirrus"))
+sys.path.insert(0, os.path.abspath("../.."))
