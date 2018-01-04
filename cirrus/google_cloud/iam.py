@@ -23,7 +23,7 @@ class GooglePolicy(object):
         self.etag = etag
         self.version = version
 
-    def __repr__(self):
+    def __str__(self):
         """
         Return representation of object
 
@@ -55,7 +55,7 @@ class GooglePolicyBinding(object):
         self.role = role
         self.members = members
 
-    def __repr__(self):
+    def __str__(self):
         """
         Return representation of object
 
@@ -111,7 +111,7 @@ class GooglePolicyMember(object):
         self.member_type = member_type
         self.email_id = email_id
 
-    def __repr__(self):
+    def __str__(self):
         """
         Return representation of object
 
@@ -140,9 +140,8 @@ class GooglePolicyRole(object):
             name = name.strip()[len(GooglePolicyRole.ROLE_PREFIX):]
 
         self.name = name
-        # TODO check if it's an actual role in Google cloud
 
-    def __repr__(self):
+    def __str__(self):
         """
         Return representation of object
 

@@ -52,8 +52,8 @@ class GoogleCloudManager(CloudManager):
 
     GOOGLE_AUTH_ERROR_MESSAGE = (
         "This action requires an authed session. Please use "
-        "Python's `with <Class> as <name>` syntax "
-        "to automatically enter and exit authorized sessions."
+        "Python's `with <Class> as <name>` syntax for a context manager "
+        "that automatically enters and exits authorized sessions."
     )
 
     def __init__(self, project_id=None):
@@ -73,25 +73,14 @@ class GoogleCloudManager(CloudManager):
             self.project_id + ".iam.gserviceaccount.com"
         )
 
-    def init_users(self, users):
-        """
-        Initialize necessary Google project settings for user(s).
-
-        Args:
-            users (List(TODO.User)): List of users
-        """
-        for user in users:
-            if not user.google_identity:
-                user.google_identity = self.create_proxy_group_for_user(user.id,
-                                                                        user.username)
-
     def create_proxy_group_for_user(self, user_id, username):
         """
         Creates a proxy group for the given user, creates a service account
         for the user, and adds the service account to the group.
 
         Args:
-            user_id (TYPE): Description
+            user_id (int): User's Unique ID
+            username (str): User's name
 
         Returns:
             str: New proxy group's ID
@@ -1022,7 +1011,7 @@ class GoogleCloudManager(CloudManager):
         # Finally set up a generic authorized session where arbitrary
         # requests can be made to Google API(s)
         scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-        # scopes.extend(admin_service.SCOPES)
+        scopes.extend(admin_service.SCOPES)
 
         credentials, _ = google.auth.default(scopes=scopes)
         self._authed_session = AuthorizedSession(credentials)
@@ -1129,7 +1118,7 @@ def _get_proxy_group_name_for_user(user_id, username):
     Returns:
         str: proxy group name
     """
-    return str(username) + "-" + str(user_id)
+    return str(username).strip().replace(" ", "-") + "-" + str(user_id)
 
 
 def _get_user_id_from_proxy_group(proxy_group):
