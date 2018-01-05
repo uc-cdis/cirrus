@@ -44,17 +44,11 @@ class GoogleCloudManager(CloudManager):
         project_id (str): Google Project ID to manage
         _authed_session (bool): Whether or not the current session is authed
             (this is set internally)
-        _admin_service (TYPE): Admin Directory API service for API access
+        _admin_service (googleapiclient.discovery.Resource): Admin Directory API service for API access
             (used internally)
         _storage_client (google.cloud.storage.Client): Access to Storage API through this client
             (used internally)
     """
-
-    GOOGLE_AUTH_ERROR_MESSAGE = (
-        "This action requires an authed session. Please use "
-        "Python's `with <Class> as <name>` syntax for a context manager "
-        "that automatically enters and exits authorized sessions."
-    )
 
     def __init__(self, project_id=None):
         """
@@ -72,6 +66,53 @@ class GoogleCloudManager(CloudManager):
         self._service_account_email_domain = (
             self.project_id + ".iam.gserviceaccount.com"
         )
+
+    def __enter__(self):
+        """
+        Set up sessions and services to communicate through Google's API's.
+        Called automatically when using Python's `with {{SomeObjectInstance}} as {{name}}:`
+        syntax.
+
+        Returns:
+            GoogleCloudManager: instance with added/modified fields
+        """
+        # Setup for admin directory service for group management
+        admin_service = GoogleAdminService()
+        self._admin_service = admin_service.build_service()
+
+        # Setup client for Google Cloud Storage
+        # Using Google's recommended Google Cloud Client Library for Python
+        # NOTE: This library handles all the auth itself
+        self._storage_client = storage.Client(self.project_id)
+
+        # Finally set up a generic authorized session where arbitrary
+        # requests can be made to Google API(s)
+        scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+        scopes.extend(admin_service.SCOPES)
+
+        credentials, _ = google.auth.default(scopes=scopes)
+        self._authed_session = AuthorizedSession(credentials)
+
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        """
+        Clean up sessions and services that were used to communicate through
+        Google's API's. Called automatically when using Python's context mangager
+        `with {{SomeObjectInstance}} as {{name}}:` syntax.
+
+        The three arguments are required by Python when an exception occurs,
+        as they  describe the exception that caused the context to be exited.
+
+        Args:
+            exception_type (Exception): Exception that caused context to be exitted
+            exception_value (str): Value of the exception
+            traceback (str): A traceback to see what caused Exception
+        """
+        self._authed_session.close()
+        self._authed_session = None
+        self._admin_service = None
+        self._storage_client = None
 
     def create_proxy_group_for_user(self, user_id, username):
         """
@@ -246,6 +287,9 @@ class GoogleCloudManager(CloudManager):
         Returns:
             List(google.cloud.storage.bucket.Bucket): Google Cloud Buckets
         """
+        if not self._authed_session:
+            raise GoogleAuthError()
+
         buckets = list(self._storage_client.list_buckets())
         return buckets
 
@@ -637,7 +681,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
-    def get_all_groups(self, user_key=None):
+    def get_all_groups(self):
         """
         Return a list of all groups in the domain
 
@@ -672,13 +716,9 @@ class GoogleCloudManager(CloudManager):
                   ],
                   "nextPageToken": string
                 }
-
-        Args:
-            user_key: will get all groups for specific user if provided,
-                      otherwise will return all groups
         """
         if not self._authed_session:
-            raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
+            raise GoogleAuthError()
 
         all_groups = []
         response = (
@@ -734,7 +774,7 @@ class GoogleCloudManager(CloudManager):
                 }
         """
         if not self._authed_session:
-            raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
+            raise GoogleAuthError()
 
         if email is None:
             email = name.replace(" ", "-").lower() + "@planx-pla.net"
@@ -775,7 +815,7 @@ class GoogleCloudManager(CloudManager):
                 }
         """
         if not self._authed_session:
-            raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
+            raise GoogleAuthError()
 
         member_to_add = {
             "email": member_email,
@@ -820,7 +860,7 @@ class GoogleCloudManager(CloudManager):
                 }
         """
         if not self._authed_session:
-            raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
+            raise GoogleAuthError()
 
         groups = self._admin_service.groups()
         group = groups.get(groupKey=group_id)
@@ -840,7 +880,7 @@ class GoogleCloudManager(CloudManager):
             `Google API Reference <https://developers.google.com/admin-sdk/directory/v1/reference/groups/delete>`_
         """
         if not self._authed_session:
-            raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
+            raise GoogleAuthError()
 
         response = self._admin_service.groups().delete(groupKey=group_id).execute()
 
@@ -872,7 +912,7 @@ class GoogleCloudManager(CloudManager):
                 ]
         """
         if not self._authed_session:
-            raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
+            raise GoogleAuthError()
 
         all_members = []
         response = (
@@ -906,7 +946,7 @@ class GoogleCloudManager(CloudManager):
             Exception: If not authed
         """
         if not self._authed_session:
-            raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
+            raise GoogleAuthError()
 
         members_response = self.get_group_members(group_id)
         emails = [member["email"]
@@ -937,7 +977,7 @@ class GoogleCloudManager(CloudManager):
             else:
                 response.raise_for_status()
         else:
-            raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
+            raise GoogleAuthError()
 
     def _authed_post(self, url, data=""):
         """
@@ -963,7 +1003,7 @@ class GoogleCloudManager(CloudManager):
             else:
                 response.raise_for_status()
         else:
-            raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
+            raise GoogleAuthError()
 
     def _authed_delete(self, url):
         """
@@ -988,51 +1028,7 @@ class GoogleCloudManager(CloudManager):
             else:
                 response.raise_for_status()
         else:
-            raise Exception(GoogleCloudManager.GOOGLE_AUTH_ERROR_MESSAGE)
-
-    def __enter__(self):
-        """
-        Set up sessions and services to communicate through Google's API's.
-        Called automatically when using Python's `with {{SomeObjectInstance}} as {{name}}:`
-        syntax.
-
-        Returns:
-            GoogleCloudManager: instance with added/modified fields
-        """
-
-        admin_service = GoogleAdminService()
-        self._admin_service = admin_service.build_service()
-
-        # Setup client for Google Cloud Storage
-        # Using Google's recommended Google Cloud Client Library for Python
-        # NOTE: This library handles all the auth itself
-        self._storage_client = storage.Client(self.project_id)
-
-        # Finally set up a generic authorized session where arbitrary
-        # requests can be made to Google API(s)
-        scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-        scopes.extend(admin_service.SCOPES)
-
-        credentials, _ = google.auth.default(scopes=scopes)
-        self._authed_session = AuthorizedSession(credentials)
-
-        return self
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        """
-        Clean up sessions and services that were used to communicate through
-        Google's API's. Called automatically when using Python's
-        `with {{SomeObjectInstance}} as {{name}}:` syntax.
-
-        Args:
-            exception_type (TYPE): Description
-            exception_value (TYPE): Description
-            traceback (TYPE): Description
-        """
-        self._authed_session.close()
-        self._authed_session = None
-        self._admin_service = None
-        self._storage_client = None
+            raise GoogleAuthError()
 
 
 def _get_google_api_url(relative_path, root_api_url):
@@ -1045,7 +1041,7 @@ def _get_google_api_url(relative_path, root_api_url):
         relative_path (str): relative path from root url
 
     Returns:
-        TYPE: Description
+        str: url with API key
     """
     api_url = urljoin(root_api_url, relative_path.strip("/"))
     api_url += "?key=" + GOOGLE_API_KEY
@@ -1145,3 +1141,19 @@ def _get_user_name_from_proxy_group(proxy_group):
         str: Username
     """
     return proxy_group.split("-")[1].strip()
+
+
+class GoogleAuthError(Exception):
+
+    GOOGLE_AUTH_ERROR_MESSAGE = (
+        "This action requires an authed session. Please use "
+        "Python's `with <Class> as <name>` syntax for a context manager "
+        "that automatically enters and exits authorized sessions using "
+        "default credentials. See cirrus's README for setup instructions."
+    )
+
+    def __init__(self, message=None, *args):
+        if not message:
+            message = GoogleAuthError.GOOGLE_AUTH_ERROR_MESSAGE
+
+        super(Exception, self).__init__(message)
