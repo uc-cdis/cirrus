@@ -276,7 +276,7 @@ class GoogleCloudManager(CloudManager):
         api_url = _get_google_api_url("projects/" + self.project_id,
                                       GOOGLE_CLOUD_RESOURCE_URL)
 
-        response = self._authed_get(api_url)
+        response = self._authed_request("GET", api_url)
 
         return response.json()
 
@@ -321,7 +321,7 @@ class GoogleCloudManager(CloudManager):
                                       "/serviceAccounts/" + account,
                                       GOOGLE_IAM_API_URL)
 
-        response = self._authed_get(api_url)
+        response = self._authed_request("GET", api_url)
 
         return response.json()
 
@@ -354,12 +354,12 @@ class GoogleCloudManager(CloudManager):
                                       "/serviceAccounts", GOOGLE_IAM_API_URL)
 
         all_service_accounts = []
-        response = self._authed_get(api_url).json()
+        response = self._authed_request("GET", api_url).json()
         all_service_accounts.extend(response["accounts"])
 
         if "nextPageToken" in response:
             while response["nextPageToken"]:
-                response = self._authed_get(api_url +
+                response = self._authed_request("GET", api_url +
                                             "&pageToken=" +
                                             response["nextPageToken"]).json()
                 all_service_accounts.extend(response["accounts"])
@@ -401,8 +401,8 @@ class GoogleCloudManager(CloudManager):
             "accountId": str(account_id)
         }
 
-        response = self._authed_post(api_url,
-                                     data=json.dumps(new_service_account))
+        response = self._authed_request("POST", api_url,
+                                        data=json.dumps(new_service_account))
 
         try:
             new_service_account_id = json.loads(response.text)["uniqueId"]
@@ -442,7 +442,7 @@ class GoogleCloudManager(CloudManager):
                                       "/serviceAccounts/" + account,
                                       GOOGLE_IAM_API_URL)
 
-        response = self._authed_delete(api_url)
+        response = self._authed_request("DELETE", api_url)
 
         return response.json()
 
@@ -478,7 +478,7 @@ class GoogleCloudManager(CloudManager):
         api_url = _get_google_api_url(new_service_account_url + "/keys",
                                       GOOGLE_IAM_API_URL)
 
-        response = self._authed_post(api_url)
+        response = self._authed_request("POST", api_url)
 
         return response.json()
 
@@ -500,7 +500,7 @@ class GoogleCloudManager(CloudManager):
                                       key_name,
                                       GOOGLE_IAM_API_URL)
 
-        response = self._authed_delete(api_url)
+        response = self._authed_request("DELETE", api_url)
 
         return response.json()
 
@@ -532,7 +532,7 @@ class GoogleCloudManager(CloudManager):
                                       key_name,
                                       GOOGLE_IAM_API_URL)
 
-        response = self._authed_get(api_url)
+        response = self._authed_request("GET", api_url)
 
         return response.json()
 
@@ -565,7 +565,7 @@ class GoogleCloudManager(CloudManager):
                                       "/serviceAccounts/" + account + "/keys",
                                       GOOGLE_IAM_API_URL)
 
-        response = self._authed_get(api_url + "&keyTypes=USER_MANAGED").json()
+        response = self._authed_request("GET", api_url + "&keyTypes=USER_MANAGED").json()
         keys = response["keys"]
 
         return keys
@@ -622,7 +622,7 @@ class GoogleCloudManager(CloudManager):
             "resource": resource
         }
 
-        response = self._authed_post(api_url, data=json.dumps(resource))
+        response = self._authed_request("POST", api_url, data=json.dumps(resource))
 
         return response.json()
 
@@ -677,7 +677,7 @@ class GoogleCloudManager(CloudManager):
         # etag = current_policy["etag"]
         # new_policy.etag = etag
 
-        response = self._authed_post(api_url, data=(str(new_policy)))
+        response = self._authed_request("POST", api_url, data=(str(new_policy)))
 
         return response.json()
 
@@ -919,7 +919,7 @@ class GoogleCloudManager(CloudManager):
             self._admin_service.members()
             .list(groupKey=group_id).execute()
         )
-        all_members.extend(response["members"])
+        all_members.extend(response.get("members", []))
 
         if "nextPageToken" in response:
             while response["nextPageToken"]:
@@ -928,7 +928,7 @@ class GoogleCloudManager(CloudManager):
                     .list(pageToken=response["nextPageToken"],
                           groupKey=group_id).execute()
                 )
-                all_members.extend(response["members"])
+                all_members.extend(response.get("members", []))
 
         return all_members
 
@@ -954,14 +954,15 @@ class GoogleCloudManager(CloudManager):
                   if self._service_account_email_domain in member["email"]]
         return emails
 
-    def _authed_get(self, url):
+    def _authed_request(self, method, url, data=""):
         """
-        GET from the provided URL using the authorized session on the project.
+        Send a request to the provided URL using the authorized session on the project.
         Raises exception if there is no current authorized session OR the
         request results in a response with a NOT ok code (i.e. 4XX, 5XX)
 
         Args:
-            url (str): URL to GET from
+            url (str): URL to send request to
+            data (str, optional): Data payload for request
 
         Returns:
             requests.Response: Response from the request (using requests lib)
@@ -970,65 +971,22 @@ class GoogleCloudManager(CloudManager):
             Exception: Not within an authorized session
         """
         if self._authed_session:
-            response = self._authed_session.get(url)
-
-            if response.status_code == requests.codes.ok:
-                return response
+            method = method.strip().lower()
+            if method == "get":
+                response = self._authed_session.get(url)
+            elif method == "post":
+                response = self._authed_session.post(url, data)
+            elif method == "delete":
+                response = self._authed_session.delete(url)
             else:
+                raise ValueError("Unsupported method: " + str(method) + ".")
+
+            if response.status_code != requests.codes.ok:
                 response.raise_for_status()
         else:
             raise GoogleAuthError()
 
-    def _authed_post(self, url, data=""):
-        """
-        POST to the provided URL using the authorized session on the project.
-        Raises exception if there is no current authorized session OR the
-        request results in a response with a NOT ok code (i.e. 4XX, 5XX)
-
-        Args:
-            url (str): URL to POST to
-            data (str, optional): Data payload for POST
-
-        Returns:
-            requests.Response: Response from the request (using requests lib)
-
-        Raises:
-            Exception: Not within an authorized session
-        """
-        if self._authed_session:
-            response = self._authed_session.post(url, data=data)
-
-            if response.status_code == requests.codes.ok:
-                return response
-            else:
-                response.raise_for_status()
-        else:
-            raise GoogleAuthError()
-
-    def _authed_delete(self, url):
-        """
-        DELETE to the provided URL using the authorized session on the project.
-        Raises exception if there is no current authorized session OR the
-        request results in a response with a NOT ok code (i.e. 4XX, 5XX)
-
-        Args:
-            url (str): URL to DELETE on
-
-        Returns:
-            requests.Response: Response from the request (using requests lib)
-
-        Raises:
-            Exception: Not within an authorized session
-        """
-        if self._authed_session:
-            response = self._authed_session.delete(url)
-
-            if response.status_code == requests.codes.ok:
-                return response
-            else:
-                response.raise_for_status()
-        else:
-            raise GoogleAuthError()
+        return response
 
 
 def _get_google_api_url(relative_path, root_api_url):
@@ -1156,4 +1114,4 @@ class GoogleAuthError(Exception):
         if not message:
             message = GoogleAuthError.GOOGLE_AUTH_ERROR_MESSAGE
 
-        super(Exception, self).__init__(message)
+        super(GoogleAuthError, self).__init__(message)
