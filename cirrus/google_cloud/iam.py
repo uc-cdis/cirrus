@@ -32,7 +32,7 @@ class GooglePolicy(object):
         """
         output_dict = dict()
         output_dict["policy"] = dict()
-        output_dict["policy"]["bindings"] = list(self.bindings)
+        output_dict["policy"]["bindings"] = [binding.get_dict() for binding in self.bindings]
         output_dict["policy"]["etag"] = self.etag
         output_dict["policy"]["version"] = self.version
 
@@ -55,9 +55,9 @@ class GooglePolicyBinding(object):
         self.role = role
         self.members = members
 
-    def __str__(self):
+    def get_dict(self):
         """
-        Return representation of object
+        Return representation of object as dictionary
 
         Returns:
             str: Representation of the Binding which can be POSTed to Google's API
@@ -65,7 +65,7 @@ class GooglePolicyBinding(object):
         output_dict = dict()
         output_dict["role"] = str(self.role)
         output_dict["members"] = [str(member) for member in self.members]
-        return str(output_dict)
+        return output_dict
 
 
 class GooglePolicyMember(object):
