@@ -146,7 +146,7 @@ class GoogleCloudManager(CloudManager):
         Returns:
             str: Service account JSON key (Google Credentials File format)
                  This should be saved into a service-account-cred.json file
-                 to be used as authenication to Google Cloud Platform.
+                 to be used as authentication to Google Cloud Platform.
 
                  NOTE: we could use the PKCS12 format here as well which is
                        more universal
@@ -169,13 +169,12 @@ class GoogleCloudManager(CloudManager):
         """
         try:
             key_info = self.create_service_account_key(account)
-            creds = _get_service_account_cred_from_key_response(key_info)
         except Exception as exc:
             raise Exception("Unable to get service " +
                             "account key for account: \n" + str(account) +
                             "\nError: " + str(exc))
 
-        return creds
+        return key_info
 
     def create_service_account_for_proxy_group(self, proxy_group_id, account_id):
         """
