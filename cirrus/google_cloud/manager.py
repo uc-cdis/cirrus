@@ -169,12 +169,13 @@ class GoogleCloudManager(CloudManager):
         """
         try:
             key_info = self.create_service_account_key(account)
+            creds = _get_service_account_cred_from_key_response(key_info)
         except Exception as exc:
             raise Exception("Unable to get service " +
                             "account key for account: \n" + str(account) +
                             "\nError: " + str(exc))
 
-        return key_info
+        return creds
 
     def create_service_account_for_proxy_group(self, proxy_group_id, account_id):
         """
