@@ -124,26 +124,39 @@ class GoogleCloudManager(CloudManager):
             username (str): User's name
 
         Returns:
-            dict: JSON response from API call, which should contain the new group
+            dict: JSON responses from API calls, which should contain the new group
             `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/Policy>`_
+            and successfully created service account
+            `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts#ServiceAccount>`_
 
             .. code-block:: python
 
                 {
-                    "kind": "admin#directory#group",
-                    "id": string,
-                    "etag": etag,
-                    "email": string,
-                    "name": string,
-                    "directMembersCount": long,
-                    "description": string,
-                    "adminCreated": boolean,
-                    "aliases": [
-                        string
-                    ],
-                    "nonEditableAliases": [
-                        string
-                    ]
+                    "group": {
+                        "kind": "admin#directory#group",
+                        "id": string,
+                        "etag": etag,
+                        "email": string,
+                        "name": string,
+                        "directMembersCount": long,
+                        "description": string,
+                        "adminCreated": boolean,
+                        "aliases": [
+                            string
+                        ],
+                        "nonEditableAliases": [
+                            string
+                        ]
+                    }
+                    "primary_service_account": {
+                        "name": string,
+                        "projectId": string,
+                        "uniqueId": string,
+                        "email": string,
+                        "displayName": string,
+                        "etag": string,
+                        "oauth2ClientId": string,
+                    }
                 }
         """
         group_name = _get_proxy_group_name_for_user(user_id, username)
@@ -154,10 +167,13 @@ class GoogleCloudManager(CloudManager):
         # Create group and service account, then add service account to group
         new_group_response = self.create_group(name=group_name)
         new_group_id = new_group_response["email"]
-        self.create_service_account_for_proxy_group(new_group_id,
-                                                    account_id=service_account_id)
+        service_account_response = self.create_service_account_for_proxy_group(
+            new_group_id, account_id=service_account_id)
 
-        return new_group_response
+        return {
+            "group": new_group_response,
+            "primary_service_account": service_account_response
+        }
 
     def get_access_key(self, account):
         """
