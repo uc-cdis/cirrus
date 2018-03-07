@@ -1,4 +1,3 @@
-from cirrus import GoogleCloudManager
 import pytest
 import json
 from requests import HTTPError
@@ -13,6 +12,11 @@ try:
 except ImportError:
     from mock import MagicMock
     from mock import patch
+
+
+from cirrus import GoogleCloudManager
+from cirrus.google_cloud.manager import _get_proxy_group_name_for_user
+from cirrus.google_cloud.manager import _get_proxy_group_service_account_id_for_user
 
 
 @pytest.fixture
@@ -652,34 +656,65 @@ def test_get_primary_service_account(test_cloud_manager):
     """
     # Setup #
     test_domain = "test-domain.net"
-    primary_service_account = "primary-account" + test_domain
-
     new_member_1_id = "1"
-    new_member_1_email = new_member_1_id + "@" + test_domain
-    group_id = new_member_1_id + "-testuser"  # This has to be the user's ID - Username
+    new_member_1_username = "testuser"
+    primary_service_account = _get_proxy_group_service_account_id_for_user(
+        new_member_1_id, new_member_1_username
+    ) + "@" + test_domain
+
+    group_name = _get_proxy_group_name_for_user(
+        new_member_1_id, new_member_1_username)
+    group_email = group_name + "@" + test_domain
+
+    test_cloud_manager.get_group = MagicMock()
+    test_cloud_manager.get_group.return_value = {
+        "kind": "admin#directory#group",
+        "id": group_name,
+        "etag": "",
+        "email": group_name + "@" + test_domain,
+        "name": "",
+        "directMembersCount": 0,
+        "description": "",
+        "adminCreated": False,
+        "aliases": [
+            ""
+        ],
+        "nonEditableAliases": [
+            ""
+        ]
+    }
 
     test_cloud_manager.get_service_accounts_from_group = MagicMock()
-    test_cloud_manager.get_service_accounts_from_group.return_value = [new_member_1_email]
+    test_cloud_manager.get_service_accounts_from_group.return_value = [primary_service_account]
+
     test_cloud_manager.get_service_account = MagicMock()
-    test_cloud_manager.get_service_account.return_value = primary_service_account
-    test_cloud_manager._service_account_email_domain = test_domain
+    test_cloud_manager.get_service_account.return_value = {
+        "name": "",
+        "projectId": "",
+        "uniqueId": "",
+        "email": primary_service_account,
+        "displayName": "",
+        "etag": "",
+        "oauth2ClientId": "",
+    }
 
     # Call #
-    email = test_cloud_manager.get_primary_service_account(group_id)
+    response = test_cloud_manager.get_primary_service_account(group_name)
+    email = response["email"]
 
     # Test #
-    assert email == primary_service_account
+    assert email == group_email
 
     # check if group id is somewhere in the args to insert
     args, kwargs = test_cloud_manager.get_service_accounts_from_group.call_args
     assert (
-        any(group_id in str(arg) for arg in args) or
-        any(group_id in str(kwarg) for kwarg in kwargs.values())
+        any(group_name in str(arg) for arg in args) or
+        any(group_name in str(kwarg) for kwarg in kwargs.values())
     )
     args, kwargs = test_cloud_manager.get_service_account.call_args
     assert (
-        any(new_member_1_email in str(arg) for arg in args) or
-        any(new_member_1_email in str(kwarg) for kwarg in kwargs.values())
+        any(primary_service_account in str(arg) for arg in args) or
+        any(primary_service_account in str(kwarg) for kwarg in kwargs.values())
     )
 
 
@@ -690,37 +725,69 @@ def test_get_service_account_from_group_mult_accounts(test_cloud_manager):
     """
     # Setup #
     test_domain = "test-domain.net"
-    primary_service_account = "primary-account" + test_domain
-
     new_member_1_id = "1"
-    new_member_1_email = new_member_1_id + "@" + test_domain
-    new_member_2_id = "2"
-    new_member_2_email = "2@" + test_domain
+    new_member_1_username = "testuser"
+    primary_service_account = _get_proxy_group_service_account_id_for_user(
+        new_member_1_id, new_member_1_username
+    ) + "@" + test_domain
 
-    group_id = new_member_2_id + "-testuser"  # This has to be the user's ID - Username
+    group_name = _get_proxy_group_name_for_user(
+        new_member_1_id, new_member_1_username)
+    group_email = group_name + "@" + test_domain
+
+    test_cloud_manager.get_group = MagicMock()
+    test_cloud_manager.get_group.return_value = {
+        "kind": "admin#directory#group",
+        "id": group_name,
+        "etag": "",
+        "email": group_name + "@" + test_domain,
+        "name": "",
+        "directMembersCount": 0,
+        "description": "",
+        "adminCreated": False,
+        "aliases": [
+            ""
+        ],
+        "nonEditableAliases": [
+            ""
+        ]
+    }
 
     test_cloud_manager.get_service_accounts_from_group = MagicMock()
-    test_cloud_manager.get_service_accounts_from_group.return_value = [new_member_1_email, new_member_2_email]
+    test_cloud_manager.get_service_accounts_from_group.return_value = [
+        "some-other-account" + "@" + test_domain,
+        primary_service_account,
+        "another-account" + "@" + test_domain
+    ]
+
     test_cloud_manager.get_service_account = MagicMock()
-    test_cloud_manager.get_service_account.return_value = primary_service_account
-    test_cloud_manager._service_account_email_domain = test_domain
+    test_cloud_manager.get_service_account.return_value = {
+        "name": "",
+        "projectId": "",
+        "uniqueId": "",
+        "email": primary_service_account,
+        "displayName": "",
+        "etag": "",
+        "oauth2ClientId": "",
+    }
 
     # Call #
-    email = test_cloud_manager.get_primary_service_account(group_id)
+    response = test_cloud_manager.get_primary_service_account(group_name)
+    email = response["email"]
 
     # Test #
-    assert email == primary_service_account
+    assert email == group_email
 
-    # check if group id is somewhere in the args
+    # check if group id is somewhere in the args to insert
     args, kwargs = test_cloud_manager.get_service_accounts_from_group.call_args
     assert (
-        any(group_id in str(arg) for arg in args) or
-        any(group_id in str(kwarg) for kwarg in kwargs.values())
+        any(group_name in str(arg) for arg in args) or
+        any(group_name in str(kwarg) for kwarg in kwargs.values())
     )
     args, kwargs = test_cloud_manager.get_service_account.call_args
     assert (
-        any(new_member_2_email in str(arg) for arg in args) or
-        any(new_member_2_email in str(kwarg) for kwarg in kwargs.values())
+        any(primary_service_account in str(arg) for arg in args) or
+        any(primary_service_account in str(kwarg) for kwarg in kwargs.values())
     )
 
 
