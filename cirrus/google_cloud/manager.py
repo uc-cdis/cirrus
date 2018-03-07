@@ -1136,35 +1136,17 @@ def _get_proxy_group_service_account_id_for_user(user_id, username):
     Returns:
         str: service account id
     """
-    username = str(username).strip().replace(" ", "-")
+    username = str(username).replace(" ", "_")
     user_id = str(user_id)
 
-    username_length = len(username)
-    user_id_length = len(user_id)
+    # Truncate username so full account ID is at most 30 characters.
+    full_account_id_length = len(username) + len(user_id) + 1
+    chars_to_drop = full_account_id_length - 30
+    truncated_username = username[:-chars_to_drop]
+    account_id = truncated_username + '-' + user_id
 
-    # add 1 for extra - character
-    account_id_length = username_length + user_id_length + 1
-
-    # min account_id is 6 so append user_id until we're passed 6
-    if account_id_length < 6:
-        account_id = username + "-" + user_id
-        while len(account_id) < 6:
-            account_id += "-" + user_id
-
-    # max is 30 characters, trim end of username to fit
-    elif account_id_length > 30:
-        chars_to_lose = account_id_length - 30
-
-        if username_length > chars_to_lose:
-            username = username[:(username_length - chars_to_lose)]
-        else:
-            # we can't fit the username at all, so don't include it
-            username = ""
-
-        account_id = username + "-" + user_id
-    else:
-        account_id = username + "-" + user_id
-
+    # Pad account ID to at least 6 chars long.
+    account_id += (6 - len(account_id)) * '-'
     return account_id
 
 
