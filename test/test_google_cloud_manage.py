@@ -13,20 +13,13 @@ except ImportError:
     from mock import MagicMock
     from mock import patch
 
-
 from cirrus import GoogleCloudManager
 from cirrus.google_cloud.manager import _get_proxy_group_name_for_user
 from cirrus.google_cloud.manager import _get_proxy_group_service_account_id_for_user
 
-
-@pytest.fixture
-def test_cloud_manager():
-    project_id = "test_project"
-    manager = GoogleCloudManager(project_id)
-    manager._authed_session = MagicMock()
-    manager._admin_service = MagicMock()
-    manager._storage_client = MagicMock()
-    return manager
+from test.conftest import mock_get_group
+from test.conftest import mock_get_service_accounts_from_group
+from test.conftest import mock_get_service_account
 
 
 def _fake_response(status_code, json_response_as_dict=None):
@@ -41,12 +34,13 @@ def _fake_response(status_code, json_response_as_dict=None):
 
 def test_get_service_account_valid(test_cloud_manager):
     """
-    Test that the result from getting service account is the result from the Google API
+    Test that the result from getting service account is the result from the
+    Google API
     """
     # Setup #
     # Google API responds OK with some data
-    test_cloud_manager._authed_session.get.return_value = _fake_response(200,
-                                                                         {"uniqueId": "123"})
+    test_cloud_manager._authed_session.get.return_value = _fake_response(
+        200, {"uniqueId": "123"})
 
     # Call #
     service_account = test_cloud_manager.get_service_account("123")
@@ -57,7 +51,8 @@ def test_get_service_account_valid(test_cloud_manager):
 
 def test_get_service_accounts_valid(test_cloud_manager):
     """
-    Test that the result from getting service accounts is the result from the Google API
+    Test that the result from getting service accounts is the result from the
+    Google API
     """
     # Setup #
     # Google API responds OK with some data
@@ -84,8 +79,8 @@ def test_get_service_accounts_valid(test_cloud_manager):
         ],
         "nextPageToken": "",
     }
-    test_cloud_manager._authed_session.get.return_value = _fake_response(200,
-                                                                         response)
+    test_cloud_manager._authed_session.get.return_value = _fake_response(
+        200, response)
 
     # Call #
     service_accounts = test_cloud_manager.get_all_service_accounts()
@@ -152,12 +147,13 @@ def test_create_service_account_valid(test_cloud_manager):
     # Setup #
     service_account_unique_id = "123"
     test_cloud_manager.set_iam_policy = MagicMock()
-    test_cloud_manager._authed_session.post.return_value = _fake_response(200,
-                                                                          {"uniqueId": service_account_unique_id})
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, {"uniqueId": service_account_unique_id})
 
     account_id = "some_new_service_account"
-    expected_new_service_account = ("projects/" + test_cloud_manager.project_id +
-                                    "/serviceAccounts/" + service_account_unique_id)
+    expected_new_service_account = (
+        "projects/" + test_cloud_manager.project_id +
+        "/serviceAccounts/" + service_account_unique_id)
 
     # Call #
     service_account = test_cloud_manager.create_service_account(account_id)
@@ -166,8 +162,9 @@ def test_create_service_account_valid(test_cloud_manager):
     assert service_account["uniqueId"] == service_account_unique_id
     assert test_cloud_manager._authed_session.post.called is True
 
-    # Naive check to see if the new account appears in the call to set_iam_policy
-    # as any argument or keyword argument (in case API changes or kwarg not used during call)
+    # Naive check to see if the new account appears in the call to
+    # set_iam_policy as any argument or keyword argument (in case API changes
+    # or kwarg not used during call)
     # Merits of this approach can be argued, I don't even know if I like it...
     args, kwargs = test_cloud_manager.set_iam_policy.call_args
     assert (
@@ -178,7 +175,8 @@ def test_create_service_account_valid(test_cloud_manager):
 
 def test_delete_service_account(test_cloud_manager):
     """
-    Test that deleting a service account actually calls google API with given account
+    Test that deleting a service account actually calls google API with
+    given account
     """
     # Setup #
     test_cloud_manager._authed_session.delete.return_value = _fake_response(200)
@@ -209,15 +207,16 @@ def test_create_service_account_key(test_cloud_manager):
     key_id = "123"
     key_private_data = "1a2s3d4f5g6h"
     response = {
-        "name": "projects/storied-bearing-184114/serviceAccounts/{}/keys/{}".format(account,
-                                                                                    key_id),
+        "name": "projects/storied-bearing-184114/serviceAccounts/{}/keys/{}".format(
+            account, key_id),
         "validBeforeTime": "2027-12-05T15:38:03Z",
         "privateKeyData": "{}".format(key_private_data),
         "privateKeyType": "TYPE_GOOGLE_CREDENTIALS_FILE",
         "keyAlgorithm": "KEY_ALG_RSA_2048",
         "validAfterTime": "2017-12-07T15:38:03Z"
     }
-    test_cloud_manager._authed_session.post.return_value = _fake_response(200, response)
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, response)
 
     # Call #
     key = test_cloud_manager.create_service_account_key(account)
@@ -323,7 +322,8 @@ def test_create_service_account_key_invalid_account(test_cloud_manager):
     account = "account-that-doesnt-exist"
     fake_response = _fake_response(400, {})
     # fancy lambda to throw httperror for the bad response
-    fake_response.raise_for_status.side_effect = HTTPError(MagicMock(status=400), 'not found')
+    fake_response.raise_for_status.side_effect = HTTPError(
+        MagicMock(status=400), 'not found')
     test_cloud_manager._authed_session.post.return_value = fake_response
 
     # Call #
@@ -354,13 +354,13 @@ def test_get_service_account_key(test_cloud_manager):
         "name": key_name,
         "keyAlgorithm": "",
     }
-    test_cloud_manager._authed_session.get.return_value = _fake_response(200,
-                                                                         response)
+    test_cloud_manager._authed_session.get.return_value = _fake_response(
+        200, response)
     account = "abc"
 
     # Call #
-    key = test_cloud_manager.get_service_account_key(account,
-                                                     key_name)
+    key = test_cloud_manager.get_service_account_key(
+        account, key_name)
 
     # Test #
     assert key["name"] == key_name
@@ -375,12 +375,12 @@ def test_get_service_account_policy_valid(test_cloud_manager):
     # Google API responds OK with some data
     account = "123"
     resource = "456"
-    test_cloud_manager._authed_session.post.return_value = _fake_response(200,
-                                                                          {"some_policy": "some_value"})
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, {"some_policy": "some_value"})
 
     # Call #
-    service_account_policy = test_cloud_manager.get_service_account_policy(account,
-                                                                           resource)
+    service_account_policy = test_cloud_manager.get_service_account_policy(
+        account, resource)
 
     # Test #
     assert service_account_policy["some_policy"] == "some_value"
@@ -404,8 +404,8 @@ def test_set_iam_policy(test_cloud_manager):
     # Setup #
     account = "123"
     resource = "456"
-    test_cloud_manager._authed_session.post.return_value = _fake_response(200,
-                                                                          {"some_policy": "some_value"})
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, {"some_policy": "some_value"})
 
     # Call #
     service_account_policy = test_cloud_manager.set_iam_policy(account, resource)
@@ -654,7 +654,6 @@ def test_get_primary_service_account(test_cloud_manager):
     """
     Test getting the primary account in a group.
     """
-    # Setup #
     test_domain = "test-domain.net"
     new_member_1_id = "1"
     new_member_1_username = "testuser"
@@ -665,38 +664,13 @@ def test_get_primary_service_account(test_cloud_manager):
     group_name = _get_proxy_group_name_for_user(
         new_member_1_id, new_member_1_username)
     group_email = group_name + "@" + test_domain
+    mock_get_group(test_cloud_manager, group_name, group_email)
 
-    test_cloud_manager.get_group = MagicMock()
-    test_cloud_manager.get_group.return_value = {
-        "kind": "admin#directory#group",
-        "id": group_name,
-        "etag": "",
-        "email": group_name + "@" + test_domain,
-        "name": "",
-        "directMembersCount": 0,
-        "description": "",
-        "adminCreated": False,
-        "aliases": [
-            ""
-        ],
-        "nonEditableAliases": [
-            ""
-        ]
-    }
+    mock_get_service_accounts_from_group(
+        test_cloud_manager, primary_service_account)
 
-    test_cloud_manager.get_service_accounts_from_group = MagicMock()
-    test_cloud_manager.get_service_accounts_from_group.return_value = [primary_service_account]
-
-    test_cloud_manager.get_service_account = MagicMock()
-    test_cloud_manager.get_service_account.return_value = {
-        "name": "",
-        "projectId": "",
-        "uniqueId": "",
-        "email": primary_service_account,
-        "displayName": "",
-        "etag": "",
-        "oauth2ClientId": "",
-    }
+    mock_get_service_account(
+        test_cloud_manager, primary_service_account)
 
     # Call #
     response = test_cloud_manager.get_primary_service_account(group_name)
@@ -723,7 +697,7 @@ def test_get_service_account_from_group_mult_accounts(test_cloud_manager):
     Test that when a group contains multiple service accounts, we still
     get the right primary account
     """
-    # Setup #
+    # Setup
     test_domain = "test-domain.net"
     new_member_1_id = "1"
     new_member_1_username = "testuser"
@@ -734,24 +708,13 @@ def test_get_service_account_from_group_mult_accounts(test_cloud_manager):
     group_name = _get_proxy_group_name_for_user(
         new_member_1_id, new_member_1_username)
     group_email = group_name + "@" + test_domain
+    mock_get_group(test_cloud_manager, group_name, group_email)
 
-    test_cloud_manager.get_group = MagicMock()
-    test_cloud_manager.get_group.return_value = {
-        "kind": "admin#directory#group",
-        "id": group_name,
-        "etag": "",
-        "email": group_name + "@" + test_domain,
-        "name": "",
-        "directMembersCount": 0,
-        "description": "",
-        "adminCreated": False,
-        "aliases": [
-            ""
-        ],
-        "nonEditableAliases": [
-            ""
-        ]
-    }
+    mock_get_service_accounts_from_group(
+        test_cloud_manager, primary_service_account)
+
+    mock_get_service_account(
+        test_cloud_manager, primary_service_account)
 
     test_cloud_manager.get_service_accounts_from_group = MagicMock()
     test_cloud_manager.get_service_accounts_from_group.return_value = [
@@ -759,17 +722,6 @@ def test_get_service_account_from_group_mult_accounts(test_cloud_manager):
         primary_service_account,
         "another-account" + "@" + test_domain
     ]
-
-    test_cloud_manager.get_service_account = MagicMock()
-    test_cloud_manager.get_service_account.return_value = {
-        "name": "",
-        "projectId": "",
-        "uniqueId": "",
-        "email": primary_service_account,
-        "displayName": "",
-        "etag": "",
-        "oauth2ClientId": "",
-    }
 
     # Call #
     response = test_cloud_manager.get_primary_service_account(group_name)
@@ -917,6 +869,7 @@ class NewDatetime(datetime.datetime):
     def __new__(cls, *args, **kwargs):
         return datetime.datetime.__new__(datetime.datetime, *args, **kwargs)
 
+
 @patch("cirrus.google_cloud.manager.datetime", NewDatetime)
 def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
     # Setup #
@@ -956,8 +909,6 @@ def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
     test_cloud_manager.get_service_account_keys_info.return_value = keys
 
     # Call #
-    # with patch("cirrus.google_cloud.manager.datetime") as mock_date:
-    #     mock_date.return_value = NewDatetime
     test_cloud_manager.handle_expired_service_account_keys(account=account)
 
     # Test #
