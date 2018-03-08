@@ -359,9 +359,9 @@ class GoogleCloudManager(CloudManager):
 
         if "nextPageToken" in response:
             while response["nextPageToken"]:
-                response = self._authed_request("GET", api_url +
-                                            "&pageToken=" +
-                                            response["nextPageToken"]).json()
+                response = self._authed_request(
+                    "GET", api_url + "&pageToken=" + response["nextPageToken"]
+                ).json()
                 all_service_accounts.extend(response["accounts"])
 
         return all_service_accounts
@@ -566,7 +566,7 @@ class GoogleCloudManager(CloudManager):
                                       GOOGLE_IAM_API_URL)
 
         response = self._authed_request("GET", api_url + "&keyTypes=USER_MANAGED").json()
-        keys = response["keys"]
+        keys = response.get("keys", [])
 
         return keys
 
