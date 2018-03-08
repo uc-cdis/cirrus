@@ -495,6 +495,7 @@ class GoogleCloudManager(CloudManager):
                   key was successfully deleted
             `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts.keys/delete>`_
         """
+        key_name = key_name.split("/")[-1]
         api_url = _get_google_api_url("projects/" + self.project_id +
                                       "/serviceAccounts/" + account + "/keys/" +
                                       key_name,
