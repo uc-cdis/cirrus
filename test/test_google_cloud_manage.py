@@ -302,7 +302,7 @@ def test_get_service_account_keys_info(test_cloud_manager):
     assert test_cloud_manager._authed_session.get.called is True
     assert len(keys) == 3
 
-    # Naive check to see if the new account appears in the call to delete
+    # Naive check to see if the new account appears in the call
     args, kwargs = test_cloud_manager._authed_session.get.call_args
     assert (
         any(account in str(arg) for arg in args) or
@@ -910,6 +910,37 @@ def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
     assert (
         any((expired_key_name_1 == arg) for arg in args) or
         any((expired_key_name_1 == kwarg) for kwarg in kwargs.values())
+    )
+
+
+def test_service_account_keys_when_empty(test_cloud_manager):
+    """
+    Test that getting a service account's keys when there aren't any results
+    in an empty list.
+
+    NOTE: google's api seems to not include the "keys" param at all when
+          there aren't any keys
+    """
+    # Setup #
+    account = "some_service_account"
+    response = {}
+
+    test_cloud_manager._authed_session.get.return_value = (
+        _fake_response(200, json_response_as_dict=response)
+    )
+
+    # Call #
+    keys = test_cloud_manager.get_service_account_keys_info(account)
+
+    # Test #
+    assert test_cloud_manager._authed_session.get.called is True
+    assert len(keys) == 0
+
+    # Naive check to see if the new account appears in the call
+    args, kwargs = test_cloud_manager._authed_session.get.call_args
+    assert (
+        any(account in str(arg) for arg in args) or
+        any(account in str(kwarg) for kwarg in kwargs.values())
     )
 
 
