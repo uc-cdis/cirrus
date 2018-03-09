@@ -359,9 +359,9 @@ class GoogleCloudManager(CloudManager):
 
         if "nextPageToken" in response:
             while response["nextPageToken"]:
-                response = self._authed_request("GET", api_url +
-                                            "&pageToken=" +
-                                            response["nextPageToken"]).json()
+                response = self._authed_request(
+                    "GET", api_url + "&pageToken=" + response["nextPageToken"]
+                ).json()
                 all_service_accounts.extend(response["accounts"])
 
         return all_service_accounts
@@ -495,6 +495,7 @@ class GoogleCloudManager(CloudManager):
                   key was successfully deleted
             `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts.keys/delete>`_
         """
+        key_name = key_name.split("/")[-1]
         api_url = _get_google_api_url("projects/" + self.project_id +
                                       "/serviceAccounts/" + account + "/keys/" +
                                       key_name,
@@ -566,7 +567,7 @@ class GoogleCloudManager(CloudManager):
                                       GOOGLE_IAM_API_URL)
 
         response = self._authed_request("GET", api_url + "&keyTypes=USER_MANAGED").json()
-        keys = response["keys"]
+        keys = response.get("keys", [])
 
         return keys
 
