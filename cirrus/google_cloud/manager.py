@@ -124,17 +124,56 @@ class GoogleCloudManager(CloudManager):
             username (str): User's name
 
         Returns:
-            str: New proxy group's ID
+            dict: JSON responses from API calls, which should contain the new group
+            `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/Policy>`_
+            and successfully created service account
+            `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts#ServiceAccount>`_
+
+            .. code-block:: python
+
+                {
+                    "group": {
+                        "kind": "admin#directory#group",
+                        "id": string,
+                        "etag": etag,
+                        "email": string,
+                        "name": string,
+                        "directMembersCount": long,
+                        "description": string,
+                        "adminCreated": boolean,
+                        "aliases": [
+                            string
+                        ],
+                        "nonEditableAliases": [
+                            string
+                        ]
+                    }
+                    "primary_service_account": {
+                        "name": string,
+                        "projectId": string,
+                        "uniqueId": string,
+                        "email": string,
+                        "displayName": string,
+                        "etag": string,
+                        "oauth2ClientId": string,
+                    }
+                }
         """
         group_name = _get_proxy_group_name_for_user(user_id, username)
+        service_account_id = _get_proxy_group_service_account_id_for_user(
+            user_id, username
+        )
 
         # Create group and service account, then add service account to group
         new_group_response = self.create_group(name=group_name)
-        new_group_id = new_group_response["id"]
-        self.create_service_account_for_proxy_group(new_group_id,
-                                                    account_id=user_id)
+        new_group_id = new_group_response["email"]
+        service_account_response = self.create_service_account_for_proxy_group(
+            new_group_id, account_id=service_account_id)
 
-        return new_group_id
+        return {
+            "group": new_group_response,
+            "primary_service_account": service_account_response
+        }
 
     def get_access_key(self, account):
         """
@@ -236,7 +275,10 @@ class GoogleCloudManager(CloudManager):
         """
         primary_email = None
 
-        user_id = _get_user_id_from_proxy_group(proxy_group_id)
+        proxy_group = self.get_group(proxy_group_id)
+
+        user_id = _get_user_id_from_proxy_group(proxy_group["email"])
+        username = _get_user_name_from_proxy_group(proxy_group["email"])
         all_service_accounts = self.get_service_accounts_from_group(proxy_group_id)
 
         # create dict with first part of email as key and whole email as value
@@ -245,8 +287,12 @@ class GoogleCloudManager(CloudManager):
             for account in all_service_accounts
         }
 
-        if user_id in service_account_emails:
-            primary_email = service_account_emails[user_id]
+        service_account_id_for_user = (
+            _get_proxy_group_service_account_id_for_user(user_id, username)
+        )
+
+        if service_account_id_for_user in service_account_emails:
+            primary_email = service_account_emails[service_account_id_for_user]
 
         return self.get_service_account(primary_email)
 
@@ -318,7 +364,7 @@ class GoogleCloudManager(CloudManager):
                 }
         """
         api_url = _get_google_api_url("projects/" + self.project_id +
-                                      "/serviceAccounts/" + account,
+                                      "/serviceAccounts/" + str(account),
                                       GOOGLE_IAM_API_URL)
 
         response = self._authed_request("GET", api_url)
@@ -1076,6 +1122,35 @@ def _get_proxy_group_name_for_user(user_id, username):
     return str(username).strip().replace(" ", "-") + "-" + str(user_id)
 
 
+def _get_proxy_group_service_account_id_for_user(user_id, username):
+    """
+    Return a valid service account id based on user_id and username
+
+    Currently Google enforces the following:
+        6-30 characters
+        Must match: [a-z][a-z\d\-]*[a-z\d]
+
+    Args:
+        user_id (str): User's uuid
+        username (str): user's name
+
+    Returns:
+        str: service account id
+    """
+    username = str(username).replace(" ", "_")
+    user_id = str(user_id)
+
+    # Truncate username so full account ID is at most 30 characters.
+    full_account_id_length = len(username) + len(user_id) + 1
+    chars_to_drop = full_account_id_length - 30
+    truncated_username = username[:-chars_to_drop]
+    account_id = truncated_username + '-' + user_id
+
+    # Pad account ID to at least 6 chars long.
+    account_id += (6 - len(account_id)) * '-'
+    return account_id
+
+
 def _get_user_id_from_proxy_group(proxy_group):
     """
     Return user id by analyzing proxy_group name
@@ -1086,7 +1161,7 @@ def _get_user_id_from_proxy_group(proxy_group):
     Returns:
         str: User id
     """
-    return proxy_group.split("-")[0].strip()
+    return proxy_group.split('@')[0].split("-")[1].strip()
 
 
 def _get_user_name_from_proxy_group(proxy_group):
@@ -1099,7 +1174,7 @@ def _get_user_name_from_proxy_group(proxy_group):
     Returns:
         str: Username
     """
-    return proxy_group.split("-")[1].strip()
+    return proxy_group.split('@')[0].split("-")[0].strip()
 
 
 class GoogleAuthError(Exception):
