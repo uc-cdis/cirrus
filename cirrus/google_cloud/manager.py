@@ -6,6 +6,7 @@ Google Cloud Management
 import base64
 import json
 from datetime import datetime
+import re
 
 # 3rd Party libs
 import google.auth
@@ -34,6 +35,8 @@ from cirrus.google_cloud.services import GoogleAdminService
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
+
+GOOGLE_SERVICE_ACCOUNT_REGEX = "[a-z][a-z\d\-]*[a-z\d]"
 
 
 class GoogleCloudManager(CloudManager):
@@ -160,7 +163,7 @@ class GoogleCloudManager(CloudManager):
                 }
         """
         group_name = _get_proxy_group_name_for_user(user_id, username)
-        service_account_id = _get_proxy_group_service_account_id_for_user(
+        service_account_id = get_valid_service_account_id_for_user(
             user_id, username
         )
 
@@ -288,7 +291,7 @@ class GoogleCloudManager(CloudManager):
         }
 
         service_account_id_for_user = (
-            _get_proxy_group_service_account_id_for_user(user_id, username)
+            get_valid_service_account_id_for_user(user_id, username)
         )
 
         if service_account_id_for_user in service_account_emails:
@@ -1027,9 +1030,6 @@ class GoogleCloudManager(CloudManager):
                 response = self._authed_session.delete(url)
             else:
                 raise ValueError("Unsupported method: " + str(method) + ".")
-
-            if response.status_code != requests.codes.ok:
-                response.raise_for_status()
         else:
             raise GoogleAuthError()
 
@@ -1122,23 +1122,20 @@ def _get_proxy_group_name_for_user(user_id, username):
     return str(username).strip().replace(" ", "-") + "-" + str(user_id)
 
 
-def _get_proxy_group_service_account_id_for_user(user_id, username):
+def get_valid_service_account_id_for_user(user_id, username):
     """
     Return a valid service account id based on user_id and username
-
     Currently Google enforces the following:
         6-30 characters
         Must match: [a-z][a-z\d\-]*[a-z\d]
-
     Args:
         user_id (str): User's uuid
         username (str): user's name
-
     Returns:
         str: service account id
     """
-    username = str(username).replace(" ", "_")
-    user_id = str(user_id)
+    username = str(username).lower().replace(" ", "_")
+    user_id = str(user_id).lower()
 
     # Truncate username so full account ID is at most 30 characters.
     full_account_id_length = len(username) + len(user_id) + 1
@@ -1148,6 +1145,54 @@ def _get_proxy_group_service_account_id_for_user(user_id, username):
 
     # Pad account ID to at least 6 chars long.
     account_id += (6 - len(account_id)) * '-'
+
+    # double check it meets Google's requirements
+    google_regex = re.compile(GOOGLE_SERVICE_ACCOUNT_REGEX)
+    match = google_regex.match(account_id)
+    if not match:
+        raise GoogleNamingError(
+            "Could not get a valid service account id. "
+            "Currently Google enforces the following: "
+            "[a-z][a-z\d\-]*[a-z\d]. Could not use user_id and username to "
+            "meet those requirements.")
+
+    return account_id
+
+
+def get_valid_service_account_id_for_client(client_id, user_id):
+    """
+    Return a valid service account id based on client_id and user_id
+    Currently Google enforces the following:
+        6-30 characters
+        Must match: [a-z][a-z\d\-]*[a-z\d]
+
+    Returns:
+        str: service account id
+    """
+    client_id = str(client_id).lower()
+    user_id = str(user_id).lower()
+
+    google_regex = re.compile(GOOGLE_SERVICE_ACCOUNT_REGEX)
+    match = google_regex.match(client_id)
+    if match:
+        # this matching ensures client_id starts with alphabetical character
+        client_id = match.group(0)
+
+        # Truncate client_id so full account ID is at most 30 characters.
+        full_account_id_length = len(client_id) + len(user_id) + 1
+        chars_to_drop = full_account_id_length - 30
+        truncated_client_id = client_id[:-chars_to_drop]
+        account_id = truncated_client_id + '-' + user_id
+
+        # Pad account ID to at least 6 chars long.
+        account_id += (6 - len(account_id)) * '-'
+    else:
+        raise GoogleNamingError(
+            "Could not get a valid service account id from client id: {}"
+            .format(client_id) + "\nCurrently Google enforces the following: "
+            "[a-z][a-z\d\-]*[a-z\d]. Could not use client_id to "
+            "meet those requirements.")
+
     return account_id
 
 
@@ -1175,6 +1220,20 @@ def _get_user_name_from_proxy_group(proxy_group):
         str: Username
     """
     return proxy_group.split('@')[0].split("-")[0].strip()
+
+
+class GoogleNamingError(Exception):
+
+    GOOGLE_ERROR_MESSAGE = (
+        "There was an issue with generating names or ids that are compliant "
+        "with Google's requirements."
+    )
+
+    def __init__(self, message=None, *args):
+        if not message:
+            message = GoogleAuthError.GOOGLE_ERROR_MESSAGE
+
+        super(GoogleNamingError, self).__init__(message)
 
 
 class GoogleAuthError(Exception):

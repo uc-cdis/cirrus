@@ -10,7 +10,7 @@ except ImportError:
 
 from cirrus import GoogleCloudManager
 from cirrus.google_cloud.manager import _get_proxy_group_name_for_user
-from cirrus.google_cloud.manager import _get_proxy_group_service_account_id_for_user
+from cirrus.google_cloud.manager import get_valid_service_account_id_for_user
 
 
 def get_test_cloud_manager():
@@ -34,7 +34,7 @@ def test_cloud_manager_group_and_service_accounts_mocked():
     test_domain = "test-domain.net"
     new_member_1_id = "1"
     new_member_1_username = "testuser"
-    primary_service_account = _get_proxy_group_service_account_id_for_user(
+    primary_service_account = get_valid_service_account_id_for_user(
         new_member_1_id, new_member_1_username
     ) + "@" + test_domain
 

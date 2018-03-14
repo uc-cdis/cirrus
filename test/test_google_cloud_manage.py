@@ -15,7 +15,7 @@ except ImportError:
 
 from cirrus import GoogleCloudManager
 from cirrus.google_cloud.manager import _get_proxy_group_name_for_user
-from cirrus.google_cloud.manager import _get_proxy_group_service_account_id_for_user
+from cirrus.google_cloud.manager import get_valid_service_account_id_for_user
 
 from test.conftest import mock_get_group
 from test.conftest import mock_get_service_accounts_from_group
@@ -320,27 +320,28 @@ def test_create_service_account_key_invalid_account(test_cloud_manager):
     """
     # Setup #
     account = "account-that-doesnt-exist"
-    fake_response = _fake_response(400, {})
+    fake_response = _fake_response(404, {})
     # fancy lambda to throw httperror for the bad response
     fake_response.raise_for_status.side_effect = HTTPError(
-        MagicMock(status=400), 'not found')
+        MagicMock(status=404), 'not found')
     test_cloud_manager._authed_session.post.return_value = fake_response
 
     # Call #
-    with pytest.raises(HTTPError):
-        test_cloud_manager.create_service_account_key(account)
+    key = test_cloud_manager.create_service_account_key(account)
 
-        # Test #
-        assert test_cloud_manager._authed_session.post.called is True
+    # Test #
+    assert not key
 
-        # Naive check to see if the account appears in the call to post
-        # as any argument or keyword argument (in case API changes or kwarg not used during call)
-        # Merits of this approach can be argued, I don't even know if I like it...
-        args, kwargs = test_cloud_manager._authed_session.post.call_args
-        assert (
-            any(account in str(arg) for arg in args) or
-            any(account in str(kwarg) for kwarg in kwargs.values())
-        )
+    assert test_cloud_manager._authed_session.post.called is True
+
+    # Naive check to see if the account appears in the call to post
+    # as any argument or keyword argument (in case API changes or kwarg not used during call)
+    # Merits of this approach can be argued, I don't even know if I like it...
+    args, kwargs = test_cloud_manager._authed_session.post.call_args
+    assert (
+        any(account in str(arg) for arg in args) or
+        any(account in str(kwarg) for kwarg in kwargs.values())
+    )
 
 
 def test_get_service_account_key(test_cloud_manager):
@@ -657,7 +658,7 @@ def test_get_primary_service_account(test_cloud_manager):
     test_domain = "test-domain.net"
     new_member_1_id = "1"
     new_member_1_username = "testuser"
-    primary_service_account = _get_proxy_group_service_account_id_for_user(
+    primary_service_account = get_valid_service_account_id_for_user(
         new_member_1_id, new_member_1_username
     ) + "@" + test_domain
 
@@ -701,7 +702,7 @@ def test_get_service_account_from_group_mult_accounts(test_cloud_manager):
     test_domain = "test-domain.net"
     new_member_1_id = "1"
     new_member_1_username = "testuser"
-    primary_service_account = _get_proxy_group_service_account_id_for_user(
+    primary_service_account = get_valid_service_account_id_for_user(
         new_member_1_id, new_member_1_username
     ) + "@" + test_domain
 
