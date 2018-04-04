@@ -32,6 +32,21 @@ def _fake_response(status_code, json_response_as_dict=None):
     return response
 
 
+def test_get_proxy_group_name_for_user():
+    """
+    Test we get a valid Google name
+
+    See:
+        https://support.google.com/a/answer/33386
+    for Google's naming restrictions
+    """
+    user_id = '12345678912345678901234567890'
+    username = '.a-bcd..efg@hijkl<@$*)%amn.net'
+    valid_name = _get_proxy_group_name_for_user(user_id, username)
+
+    assert valid_name == 'a-bcd.efg-12345678912345678901234567890'
+
+
 def test_get_service_account_valid(test_cloud_manager):
     """
     Test that the result from getting service account is the result from the
