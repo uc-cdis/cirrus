@@ -1110,7 +1110,11 @@ def _get_service_account_cred_from_key_response(key_response):
 
 def _get_proxy_group_name_for_user(user_id, username):
     """
-    Return a proxy group name based on user_id and username
+    Return a valid proxy group name based on user_id and username
+
+    See:
+        https://support.google.com/a/answer/33386
+    for Google's naming restrictions
 
     Args:
         user_id (str): User's uuid
@@ -1119,7 +1123,24 @@ def _get_proxy_group_name_for_user(user_id, username):
     Returns:
         str: proxy group name
     """
-    return str(username).strip().replace(" ", "-") + "-" + str(user_id)
+    # allow alphanumeric and some special chars
+    user_id = str(user_id)
+    username = ''.join([
+        item for item in str(username)
+        if item.isalnum() or item in ['-', '_', '.', '\'']
+    ])
+
+    username = username.replace('..', '.')
+    if username[0] == '.':
+        username = username[1:]
+
+    # Truncate username so full name is at most 60 characters.
+    full_username_length = len(username) + len(user_id) + 1
+    chars_to_drop = full_username_length - 60
+    truncated_username = username[:-chars_to_drop]
+    name = truncated_username + '-' + user_id
+
+    return name
 
 
 def get_valid_service_account_id_for_user(user_id, username):
@@ -1134,7 +1155,10 @@ def get_valid_service_account_id_for_user(user_id, username):
     Returns:
         str: service account id
     """
-    username = str(username).lower().replace(" ", "_")
+    username = ''.join([
+        item for item in str(username).lower()
+        if item.isalnum() or item == '-'
+    ])
     user_id = str(user_id).lower()
 
     # Truncate username so full account ID is at most 30 characters.
@@ -1169,7 +1193,10 @@ def get_valid_service_account_id_for_client(client_id, user_id):
     Returns:
         str: service account id
     """
-    client_id = str(client_id).lower()
+    client_id = ''.join([
+        item for item in str(client_id).lower()
+        if item.isalnum() or item == '-'
+    ])
     user_id = str(user_id).lower()
 
     google_regex = re.compile(GOOGLE_SERVICE_ACCOUNT_REGEX)
