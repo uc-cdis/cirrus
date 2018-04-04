@@ -213,9 +213,11 @@ class GoogleCloudManager(CloudManager):
             key_info = self.create_service_account_key(account)
             creds = _get_service_account_cred_from_key_response(key_info)
         except Exception as exc:
-            raise Exception("Unable to get service " +
-                            "account key for account: \n" + str(account) +
-                            "\nError: " + str(exc))
+            raise Exception(
+                "Unable to get service " +
+                "account key for account: \n" + str(account) +
+                "\nError: " + str(exc)
+            )
 
         return creds
 
@@ -322,8 +324,8 @@ class GoogleCloudManager(CloudManager):
                   if it exists
             `Google API Reference <https://cloud.google.com/resource-manager/reference/rest/v1/projects/get>`_
         """
-        api_url = _get_google_api_url("projects/" + self.project_id,
-                                      GOOGLE_CLOUD_RESOURCE_URL)
+        api_url = _get_google_api_url(
+            "projects/" + self.project_id, GOOGLE_CLOUD_RESOURCE_URL)
 
         response = self._authed_request("GET", api_url)
 
@@ -366,9 +368,9 @@ class GoogleCloudManager(CloudManager):
                     "oauth2ClientId": string,
                 }
         """
-        api_url = _get_google_api_url("projects/" + self.project_id +
-                                      "/serviceAccounts/" + str(account),
-                                      GOOGLE_IAM_API_URL)
+        api_url = _get_google_api_url(
+            "projects/" + self.project_id + "/serviceAccounts/" + str(account),
+            GOOGLE_IAM_API_URL)
 
         response = self._authed_request("GET", api_url)
 
@@ -399,8 +401,9 @@ class GoogleCloudManager(CloudManager):
                     ...
                 ]
         """
-        api_url = _get_google_api_url("projects/" + self.project_id +
-                                      "/serviceAccounts", GOOGLE_IAM_API_URL)
+        api_url = _get_google_api_url(
+            "projects/" + self.project_id + "/serviceAccounts",
+            GOOGLE_IAM_API_URL)
 
         all_service_accounts = []
         response = self._authed_request("GET", api_url).json()
@@ -443,35 +446,39 @@ class GoogleCloudManager(CloudManager):
                     "oauth2ClientId": string,
                 }
         """
-        api_url = _get_google_api_url("projects/" + self.project_id +
-                                      "/serviceAccounts", GOOGLE_IAM_API_URL)
+        api_url = _get_google_api_url(
+            "projects/" + self.project_id + "/serviceAccounts",
+            GOOGLE_IAM_API_URL)
 
         new_service_account = {
             "accountId": str(account_id)
         }
 
-        response = self._authed_request("POST", api_url,
-                                        data=json.dumps(new_service_account))
+        response = self._authed_request(
+            "POST", api_url, data=json.dumps(new_service_account))
 
         try:
             new_service_account_id = json.loads(response.text)["uniqueId"]
-            new_service_account_resource = ("projects/" + self.project_id +
-                                            "/serviceAccounts/" + new_service_account_id)
+            new_service_account_resource = (
+                "projects/" + self.project_id +
+                "/serviceAccounts/" + new_service_account_id
+            )
 
             # need to give add the admin account permission to create keys for
             # this new service account
             role = GooglePolicyRole(name="iam.serviceAccountKeyAdmin")
-            member = GooglePolicyMember(email_id=GOOGLE_ADMIN_EMAIL,
-                                        member_type=GooglePolicyMember.SERVICE_ACCOUNT)
+            member = GooglePolicyMember(
+                email_id=GOOGLE_ADMIN_EMAIL,
+                member_type=GooglePolicyMember.SERVICE_ACCOUNT)
             binding = GooglePolicyBinding(role=role, members=[member])
             new_policy = GooglePolicy(bindings=[binding])
 
-            self.set_iam_policy(resource=new_service_account_resource,
-                                new_policy=new_policy)
+            self.set_iam_policy(
+                resource=new_service_account_resource, new_policy=new_policy)
         except Exception as exc:
-            raise Exception("Error setting service account policy." +
-                            "\nError: " +
-                            str(exc))
+            raise Exception(
+                "Error setting service account policy." + "\nError: " +
+                str(exc))
 
         return response.json()
 
@@ -487,9 +494,9 @@ class GoogleCloudManager(CloudManager):
                   it successfully deleted the service account
             `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts/delete>`_
         """
-        api_url = _get_google_api_url("projects/" + self.project_id +
-                                      "/serviceAccounts/" + account,
-                                      GOOGLE_IAM_API_URL)
+        api_url = _get_google_api_url(
+            "projects/" + self.project_id + "/serviceAccounts/" + account,
+            GOOGLE_IAM_API_URL)
 
         response = self._authed_request("DELETE", api_url)
 
@@ -545,10 +552,9 @@ class GoogleCloudManager(CloudManager):
             `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/projects.serviceAccounts.keys/delete>`_
         """
         key_name = key_name.split("/")[-1]
-        api_url = _get_google_api_url("projects/" + self.project_id +
-                                      "/serviceAccounts/" + account + "/keys/" +
-                                      key_name,
-                                      GOOGLE_IAM_API_URL)
+        api_url = _get_google_api_url(
+            "projects/" + self.project_id + "/serviceAccounts/" + account +
+            "/keys/" + key_name, GOOGLE_IAM_API_URL)
 
         response = self._authed_request("DELETE", api_url)
 
@@ -577,10 +583,9 @@ class GoogleCloudManager(CloudManager):
                     "keyAlgorithm": enum(ServiceAccountKeyAlgorithm),
                 }
         """
-        api_url = _get_google_api_url("projects/" + self.project_id +
-                                      "/serviceAccounts/" + account + "/keys/" +
-                                      key_name,
-                                      GOOGLE_IAM_API_URL)
+        api_url = _get_google_api_url(
+            "projects/" + self.project_id + "/serviceAccounts/" + account +
+            "/keys/" + key_name, GOOGLE_IAM_API_URL)
 
         response = self._authed_request("GET", api_url)
 
@@ -611,9 +616,9 @@ class GoogleCloudManager(CloudManager):
                     ...
                 ]
         """
-        api_url = _get_google_api_url("projects/" + self.project_id +
-                                      "/serviceAccounts/" + account + "/keys",
-                                      GOOGLE_IAM_API_URL)
+        api_url = _get_google_api_url(
+            "projects/" + self.project_id + "/serviceAccounts/" + account +
+            "/keys", GOOGLE_IAM_API_URL)
 
         response = self._authed_request("GET", api_url + "&keyTypes=USER_MANAGED").json()
         keys = response.get("keys", [])
@@ -664,9 +669,9 @@ class GoogleCloudManager(CloudManager):
                     ]
                 }
         """
-        api_url = _get_google_api_url("projects/" + self.project_id +
-                                      "/serviceAccounts/" + account +
-                                      ":getIamPolicy", GOOGLE_IAM_API_URL)
+        api_url = _get_google_api_url(
+            "projects/" + self.project_id + "/serviceAccounts/" + account +
+            ":getIamPolicy", GOOGLE_IAM_API_URL)
 
         resource = {
             "resource": resource
@@ -829,8 +834,6 @@ class GoogleCloudManager(CloudManager):
         if email is None:
             email = name.replace(" ", "-").lower() + "@planx-pla.net"
 
-        # api_url = _get_google_api_url("groups", GOOGLE_DIRECTORY_API_URL)
-
         group = {
             "email": email,
             "name": name,
@@ -873,8 +876,29 @@ class GoogleCloudManager(CloudManager):
         }
 
         response = (
-            self._admin_service.members().insert(groupKey=group_id,
-                                                 body=member_to_add).execute()
+            self._admin_service.members().insert(
+                groupKey=group_id, body=member_to_add).execute()
+        )
+
+        return response
+
+    def remove_member_from_group(self, member_email, group_id):
+        """
+        Remove given member email to given group
+
+        Args:
+            member_email (str): email for member to remove
+            group_id (str): Group email or unique ID
+
+        Returns:
+            Empty body if success
+        """
+        if not self._authed_session:
+            raise GoogleAuthError()
+
+        response = (
+            self._admin_service.members().delete(
+                groupKey=group_id, memberKey=member_email).execute()
         )
 
         return response
@@ -932,7 +956,10 @@ class GoogleCloudManager(CloudManager):
         if not self._authed_session:
             raise GoogleAuthError()
 
-        response = self._admin_service.groups().delete(groupKey=group_id).execute()
+        response = (
+            self._admin_service.groups()
+            .delete(groupKey=group_id).execute()
+        )
 
         return response
 
