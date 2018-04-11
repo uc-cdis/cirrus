@@ -1,2 +1,2 @@
 from .manager import GoogleCloudManager
-from .manager import get_valid_service_account_id_for_client
+from .utils import get_valid_service_account_id_for_client
