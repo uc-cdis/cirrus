@@ -98,7 +98,7 @@ def get_default_service_account_credentials():
 
 def get_signed_url(
         path_to_resource, http_verb, expires,
-        extension_headers=None, content_type='text/plain', md5_value='',
+        extension_headers=None, content_type='', md5_value='',
         service_account_creds=None):
     """
 
@@ -112,27 +112,35 @@ def get_signed_url(
         extension_headers (None, optional): Description
         content_type (str, optional): Description
         md5_value (str, optional): Description
-        service_account_creds (ServiceAccountCredentials, optional): Description
+        service_account_creds (dict, optional): JSON keyfile dict for Google
+            Service Account (can be obtained by calling `get_access_key`)
 
     Returns:
         str: Completed signed URL
     """
+    path_to_resource = path_to_resource.strip('/')
     string_to_sign = _get_string_to_sign(
         path_to_resource, http_verb, expires,
         extension_headers, content_type, md5_value)
 
-    creds = service_account_creds or get_default_service_account_credentials()
-    client_id = creds.service_account_email
-    signature = creds.sign_blob([string_to_sign])[1]
+    if service_account_creds:
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(
+            service_account_creds)
+    else:
+        creds = get_default_service_account_credentials()
 
-    alternate_plus_and_forward_slash = ['%2B', '%2F']
+    client_id = creds.service_account_email
+    signature = creds.sign_blob(string_to_sign)[1]
+
+    # needs to be url safe so percent-encode + and /
     encoded_signature = base64.b64encode(
-        signature, alternate_plus_and_forward_slash)
+        signature).replace('+', '%2B').replace('/', '%2F')
 
     final_url = (
-        string_to_sign
+        'https://storage.googleapis.com/'
+        + path_to_resource
         + '?GoogleAccessId=' + client_id
-        + '&Expires=' + expires
+        + '&Expires=' + str(expires)
         + '&Signature=' + encoded_signature
     )
 
@@ -141,18 +149,19 @@ def get_signed_url(
 
 def _get_string_to_sign(
         path_to_resource, http_verb, expires,
-        extension_headers=None, content_type='text/plain', md5_value=''):
+        extension_headers=None, content_type='', md5_value=''):
+    path_to_resource = path_to_resource.strip('/')
     extension_headers = extension_headers or []
     string_to_sign = (
-        http_verb + '\n' +
-        md5_value + '\n' +
-        content_type + '\n' +
-        expires + '\n'
+        str(http_verb) + '\n' +
+        str(md5_value) + '\n' +
+        str(content_type) + '\n' +
+        str(expires) + '\n'
     )
 
     for ext_header in extension_headers:
-        string_to_sign += ext_header + '\n'
+        string_to_sign += str(ext_header) + '\n'
 
-    string_to_sign += path_to_resource
+    string_to_sign += '/' + str(path_to_resource)
 
     return string_to_sign

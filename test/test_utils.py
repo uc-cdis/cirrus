@@ -1,5 +1,3 @@
-import pytest
-
 # Python 2 and 3 compatible
 try:
     from unittest.mock import MagicMock
@@ -39,5 +37,25 @@ def test_get_string_to_sign():
         '1388534400\n'
         'x-goog-encryption-algorithm:AES256\n'
         'x-goog-meta-foo:bar,baz\n'
+        '/bucket/objectname'
+    )
+
+
+def test_get_string_to_sign_no_optional_params():
+    http_verb = 'GET'
+    expires = '1388534400'
+    resource_path = '/bucket/objectname'
+
+    result = _get_string_to_sign(
+        path_to_resource=resource_path,
+        http_verb=http_verb,
+        expires=expires,
+    )
+
+    assert result == (
+        'GET\n'
+        '\n'
+        '\n'
+        '1388534400\n'
         '/bucket/objectname'
     )
