@@ -9,8 +9,10 @@ from datetime import datetime
 import re
 
 # 3rd Party libs
-import google.auth
 from google.auth.transport.requests import AuthorizedSession
+from google.oauth2.service_account import (
+    Credentials as ServiceAccountCredentials
+)
 from google.cloud import storage
 
 try:
@@ -68,6 +70,9 @@ class GoogleCloudManager(CloudManager):
         )
 
     def __enter__(self):
+        credentials = ServiceAccountCredentials.from_service_account_file(
+            config.GOOGLE_APPLICATION_CREDENTIALS)
+
         """
         Set up sessions and services to communicate through Google's API's.
         Called automatically when using Python's `with {{SomeObjectInstance}} as {{name}}:`
@@ -82,16 +87,17 @@ class GoogleCloudManager(CloudManager):
 
         # Setup client for Google Cloud Storage
         # Using Google's recommended Google Cloud Client Library for Python
-        # NOTE: This library handles all the auth itself
-        self._storage_client = storage.Client(self.project_id)
+        # NOTE: This library requires using google.oauth2 for creds
+        self._storage_client = storage.Client(
+            self.project_id, credentials=credentials)
 
         # Finally set up a generic authorized session where arbitrary
         # requests can be made to Google API(s)
         scopes = ["https://www.googleapis.com/auth/cloud-platform"]
         scopes.extend(admin_service.SCOPES)
 
-        credentials, _ = google.auth.default(scopes=scopes)
-        self._authed_session = AuthorizedSession(credentials)
+        self._authed_session = AuthorizedSession(
+            credentials.with_scopes(scopes))
 
         return self
 
