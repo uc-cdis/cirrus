@@ -3,7 +3,7 @@ import base64
 
 from oauth2client.service_account import ServiceAccountCredentials
 
-from cirrus.config import GOOGLE_APPLICATION_CREDENTIALS
+from cirrus.config import config
 from cirrus.google_cloud.errors import GoogleNamingError
 
 
@@ -92,7 +92,7 @@ def get_valid_service_account_id_for_client(client_id, user_id):
 
 def get_default_service_account_credentials():
     return ServiceAccountCredentials.from_json_keyfile_name(
-        GOOGLE_APPLICATION_CREDENTIALS
+        config.GOOGLE_APPLICATION_CREDENTIALS
     )
 
 
