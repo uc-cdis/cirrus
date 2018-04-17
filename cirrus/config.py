@@ -75,5 +75,4 @@ class Config(object):
             self.configs.get('GOOGLE_API_KEY', '')).strip('\'')
 
 
-
 config = Config()
