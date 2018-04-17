@@ -18,12 +18,7 @@ try:
 except ImportError:
     from urlparse import urljoin
 
-# Configuration for connecting to Google APIs
-from cirrus.config import GOOGLE_API_KEY
-from cirrus.config import GOOGLE_ADMIN_EMAIL
-from cirrus.config import GOOGLE_IDENTITY_DOMAIN
-from cirrus.config import GOOGLE_PROJECT_ID
-from cirrus.config import SERVICE_KEY_EXPIRATION_IN_DAYS
+from cirrus.config import config
 
 from cirrus.core import CloudManager
 from cirrus.google_cloud.iam import GooglePolicy
@@ -66,7 +61,7 @@ class GoogleCloudManager(CloudManager):
         if project_id is not None:
             self.project_id = project_id
         else:
-            self.project_id = GOOGLE_PROJECT_ID
+            self.project_id = config.GOOGLE_PROJECT_ID
         self._authed_session = False
         self._service_account_email_domain = (
             self.project_id + ".iam.gserviceaccount.com"
@@ -344,6 +339,17 @@ class GoogleCloudManager(CloudManager):
         buckets = list(self._storage_client.list_buckets())
         return buckets
 
+    def create_bucket(self, name):
+        """
+        Create a bucket for the project
+        Returns:
+            bucket(google.cloud.storage.bucket.Bucket): Google Cloud Bucket
+        """
+        if not self._authed_session:
+            raise GoogleAuthError()
+
+        return self._storage_client.create_bucket(name)
+
     def get_service_account(self, account):
         """
         GET a service account within the project with the provided account ID.
@@ -463,7 +469,7 @@ class GoogleCloudManager(CloudManager):
             # need to give add the admin account permission to create keys for
             # this new service account
             role = GooglePolicyRole(name="iam.serviceAccountKeyAdmin")
-            member = GooglePolicyMember(email_id=GOOGLE_ADMIN_EMAIL,
+            member = GooglePolicyMember(email_id=config.GOOGLE_ADMIN_EMAIL,
                                         member_type=GooglePolicyMember.SERVICE_ACCOUNT)
             binding = GooglePolicyBinding(role=role, members=[member])
             new_policy = GooglePolicy(bindings=[binding])
@@ -631,7 +637,7 @@ class GoogleCloudManager(CloudManager):
         """
         keys = self.get_service_account_keys_info(account)
         for key in keys:
-            if _is_key_expired(key, SERVICE_KEY_EXPIRATION_IN_DAYS):
+            if _is_key_expired(key, config.SERVICE_KEY_EXPIRATION_IN_DAYS):
                 self.delete_service_account_key(account, key["name"])
 
     def get_service_account_policy(self, account, resource):
@@ -775,7 +781,7 @@ class GoogleCloudManager(CloudManager):
         all_groups = []
         response = (
             self._admin_service.groups()
-            .list(domain=GOOGLE_IDENTITY_DOMAIN).execute()
+            .list(domain=config.GOOGLE_IDENTITY_DOMAIN).execute()
         )
         all_groups.extend(response["groups"])
 
@@ -784,7 +790,7 @@ class GoogleCloudManager(CloudManager):
                 response = (
                     self._admin_service.groups()
                     .list(pageToken=response["nextPageToken"],
-                          domain=GOOGLE_IDENTITY_DOMAIN).execute()
+                          domain=config.GOOGLE_IDENTITY_DOMAIN).execute()
                 )
                 all_groups.extend(response["groups"])
 
@@ -1041,7 +1047,7 @@ class GoogleCloudManager(CloudManager):
 def _get_google_api_url(relative_path, root_api_url):
     """
     Return the url for a Gooel API given the root url, relative path.
-    Add the GOOGLE_API_KEY from the environment to the request.
+    Add the config.GOOGLE_API_KEY from the environment to the request.
 
     Args:
         root_api_url (str): root Google API url
@@ -1051,7 +1057,7 @@ def _get_google_api_url(relative_path, root_api_url):
         str: url with API key
     """
     api_url = urljoin(root_api_url, relative_path.strip("/"))
-    api_url += "?key=" + GOOGLE_API_KEY
+    api_url += "?key=" + config.GOOGLE_API_KEY
     return api_url
 
 
