@@ -667,6 +667,38 @@ def test_add_member_to_group(test_cloud_manager):
     )
 
 
+def test_remove_member_from_group(test_cloud_manager):
+    """
+    Test removing member from group calls google API with provided info and
+    that response is returned
+    """
+    # Setup #
+    new_member_email = "test-email@test-domain.com"
+    group_id = "abc"
+    mock_config = {
+        "members.return_value.delete.return_value.execute.return_value": {}
+    }
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
+
+    # Call #
+    response = test_cloud_manager.remove_member_from_group(
+        member_email=new_member_email, group_id=group_id)
+
+    # Test #
+    assert not response
+
+    # check if group id and email are somewhere in the args to delete
+    args, kwargs = test_cloud_manager._admin_service.members.return_value.delete.call_args
+    assert (
+        any(new_member_email in str(arg) for arg in args) or
+        any(new_member_email in str(kwarg) for kwarg in kwargs.values())
+    )
+    assert (
+        any(group_id in str(arg) for arg in args) or
+        any(group_id in str(kwarg) for kwarg in kwargs.values())
+    )
+
+
 def test_get_primary_service_account(test_cloud_manager):
     """
     Test getting the primary account in a group.
