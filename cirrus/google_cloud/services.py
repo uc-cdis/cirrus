@@ -7,9 +7,7 @@ from googleapiclient.discovery import build
 from httplib2 import Http
 from oauth2client.service_account import ServiceAccountCredentials
 
-from cirrus.config import GOOGLE_APPLICATION_CREDENTIALS
-from cirrus.config import GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL
-from cirrus.config import GOOGLE_API_KEY
+from cirrus.config import config
 
 
 class GoogleService(object):
@@ -36,7 +34,7 @@ class GoogleService(object):
 
         if not credentials:
             credentials = ServiceAccountCredentials.from_json_keyfile_name(
-                GOOGLE_APPLICATION_CREDENTIALS, scopes=scopes
+                config.GOOGLE_APPLICATION_CREDENTIALS, scopes=scopes
             )
 
         self.credentials = credentials
@@ -70,7 +68,7 @@ class GoogleService(object):
         http_auth = self.credentials.authorize(Http())
 
         return build(self.service_name, self.version,
-                     http=http_auth, developerKey=GOOGLE_API_KEY)
+                     http=http_auth, developerKey=config.GOOGLE_API_KEY)
 
 
 class GoogleAdminService(GoogleService):
@@ -98,4 +96,4 @@ class GoogleAdminService(GoogleService):
             "directory_v1",
             self.SCOPES
         )
-        self.use_delegated_credentials(GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL)
+        self.use_delegated_credentials(config.GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL)
