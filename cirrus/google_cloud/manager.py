@@ -13,6 +13,7 @@ from google.oauth2.service_account import (
     Credentials as ServiceAccountCredentials
 )
 from google.cloud import storage
+from google.cloud.iam import Policy
 
 try:
     from urllib.parse import urljoin
@@ -36,6 +37,11 @@ from cirrus.google_cloud.utils import get_default_service_account_credentials
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
+
+GOOGLE_STORAGE_CLASSES = [
+    "MULTI_REGIONAL", "REGIONAL", "NEARLINE", "COLDLINE", "STANDARD",
+    "DURABLE_REDUCED_AVAILABILITY"
+]
 
 
 class GoogleCloudManager(CloudManager):
@@ -337,54 +343,93 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
-    def get_bucket(self, name):
+    def create_bucket(
+            self, name, storage_class=None, public=False, requester_pays=False,
+            project=None, access_logs_bucket=None):
         """
-        Get a google bucket
+        Create a Google Storage bucket.
 
         Returns:
             google.cloud.storage.bucket.Bucket: Google Cloud Bucket
-        """
-        if not self._authed_session:
-            raise GoogleAuthError()
-
-        bucket = self._storage_client.get_bucket(name)
-        return bucket
-
-    def get_buckets(self):
-        """
-        Return all the buckets for the project
-
-        Returns:
-            List(google.cloud.storage.bucket.Bucket): Google Cloud Buckets
-        """
-        if not self._authed_session:
-            raise GoogleAuthError()
-
-        buckets = list(self._storage_client.list_buckets())
-        return buckets
-
-    def create_bucket(self, name, requester_pays=False, project=None):
-        """
-        Create a bucket for the project
-
-        Returns:
-            bucket(google.cloud.storage.bucket.Bucket): Google Cloud Bucket
 
         Args:
-            name (TYPE): Description
+            name (str): Globally unique name for new Google Bucket
+            storage_class (str, optional): one of GOOGLE_STORAGE_CLASSES
+            public (bool, optional): Whether or not all data in bucket should
+                be open to the public (will only allow access by authN'd users
+                to support access logs)
             requester_pays (bool, optional): Whether requester pays for API
                 requests for this bucket and its blobs.
-            project (None, optional): the project under which the bucket is to
-                be created. If not passed, uses the project set on the client
+            project (str, optional): the project to bill to (only used
+                if requester_pays is False). If not provided, will bill
+                to the owner of the bucket
+            access_logs_bucket (str, optional): Google bucket name to store
+                access logs for this newly created bucket
 
-        Returns:
-            google.cloud.storage.bucket.Bucket: Google Cloud Bucket
+        Raises:
+            GoogleAuthError: Description
+            ValueError: Description
         """
         if not self._authed_session:
             raise GoogleAuthError()
 
-        return self._storage_client.create_bucket(
-            name, requester_pays=requester_pays, project=project)
+        if storage_class not in GOOGLE_STORAGE_CLASSES:
+            raise ValueError(
+                'storage_class {} not one of {}. Did not create bucket...'
+                .format(storage_class, GOOGLE_STORAGE_CLASSES))
+
+        bucket = storage.bucket.Bucket(client=self._storage_client, name=name)
+        bucket.requester_pays = requester_pays
+        if storage_class:
+            bucket.storage_class = storage_class
+
+        # bill to the provided project if requestor pays is off
+        # if no project is provided, this defaults to the owner of the bucket
+        if not requester_pays and project:
+            bucket.user_project = project
+
+        bucket.create()
+
+        if public:
+            # update bucket iam policy with allAuthN users having read access
+            policy = Policy()
+            role = GooglePolicyRole('roles/storage.objectViewer')
+            policy[role] = ['allAuthenticatedUsers']
+            bucket.set_iam_policy(policy)
+
+        if access_logs_bucket:
+            bucket.enable_logging(access_logs_bucket)
+
+        bucket.update()
+
+    def give_group_access_to_bucket(self, group_email, bucket_name):
+        """
+        Give a group read access to a bucket.
+
+        Specifically grants the group email with storage.objectViewer role.
+
+        Args:
+            group_email (str): Email for the Google group to provide access to
+            bucket_name (str): Bucket to provide read access to
+
+        Raises:
+            ValueError: No bucket found with given name
+        """
+        bucket = self._storage_client.get_bucket(bucket_name)
+        if not bucket:
+            raise ValueError('No bucket with name: {}'.format(bucket_name))
+
+        # update bucket iam policy with group having read access
+        policy = bucket.get_iam_policy()
+
+        member = GooglePolicyMember(
+            member_type=GooglePolicyMember.GROUP, email_id=group_email)
+        role = GooglePolicyRole('roles/storage.objectViewer')
+        policy[role] = [str(member)]
+
+        bucket.set_iam_policy(policy)
+
+        bucket.update()
 
     def get_service_account(self, account):
         """
