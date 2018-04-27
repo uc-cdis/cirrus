@@ -6,7 +6,6 @@ Google Cloud Management
 import base64
 import json
 from datetime import datetime
-import re
 
 # 3rd Party libs
 from google.auth.transport.requests import AuthorizedSession
@@ -32,6 +31,7 @@ from cirrus.google_cloud.services import GoogleAdminService
 from cirrus.google_cloud.errors import GoogleAuthError
 
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
+from cirrus.google_cloud.utils import get_default_service_account_credentials
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
@@ -43,24 +43,28 @@ class GoogleCloudManager(CloudManager):
     Manage a Google Cloud Project (users, groups, resources, and policies)
 
     Attributes:
+        credentials (google.oauth2.service_account.ServiceAccountCredentials):
+            Service account credentials used to connect to Google services
         project_id (str): Google Project ID to manage
         _authed_session (bool): Whether or not the current session is authed
             (this is set internally)
-        _admin_service (googleapiclient.discovery.Resource): Admin Directory API service for API access
-            (used internally)
-        _storage_client (google.cloud.storage.Client): Access to Storage API through this client
-            (used internally)
+        _admin_service (googleapiclient.discovery.Resource): Admin Directory
+            API service for API access (used internally)
+        _storage_client (google.cloud.storage.Client): Access to Storage API
+            through this client (used internally)
     """
 
-    def __init__(self, project_id=None):
+    def __init__(self, project_id=None, creds=None):
         """
         Construct an instance of the Manager for the given Google project ID.
 
         Args:
             project_id (str): Google Project ID
+            creds (str, optional): PATH to JSON credentials file for a
+                service account to connect to Google's services
         """
         super(GoogleCloudManager, self).__init__()
-        if project_id is not None:
+        if project_id:
             self.project_id = project_id
         else:
             self.project_id = config.GOOGLE_PROJECT_ID
@@ -68,11 +72,12 @@ class GoogleCloudManager(CloudManager):
         self._service_account_email_domain = (
             self.project_id + ".iam.gserviceaccount.com"
         )
+        creds = creds or config.GOOGLE_APPLICATION_CREDENTIALS
+        self.credentials = (
+            ServiceAccountCredentials.from_service_account_file(creds)
+        )
 
     def __enter__(self):
-        credentials = ServiceAccountCredentials.from_service_account_file(
-            config.GOOGLE_APPLICATION_CREDENTIALS)
-
         """
         Set up sessions and services to communicate through Google's API's.
         Called automatically when using Python's `with {{SomeObjectInstance}} as {{name}}:`
@@ -89,7 +94,7 @@ class GoogleCloudManager(CloudManager):
         # Using Google's recommended Google Cloud Client Library for Python
         # NOTE: This library requires using google.oauth2 for creds
         self._storage_client = storage.Client(
-            self.project_id, credentials=credentials)
+            self.project_id, credentials=self.credentials)
 
         # Finally set up a generic authorized session where arbitrary
         # requests can be made to Google API(s)
@@ -97,7 +102,7 @@ class GoogleCloudManager(CloudManager):
         scopes.extend(admin_service.SCOPES)
 
         self._authed_session = AuthorizedSession(
-            credentials.with_scopes(scopes))
+            self.credentials.with_scopes(scopes))
 
         return self
 
@@ -332,6 +337,19 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
+    def get_bucket(self, name):
+        """
+        Get a google bucket
+
+        Returns:
+            google.cloud.storage.bucket.Bucket: Google Cloud Bucket
+        """
+        if not self._authed_session:
+            raise GoogleAuthError()
+
+        bucket = self._storage_client.get_bucket(name)
+        return bucket
+
     def get_buckets(self):
         """
         Return all the buckets for the project
@@ -345,16 +363,28 @@ class GoogleCloudManager(CloudManager):
         buckets = list(self._storage_client.list_buckets())
         return buckets
 
-    def create_bucket(self, name):
+    def create_bucket(self, name, requester_pays=False, project=None):
         """
         Create a bucket for the project
+
         Returns:
             bucket(google.cloud.storage.bucket.Bucket): Google Cloud Bucket
+
+        Args:
+            name (TYPE): Description
+            requester_pays (bool, optional): Whether requester pays for API
+                requests for this bucket and its blobs.
+            project (None, optional): the project under which the bucket is to
+                be created. If not passed, uses the project set on the client
+
+        Returns:
+            google.cloud.storage.bucket.Bucket: Google Cloud Bucket
         """
         if not self._authed_session:
             raise GoogleAuthError()
 
-        return self._storage_client.create_bucket(name)
+        return self._storage_client.create_bucket(
+            name, requester_pays=requester_pays, project=project)
 
     def get_service_account(self, account):
         """
@@ -841,9 +871,10 @@ class GoogleCloudManager(CloudManager):
             raise GoogleAuthError()
 
         if email is None:
-            email = name.replace(" ", "-").lower() + "@planx-pla.net"
-
-        # api_url = _get_google_api_url("groups", GOOGLE_DIRECTORY_API_URL)
+            email = (
+                name.replace(" ", "-").lower()
+                + "@" + config.GOOGLE_IDENTITY_DOMAIN
+            )
 
         group = {
             "email": email,
