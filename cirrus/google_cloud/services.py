@@ -4,7 +4,6 @@ Google services for interacting with APIs.
 See README for details on different ways to interact with Google's API(s)
 """
 from googleapiclient.discovery import build
-from httplib2 import Http
 from cirrus.config import config
 
 
@@ -55,10 +54,9 @@ class GoogleService(object):
             googleapiclient.discovery.Resource: Google Resource to interact with
             API
         """
-        http_auth = self.creds.authorize(Http())
-
-        return build(self.service_name, self.version,
-                     http=http_auth, developerKey=config.GOOGLE_API_KEY)
+        return build(
+            self.service_name, self.version, credentials=self.creds,
+            developerKey=config.GOOGLE_API_KEY)
 
 
 class GoogleAdminService(GoogleService):
