@@ -373,7 +373,7 @@ class GoogleCloudManager(CloudManager):
         if not self._authed_session:
             raise GoogleAuthError()
 
-        if storage_class not in GOOGLE_STORAGE_CLASSES:
+        if storage_class and storage_class not in GOOGLE_STORAGE_CLASSES:
             raise ValueError(
                 'storage_class {} not one of {}. Did not create bucket...'
                 .format(storage_class, GOOGLE_STORAGE_CLASSES))
