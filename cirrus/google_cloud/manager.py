@@ -96,7 +96,7 @@ class GoogleCloudManager(CloudManager):
             GoogleCloudManager: instance with added/modified fields
         """
         # Setup for admin directory service for group management
-        admin_service = GoogleAdminService()
+        admin_service = GoogleAdminService(creds=self.credentials)
         self._admin_service = admin_service.build_service()
 
         # Setup client for Google Cloud Storage

@@ -14,7 +14,7 @@ class GoogleService(object):
     """
     Generic Google servicing using Method 1 (Google's google-api-python-client)
     """
-    def __init__(self, service_name, version, scopes, credentials=None):
+    def __init__(self, service_name, version, scopes, creds=None):
         """
         Create an object that can be used to build a service to interact
         with Google's APIs. This holds the necessary information and
@@ -32,12 +32,14 @@ class GoogleService(object):
         self.version = version
         self.scopes = scopes
 
-        if not credentials:
+        if not creds:
             credentials = ServiceAccountCredentials.from_json_keyfile_name(
                 config.GOOGLE_APPLICATION_CREDENTIALS, scopes=scopes
             )
+        else:
+            credentials = creds.with_scopes(scopes)
 
-        self.credentials = credentials
+        self.creds = credentials
 
     def use_delegated_credentials(self, user_to_become):
         """
@@ -87,13 +89,14 @@ class GoogleAdminService(GoogleService):
         "https://www.googleapis.com/auth/admin.directory.user.security"
     ]
 
-    def __init__(self):
+    def __init__(self, creds):
         """
         Create the Google Admin Directory Service
         """
         super(GoogleAdminService, self).__init__(
             "admin",
             "directory_v1",
-            self.SCOPES
+            self.SCOPES,
+            credentials=creds
         )
         self.use_delegated_credentials(config.GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL)
