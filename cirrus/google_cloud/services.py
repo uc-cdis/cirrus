@@ -5,8 +5,6 @@ See README for details on different ways to interact with Google's API(s)
 """
 from googleapiclient.discovery import build
 from httplib2 import Http
-from oauth2client.service_account import ServiceAccountCredentials
-
 from cirrus.config import config
 
 
@@ -14,7 +12,7 @@ class GoogleService(object):
     """
     Generic Google servicing using Method 1 (Google's google-api-python-client)
     """
-    def __init__(self, service_name, version, scopes, creds=None):
+    def __init__(self, service_name, version, scopes, creds):
         """
         Create an object that can be used to build a service to interact
         with Google's APIs. This holds the necessary information and
@@ -24,22 +22,12 @@ class GoogleService(object):
             service_name (str): Google service name
             version (str): Google service version
             scopes (List(str)): List of permission scopes to use when accessing API
-            credentials (oauth2client.client.GoogleCredentials, optional):
-                Credentials to access Google API. If not provided, will use
-                the default service account credentials.
+            creds (google.oauth2.service_account.Credentials): SA creds
         """
         self.service_name = service_name
         self.version = version
         self.scopes = scopes
-
-        if not creds:
-            credentials = ServiceAccountCredentials.from_json_keyfile_name(
-                config.GOOGLE_APPLICATION_CREDENTIALS, scopes=scopes
-            )
-        else:
-            credentials = creds.with_scopes(scopes)
-
-        self.creds = credentials
+        self.creds = creds.with_scopes(scopes)
 
     def use_delegated_credentials(self, user_to_become):
         """
@@ -51,7 +39,7 @@ class GoogleService(object):
             user_to_become (str): Email of user to become
         """
         delegated_credentials = (
-            self.creds.create_delegated(user_to_become)
+            self.creds.with_subject(user_to_become)
         )
         self.creds = delegated_credentials
 

@@ -32,7 +32,6 @@ from cirrus.google_cloud.services import GoogleAdminService
 from cirrus.google_cloud.errors import GoogleAuthError
 
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
-from cirrus.google_cloud.utils import get_default_service_account_credentials
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
