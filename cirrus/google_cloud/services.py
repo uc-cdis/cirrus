@@ -55,8 +55,7 @@ class GoogleService(object):
             API
         """
         return build(
-            self.service_name, self.version, credentials=self.creds,
-            developerKey=config.GOOGLE_API_KEY)
+            self.service_name, self.version, credentials=self.creds)
 
 
 class GoogleAdminService(GoogleService):
