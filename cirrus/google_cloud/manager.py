@@ -378,15 +378,13 @@ class GoogleCloudManager(CloudManager):
                 'storage_class {} not one of {}. Did not create bucket...'
                 .format(storage_class, GOOGLE_STORAGE_CLASSES))
 
-        bucket = storage.bucket.Bucket(client=self._storage_client, name=name)
+        bucket = storage.bucket.Bucket(
+            client=self._storage_client, name=name, user_project=project)
+
         bucket.requester_pays = requester_pays
+
         if storage_class:
             bucket.storage_class = storage_class
-
-        # bill to the provided project if requestor pays is off
-        # if no project is provided, this defaults to the owner of the bucket
-        if not requester_pays and project:
-            bucket.user_project = project
 
         bucket.create()
 
