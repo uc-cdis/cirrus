@@ -363,9 +363,10 @@ class GoogleCloudManager(CloudManager):
                 to support access logs)
             requester_pays (bool, optional): Whether requester pays for API
                 requests for this bucket and its blobs.
-            project (str, optional): the project to bill to (only used
-                if requester_pays is False). If not provided, will bill
-                to the owner of the bucket
+            project (str, optional): FIXME not currently used since Google's
+                Python API won't accept it... their docs are out of date and
+                new versions of the code default to client.project, which should
+                presumably be fine.
             access_logs_bucket (str, optional): Google bucket name to store
                 access logs for this newly created bucket
 
@@ -384,12 +385,13 @@ class GoogleCloudManager(CloudManager):
         bucket = storage.bucket.Bucket(
             client=self._storage_client, name=name)
 
-        bucket.requester_pays = requester_pays
+        if requester_pays is not None:
+            bucket.requester_pays = requester_pays
 
         if storage_class:
             bucket.storage_class = storage_class
 
-        bucket.create(project=project)
+        bucket.create()
 
         if public:
             # update bucket iam policy with allAuthN users having read access
