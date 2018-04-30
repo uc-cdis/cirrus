@@ -51,9 +51,9 @@ class GoogleService(object):
             user_to_become (str): Email of user to become
         """
         delegated_credentials = (
-            self.credentials.create_delegated(user_to_become)
+            self.creds.create_delegated(user_to_become)
         )
-        self.credentials = delegated_credentials
+        self.creds = delegated_credentials
 
     def build_service(self):
         """
@@ -67,7 +67,7 @@ class GoogleService(object):
             googleapiclient.discovery.Resource: Google Resource to interact with
             API
         """
-        http_auth = self.credentials.authorize(Http())
+        http_auth = self.creds.authorize(Http())
 
         return build(self.service_name, self.version,
                      http=http_auth, developerKey=config.GOOGLE_API_KEY)
