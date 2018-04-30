@@ -97,6 +97,6 @@ class GoogleAdminService(GoogleService):
             "admin",
             "directory_v1",
             self.SCOPES,
-            credentials=creds
+            creds=creds
         )
         self.use_delegated_credentials(config.GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL)
