@@ -39,8 +39,11 @@ GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
 
 GOOGLE_STORAGE_CLASSES = [
-    "MULTI_REGIONAL", "REGIONAL", "NEARLINE", "COLDLINE", "STANDARD",
-    "DURABLE_REDUCED_AVAILABILITY"
+    'MULTI_REGIONAL',
+    'REGIONAL',
+    'NEARLINE',
+    'COLDLINE',
+    'STANDARD'  # alias for MULTI_REGIONAL/REGIONAL, based on location
 ]
 
 
@@ -379,14 +382,14 @@ class GoogleCloudManager(CloudManager):
                 .format(storage_class, GOOGLE_STORAGE_CLASSES))
 
         bucket = storage.bucket.Bucket(
-            client=self._storage_client, name=name, user_project=project)
+            client=self._storage_client, name=name)
 
         bucket.requester_pays = requester_pays
 
         if storage_class:
             bucket.storage_class = storage_class
 
-        bucket.create()
+        bucket.create(project=project)
 
         if public:
             # update bucket iam policy with allAuthN users having read access
