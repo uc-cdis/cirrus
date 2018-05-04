@@ -14,7 +14,7 @@ from google.oauth2.service_account import (
 )
 from google.cloud import storage
 from google.cloud.iam import Policy
-
+from google.cloud import exceptions as google_exceptions
 try:
     from urllib.parse import urljoin
 except ImportError:
@@ -396,7 +396,7 @@ class GoogleCloudManager(CloudManager):
             # update bucket iam policy with allAuthN users having read access
             policy = Policy()
             role = GooglePolicyRole('roles/storage.objectViewer')
-            policy[role] = ['allAuthenticatedUsers']
+            policy[str(role)] = ['allAuthenticatedUsers']
             bucket.set_iam_policy(policy)
 
         if access_logs_bucket:
@@ -417,8 +417,9 @@ class GoogleCloudManager(CloudManager):
         Raises:
             ValueError: No bucket found with given name
         """
-        bucket = self._storage_client.get_bucket(bucket_name)
-        if not bucket:
+        try:
+            bucket = self._storage_client.get_bucket(bucket_name)
+        except google_exceptions.NotFound:
             raise ValueError('No bucket with name: {}'.format(bucket_name))
 
         # update bucket iam policy with group having read access
@@ -427,7 +428,7 @@ class GoogleCloudManager(CloudManager):
         member = GooglePolicyMember(
             member_type=GooglePolicyMember.GROUP, email_id=group_email)
         role = GooglePolicyRole('roles/storage.objectViewer')
-        policy[role] = [str(member)]
+        policy[str(role)] = [str(member)]
 
         bucket.set_iam_policy(policy)
 
