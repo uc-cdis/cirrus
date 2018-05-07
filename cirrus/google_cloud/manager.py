@@ -394,7 +394,7 @@ class GoogleCloudManager(CloudManager):
 
         if public:
             # update bucket iam policy with allAuthN users having read access
-            policy = Policy()
+            policy = bucket.get_iam_policy()
             role = GooglePolicyRole('roles/storage.objectViewer')
             policy[str(role)] = ['allAuthenticatedUsers']
             bucket.set_iam_policy(policy)
