@@ -1261,7 +1261,10 @@ def _get_proxy_group_name_for_user(user_id, username):
     # Truncate username so full name is at most 60 characters.
     full_username_length = len(username) + len(user_id) + 1
     chars_to_drop = full_username_length - 60
-    truncated_username = username[:-chars_to_drop]
+    if chars_to_drop > 0:
+        truncated_username = username[:-chars_to_drop]
+    else:
+        truncated_username = username
     name = truncated_username + '-' + user_id
 
     return name
