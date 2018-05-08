@@ -542,8 +542,8 @@ class GoogleCloudManager(CloudManager):
             "accountId": str(account_id)
         }
 
-        response = self._authed_request("POST", api_url,
-                                        data=json.dumps(new_service_account))
+        response = self._authed_request(
+            "POST", api_url, data=json.dumps(new_service_account))
 
         try:
             new_service_account_id = json.loads(response.text)["uniqueId"]
@@ -558,12 +558,14 @@ class GoogleCloudManager(CloudManager):
             binding = GooglePolicyBinding(role=role, members=[member])
             new_policy = GooglePolicy(bindings=[binding])
 
-            self.set_iam_policy(resource=new_service_account_resource,
-                                new_policy=new_policy)
+            self.set_iam_policy(
+                resource=new_service_account_resource, new_policy=new_policy)
         except Exception as exc:
-            raise Exception("Error setting service account policy." +
-                            "\nError: " +
-                            str(exc))
+            raise Exception(
+                "Error setting service account policy."
+                "\nReponse: " + str(response) +
+                "\nError: " + str(exc)
+            )
 
         return response.json()
 
