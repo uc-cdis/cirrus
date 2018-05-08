@@ -570,7 +570,7 @@ class GoogleCloudManager(CloudManager):
         except Exception as exc:
             raise Exception(
                 "Error setting service account policy."
-                "\nReponse: " + str(response) +
+                "\nReponse: " + str(response.__dict__) +
                 "\nError: " + str(exc)
             )
 
