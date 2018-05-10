@@ -9,10 +9,12 @@ from datetime import datetime
 import re
 
 # 3rd Party libs
-import google.auth
 from google.auth.transport.requests import AuthorizedSession
+from google.oauth2.service_account import (
+    Credentials as ServiceAccountCredentials
+)
 from google.cloud import storage
-import requests
+
 try:
     from urllib.parse import urljoin
 except ImportError:
@@ -27,11 +29,13 @@ from cirrus.google_cloud.iam import GooglePolicyRole
 from cirrus.google_cloud.iam import GooglePolicyMember
 from cirrus.google_cloud.services import GoogleAdminService
 
+from cirrus.google_cloud.errors import GoogleAuthError
+
+from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
+
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
-
-GOOGLE_SERVICE_ACCOUNT_REGEX = "[a-z][a-z\d\-]*[a-z\d]"
 
 
 class GoogleCloudManager(CloudManager):
@@ -66,6 +70,9 @@ class GoogleCloudManager(CloudManager):
         )
 
     def __enter__(self):
+        credentials = ServiceAccountCredentials.from_service_account_file(
+            config.GOOGLE_APPLICATION_CREDENTIALS)
+
         """
         Set up sessions and services to communicate through Google's API's.
         Called automatically when using Python's `with {{SomeObjectInstance}} as {{name}}:`
@@ -80,16 +87,17 @@ class GoogleCloudManager(CloudManager):
 
         # Setup client for Google Cloud Storage
         # Using Google's recommended Google Cloud Client Library for Python
-        # NOTE: This library handles all the auth itself
-        self._storage_client = storage.Client(self.project_id)
+        # NOTE: This library requires using google.oauth2 for creds
+        self._storage_client = storage.Client(
+            self.project_id, credentials=credentials)
 
         # Finally set up a generic authorized session where arbitrary
         # requests can be made to Google API(s)
         scopes = ["https://www.googleapis.com/auth/cloud-platform"]
         scopes.extend(admin_service.SCOPES)
 
-        credentials, _ = google.auth.default(scopes=scopes)
-        self._authed_session = AuthorizedSession(credentials)
+        self._authed_session = AuthorizedSession(
+            credentials.with_scopes(scopes))
 
         return self
 
@@ -1176,86 +1184,6 @@ def _get_proxy_group_name_for_user(user_id, username):
     return name
 
 
-def get_valid_service_account_id_for_user(user_id, username):
-    """
-    Return a valid service account id based on user_id and username
-    Currently Google enforces the following:
-        6-30 characters
-        Must match: [a-z][a-z\d\-]*[a-z\d]
-    Args:
-        user_id (str): User's uuid
-        username (str): user's name
-    Returns:
-        str: service account id
-    """
-    username = ''.join([
-        item for item in str(username).lower()
-        if item.isalnum() or item == '-'
-    ])
-    user_id = str(user_id).lower()
-
-    # Truncate username so full account ID is at most 30 characters.
-    full_account_id_length = len(username) + len(user_id) + 1
-    chars_to_drop = full_account_id_length - 30
-    truncated_username = username[:-chars_to_drop]
-    account_id = truncated_username + '-' + user_id
-
-    # Pad account ID to at least 6 chars long.
-    account_id += (6 - len(account_id)) * '-'
-
-    # double check it meets Google's requirements
-    google_regex = re.compile(GOOGLE_SERVICE_ACCOUNT_REGEX)
-    match = google_regex.match(account_id)
-    if not match:
-        raise GoogleNamingError(
-            "Could not get a valid service account id. "
-            "Currently Google enforces the following: "
-            "[a-z][a-z\d\-]*[a-z\d]. Could not use user_id and username to "
-            "meet those requirements.")
-
-    return account_id
-
-
-def get_valid_service_account_id_for_client(client_id, user_id):
-    """
-    Return a valid service account id based on client_id and user_id
-    Currently Google enforces the following:
-        6-30 characters
-        Must match: [a-z][a-z\d\-]*[a-z\d]
-
-    Returns:
-        str: service account id
-    """
-    client_id = ''.join([
-        item for item in str(client_id).lower()
-        if item.isalnum() or item == '-'
-    ])
-    user_id = str(user_id).lower()
-
-    google_regex = re.compile(GOOGLE_SERVICE_ACCOUNT_REGEX)
-    match = google_regex.match(client_id)
-    if match:
-        # this matching ensures client_id starts with alphabetical character
-        client_id = match.group(0)
-
-        # Truncate client_id so full account ID is at most 30 characters.
-        full_account_id_length = len(client_id) + len(user_id) + 1
-        chars_to_drop = full_account_id_length - 30
-        truncated_client_id = client_id[:-chars_to_drop]
-        account_id = truncated_client_id + '-' + user_id
-
-        # Pad account ID to at least 6 chars long.
-        account_id += (6 - len(account_id)) * '-'
-    else:
-        raise GoogleNamingError(
-            "Could not get a valid service account id from client id: {}"
-            .format(client_id) + "\nCurrently Google enforces the following: "
-            "[a-z][a-z\d\-]*[a-z\d]. Could not use client_id to "
-            "meet those requirements.")
-
-    return account_id
-
-
 def _get_user_id_from_proxy_group(proxy_group):
     """
     Return user id by analyzing proxy_group name
@@ -1280,33 +1208,3 @@ def _get_user_name_from_proxy_group(proxy_group):
         str: Username
     """
     return proxy_group.split('@')[0].split("-")[0].strip()
-
-
-class GoogleNamingError(Exception):
-
-    GOOGLE_ERROR_MESSAGE = (
-        "There was an issue with generating names or ids that are compliant "
-        "with Google's requirements."
-    )
-
-    def __init__(self, message=None, *args):
-        if not message:
-            message = GoogleAuthError.GOOGLE_ERROR_MESSAGE
-
-        super(GoogleNamingError, self).__init__(message)
-
-
-class GoogleAuthError(Exception):
-
-    GOOGLE_AUTH_ERROR_MESSAGE = (
-        "This action requires an authed session. Please use "
-        "Python's `with <Class> as <name>` syntax for a context manager "
-        "that automatically enters and exits authorized sessions using "
-        "default credentials. See cirrus's README for setup instructions."
-    )
-
-    def __init__(self, message=None, *args):
-        if not message:
-            message = GoogleAuthError.GOOGLE_AUTH_ERROR_MESSAGE
-
-        super(GoogleAuthError, self).__init__(message)

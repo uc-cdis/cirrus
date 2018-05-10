@@ -10,7 +10,7 @@ except ImportError:
 
 from cirrus import GoogleCloudManager
 from cirrus.google_cloud.manager import _get_proxy_group_name_for_user
-from cirrus.google_cloud.manager import get_valid_service_account_id_for_user
+from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 
 
 def get_test_cloud_manager():
