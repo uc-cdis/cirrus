@@ -45,7 +45,7 @@ def test_get_proxy_group_name_for_user():
     username = '.a-bcd..efg@hijkl<@$*)%amn.net'
     valid_name = _get_proxy_group_name_for_user(user_id, username)
 
-    assert valid_name == 'a-bcd.efg-12345678912345678901234567890'
+    assert valid_name == 'a-bcd.efghijklamn.net-12345678912345678901234567890'
 
 
 def test_get_service_account_valid(test_cloud_manager):

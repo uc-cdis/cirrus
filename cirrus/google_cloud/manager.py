@@ -4,35 +4,32 @@ Google Cloud Management
 
 # Builtin libs
 import base64
-import json
 from datetime import datetime
-
-# 3rd Party libs
-from google.auth.transport.requests import AuthorizedSession
-from google.oauth2.service_account import (
-    Credentials as ServiceAccountCredentials
-)
-from google.cloud import storage
-from google.cloud.iam import Policy
-from google.cloud import exceptions as google_exceptions
+import json
 
 try:
     from urllib.parse import urljoin
 except ImportError:
     from urlparse import urljoin
 
-from cirrus.config import config
+# 3rd Party libs
+from google.auth.transport.requests import AuthorizedSession
+from google.cloud import exceptions as google_exceptions
+from google.cloud import storage
+from google.oauth2.service_account import (
+    Credentials as ServiceAccountCredentials
+)
 
+from cirrus.config import config
 from cirrus.core import CloudManager
+from cirrus.google_cloud.errors import GoogleAuthError
 from cirrus.google_cloud.iam import GooglePolicy
 from cirrus.google_cloud.iam import GooglePolicyBinding
-from cirrus.google_cloud.iam import GooglePolicyRole
 from cirrus.google_cloud.iam import GooglePolicyMember
+from cirrus.google_cloud.iam import GooglePolicyRole
 from cirrus.google_cloud.services import GoogleAdminService
-
-from cirrus.google_cloud.errors import GoogleAuthError
-
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
+
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"

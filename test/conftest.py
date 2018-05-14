@@ -19,12 +19,17 @@ def get_test_cloud_manager():
     manager._authed_session = MagicMock()
     manager._admin_service = MagicMock()
     manager._storage_client = MagicMock()
+    manager.credentials = MagicMock()
     return manager
 
 
 @pytest.fixture
 def test_cloud_manager():
-    return get_test_cloud_manager()
+    patcher = patch(
+        'cirrus.google_cloud.manager.ServiceAccountCredentials.from_service_account_file')
+    patcher.start()
+    yield get_test_cloud_manager()
+    patcher.stop()
 
 
 @pytest.fixture
