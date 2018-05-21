@@ -19,6 +19,7 @@ from google.cloud import storage
 from google.oauth2.service_account import (
     Credentials as ServiceAccountCredentials
 )
+from googleapiclient.errors import HttpError
 
 from cirrus.config import config
 from cirrus.core import CloudManager
@@ -344,6 +345,10 @@ class GoogleCloudManager(CloudManager):
         response = self._authed_request("GET", api_url)
 
         return response.json()
+
+    def get_bucket_iam_policy(self, bucket_name):
+        bucket = self._storage_client.get_bucket(bucket_name)
+        return bucket.get_iam_policy()
 
     def create_bucket(
             self, name, storage_class=None, public=False, requester_pays=False,
@@ -970,10 +975,18 @@ class GoogleCloudManager(CloudManager):
             "role": "MEMBER"
         }
 
-        response = (
-            self._admin_service.members().insert(
-                groupKey=group_id, body=member_to_add).execute()
-        )
+        try:
+            response = (
+                self._admin_service.members().insert(
+                    groupKey=group_id, body=member_to_add).execute()
+            )
+        except HttpError as err:
+            if err.resp.status == 409:
+                # conflict, member already exists in group. This is fine,
+                # don't raise an error, pass back member
+                response = member_to_add
+            else:
+                raise
 
         return response
 
@@ -991,10 +1004,17 @@ class GoogleCloudManager(CloudManager):
         if not self._authed_session:
             raise GoogleAuthError()
 
-        response = (
-            self._admin_service.members().delete(
-                groupKey=group_id, memberKey=member_email).execute()
-        )
+        try:
+            response = (
+                self._admin_service.members().delete(
+                    groupKey=group_id, memberKey=member_email).execute()
+            )
+        except HttpError as err:
+            if err.resp.status == 404:
+                # not found, member isn't in group. This is fine
+                response = {}
+            else:
+                raise
 
         return response
 
