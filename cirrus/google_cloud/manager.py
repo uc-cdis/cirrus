@@ -352,7 +352,7 @@ class GoogleCloudManager(CloudManager):
 
     def create_bucket(
             self, name, storage_class=None, public=False, requester_pays=False,
-            project=None, access_logs_bucket=None):
+            access_logs_bucket=None):
         """
         Create a Google Storage bucket.
 
@@ -367,10 +367,6 @@ class GoogleCloudManager(CloudManager):
                 to support access logs)
             requester_pays (bool, optional): Whether requester pays for API
                 requests for this bucket and its blobs.
-            project (str, optional): FIXME not currently used since Google's
-                Python API won't accept it... their docs are out of date and
-                new versions of the code default to client.project, which should
-                presumably be fine.
             access_logs_bucket (str, optional): Google bucket name to store
                 access logs for this newly created bucket
 
