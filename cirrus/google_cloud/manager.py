@@ -409,31 +409,55 @@ class GoogleCloudManager(CloudManager):
 
         bucket.update()
 
-    def give_group_access_to_bucket(self, group_email, bucket_name):
+    def give_group_access_to_bucket(
+            self, group_email, bucket_name, access=None):
         """
-        Give a group read access to a bucket.
+        Give a group access to a bucket.
 
         Specifically grants the group email with storage.objectViewer role.
 
         Args:
             group_email (str): Email for the Google group to provide access to
-            bucket_name (str): Bucket to provide read access to
+            bucket_name (str): Bucket to provide access to
 
         Raises:
             ValueError: No bucket found with given name
         """
+        access = access or ['read']
         try:
             bucket = self._storage_client.get_bucket(bucket_name)
         except google_exceptions.NotFound:
             raise ValueError('No bucket with name: {}'.format(bucket_name))
 
-        # update bucket iam policy with group having read access
+        # update bucket iam policy with group having access
         policy = bucket.get_iam_policy()
 
         member = GooglePolicyMember(
             member_type=GooglePolicyMember.GROUP, email_id=group_email)
-        role = GooglePolicyRole('roles/storage.objectViewer')
-        policy[str(role)] = [str(member)]
+
+        roles = []
+        for access_level in access:
+            if access_level == 'admin':
+                roles.append(GooglePolicyRole('roles/storage.admin'))
+                break
+            elif access_level == 'read':
+                roles.append(GooglePolicyRole('roles/storage.objectViewer'))
+            elif access_level == 'write':
+                roles.append(GooglePolicyRole('roles/storage.objectCreator'))
+            else:
+                raise Exception(
+                    'Unable to grant {access_level} access to {group_email} '
+                    'on bucket {bucket_name}. cirrus '
+                    'does not support the access level {access_level}.'
+                    .format(
+                            access_level=access_level,
+                            group_email=group_email,
+                            bucket_name=bucket_name
+                        )
+                    )
+
+        for role in roles:
+            policy[str(role)] = [str(member)]
 
         bucket.set_iam_policy(policy)
 
