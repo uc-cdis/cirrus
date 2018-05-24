@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='cirrus',
-    version='0.0.5',
+    version='0.0.6',
     install_requires=[
         "oauth2client<4.0dev,>=2.0.0",
         "google-cloud-storage>=1.10.0",
