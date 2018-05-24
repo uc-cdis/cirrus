@@ -4,38 +4,45 @@ Google Cloud Management
 
 # Builtin libs
 import base64
-import json
 from datetime import datetime
-import re
-
-# 3rd Party libs
-from google.auth.transport.requests import AuthorizedSession
-from google.oauth2.service_account import (
-    Credentials as ServiceAccountCredentials
-)
-from google.cloud import storage
+import json
 
 try:
     from urllib.parse import urljoin
 except ImportError:
     from urlparse import urljoin
 
-from cirrus.config import config
+# 3rd Party libs
+from google.auth.transport.requests import AuthorizedSession
+from google.cloud import exceptions as google_exceptions
+from google.cloud import storage
+from google.oauth2.service_account import (
+    Credentials as ServiceAccountCredentials
+)
+from googleapiclient.errors import HttpError
 
+from cirrus.config import config
 from cirrus.core import CloudManager
+from cirrus.google_cloud.errors import GoogleAuthError
 from cirrus.google_cloud.iam import GooglePolicy
 from cirrus.google_cloud.iam import GooglePolicyBinding
-from cirrus.google_cloud.iam import GooglePolicyRole
 from cirrus.google_cloud.iam import GooglePolicyMember
+from cirrus.google_cloud.iam import GooglePolicyRole
 from cirrus.google_cloud.services import GoogleAdminService
-
-from cirrus.google_cloud.errors import GoogleAuthError
-
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
+
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
+
+GOOGLE_STORAGE_CLASSES = [
+    'MULTI_REGIONAL',
+    'REGIONAL',
+    'NEARLINE',
+    'COLDLINE',
+    'STANDARD'  # alias for MULTI_REGIONAL/REGIONAL, based on location
+]
 
 
 class GoogleCloudManager(CloudManager):
@@ -43,24 +50,28 @@ class GoogleCloudManager(CloudManager):
     Manage a Google Cloud Project (users, groups, resources, and policies)
 
     Attributes:
+        credentials (google.oauth2.service_account.ServiceAccountCredentials):
+            Service account credentials used to connect to Google services
         project_id (str): Google Project ID to manage
         _authed_session (bool): Whether or not the current session is authed
             (this is set internally)
-        _admin_service (googleapiclient.discovery.Resource): Admin Directory API service for API access
-            (used internally)
-        _storage_client (google.cloud.storage.Client): Access to Storage API through this client
-            (used internally)
+        _admin_service (googleapiclient.discovery.Resource): Admin Directory
+            API service for API access (used internally)
+        _storage_client (google.cloud.storage.Client): Access to Storage API
+            through this client (used internally)
     """
 
-    def __init__(self, project_id=None):
+    def __init__(self, project_id=None, creds=None):
         """
         Construct an instance of the Manager for the given Google project ID.
 
         Args:
             project_id (str): Google Project ID
+            creds (str, optional): PATH to JSON credentials file for a
+                service account to connect to Google's services
         """
         super(GoogleCloudManager, self).__init__()
-        if project_id is not None:
+        if project_id:
             self.project_id = project_id
         else:
             self.project_id = config.GOOGLE_PROJECT_ID
@@ -68,11 +79,12 @@ class GoogleCloudManager(CloudManager):
         self._service_account_email_domain = (
             self.project_id + ".iam.gserviceaccount.com"
         )
+        creds = creds or config.GOOGLE_APPLICATION_CREDENTIALS
+        self.credentials = (
+            ServiceAccountCredentials.from_service_account_file(creds)
+        )
 
     def __enter__(self):
-        credentials = ServiceAccountCredentials.from_service_account_file(
-            config.GOOGLE_APPLICATION_CREDENTIALS)
-
         """
         Set up sessions and services to communicate through Google's API's.
         Called automatically when using Python's `with {{SomeObjectInstance}} as {{name}}:`
@@ -82,14 +94,14 @@ class GoogleCloudManager(CloudManager):
             GoogleCloudManager: instance with added/modified fields
         """
         # Setup for admin directory service for group management
-        admin_service = GoogleAdminService()
+        admin_service = GoogleAdminService(creds=self.credentials)
         self._admin_service = admin_service.build_service()
 
         # Setup client for Google Cloud Storage
         # Using Google's recommended Google Cloud Client Library for Python
         # NOTE: This library requires using google.oauth2 for creds
         self._storage_client = storage.Client(
-            self.project_id, credentials=credentials)
+            self.project_id, credentials=self.credentials)
 
         # Finally set up a generic authorized session where arbitrary
         # requests can be made to Google API(s)
@@ -97,7 +109,7 @@ class GoogleCloudManager(CloudManager):
         scopes.extend(admin_service.SCOPES)
 
         self._authed_session = AuthorizedSession(
-            credentials.with_scopes(scopes))
+            self.credentials.with_scopes(scopes))
 
         return self
 
@@ -334,29 +346,118 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
-    def get_buckets(self):
+    def get_bucket_iam_policy(self, bucket_name):
+        bucket = self._storage_client.get_bucket(bucket_name)
+        return bucket.get_iam_policy()
+
+    def create_bucket(
+            self, name, storage_class=None, public=False, requester_pays=False,
+            access_logs_bucket=None):
         """
-        Return all the buckets for the project
+        Create a Google Storage bucket.
 
         Returns:
-            List(google.cloud.storage.bucket.Bucket): Google Cloud Buckets
+            google.cloud.storage.bucket.Bucket: Google Cloud Bucket
+
+        Args:
+            name (str): Globally unique name for new Google Bucket
+            storage_class (str, optional): one of GOOGLE_STORAGE_CLASSES
+            public (bool, optional): Whether or not all data in bucket should
+                be open to the public (will only allow access by authN'd users
+                to support access logs)
+            requester_pays (bool, optional): Whether requester pays for API
+                requests for this bucket and its blobs.
+            access_logs_bucket (str, optional): Google bucket name to store
+                access logs for this newly created bucket
+
+        Raises:
+            GoogleAuthError: Description
+            ValueError: Description
         """
         if not self._authed_session:
             raise GoogleAuthError()
 
-        buckets = list(self._storage_client.list_buckets())
-        return buckets
+        if storage_class and storage_class not in GOOGLE_STORAGE_CLASSES:
+            raise ValueError(
+                'storage_class {} not one of {}. Did not create bucket...'
+                .format(storage_class, GOOGLE_STORAGE_CLASSES))
 
-    def create_bucket(self, name):
-        """
-        Create a bucket for the project
-        Returns:
-            bucket(google.cloud.storage.bucket.Bucket): Google Cloud Bucket
-        """
-        if not self._authed_session:
-            raise GoogleAuthError()
+        bucket = storage.bucket.Bucket(
+            client=self._storage_client, name=name)
 
-        return self._storage_client.create_bucket(name)
+        if requester_pays is not None:
+            bucket.requester_pays = requester_pays
+
+        if storage_class:
+            bucket.storage_class = storage_class
+
+        bucket.create()
+
+        if public:
+            # update bucket iam policy with allAuthN users having read access
+            policy = bucket.get_iam_policy()
+            role = GooglePolicyRole('roles/storage.objectViewer')
+            policy[str(role)] = ['allAuthenticatedUsers']
+            bucket.set_iam_policy(policy)
+
+        if access_logs_bucket:
+            bucket.enable_logging(access_logs_bucket)
+
+        bucket.update()
+
+    def give_group_access_to_bucket(
+            self, group_email, bucket_name, access=None):
+        """
+        Give a group access to a bucket.
+
+        Specifically grants the group email with storage.objectViewer role.
+
+        Args:
+            group_email (str): Email for the Google group to provide access to
+            bucket_name (str): Bucket to provide access to
+
+        Raises:
+            ValueError: No bucket found with given name
+        """
+        access = access or ['read']
+        try:
+            bucket = self._storage_client.get_bucket(bucket_name)
+        except google_exceptions.NotFound:
+            raise ValueError('No bucket with name: {}'.format(bucket_name))
+
+        # update bucket iam policy with group having access
+        policy = bucket.get_iam_policy()
+
+        member = GooglePolicyMember(
+            member_type=GooglePolicyMember.GROUP, email_id=group_email)
+
+        roles = []
+        for access_level in access:
+            if access_level == 'admin':
+                roles.append(GooglePolicyRole('roles/storage.admin'))
+                break
+            elif access_level == 'read':
+                roles.append(GooglePolicyRole('roles/storage.objectViewer'))
+            elif access_level == 'write':
+                roles.append(GooglePolicyRole('roles/storage.objectCreator'))
+            else:
+                raise Exception(
+                    'Unable to grant {access_level} access to {group_email} '
+                    'on bucket {bucket_name}. cirrus '
+                    'does not support the access level {access_level}.'
+                    .format(
+                            access_level=access_level,
+                            group_email=group_email,
+                            bucket_name=bucket_name
+                        )
+                    )
+
+        for role in roles:
+            policy[str(role)] = [str(member)]
+
+        bucket.set_iam_policy(policy)
+
+        bucket.update()
 
     def get_service_account(self, account):
         """
@@ -491,8 +592,10 @@ class GoogleCloudManager(CloudManager):
                 resource=new_service_account_resource, new_policy=new_policy)
         except Exception as exc:
             raise Exception(
-                "Error setting service account policy." + "\nError: " +
-                str(exc))
+                "Error setting service account policy."
+                "\nReponse: " + str(response.__dict__) +
+                "\nError: " + str(exc)
+            )
 
         return response.json()
 
@@ -846,7 +949,10 @@ class GoogleCloudManager(CloudManager):
             raise GoogleAuthError()
 
         if email is None:
-            email = name.replace(" ", "-").lower() + "@planx-pla.net"
+            email = (
+                name.replace(" ", "-").lower()
+                + "@" + config.GOOGLE_IDENTITY_DOMAIN
+            )
 
         group = {
             "email": email,
@@ -889,10 +995,18 @@ class GoogleCloudManager(CloudManager):
             "role": "MEMBER"
         }
 
-        response = (
-            self._admin_service.members().insert(
-                groupKey=group_id, body=member_to_add).execute()
-        )
+        try:
+            response = (
+                self._admin_service.members().insert(
+                    groupKey=group_id, body=member_to_add).execute()
+            )
+        except HttpError as err:
+            if err.resp.status == 409:
+                # conflict, member already exists in group. This is fine,
+                # don't raise an error, pass back member
+                response = member_to_add
+            else:
+                raise
 
         return response
 
@@ -910,10 +1024,17 @@ class GoogleCloudManager(CloudManager):
         if not self._authed_session:
             raise GoogleAuthError()
 
-        response = (
-            self._admin_service.members().delete(
-                groupKey=group_id, memberKey=member_email).execute()
-        )
+        try:
+            response = (
+                self._admin_service.members().delete(
+                    groupKey=group_id, memberKey=member_email).execute()
+            )
+        except HttpError as err:
+            if err.resp.status == 404:
+                # not found, member isn't in group. This is fine
+                response = {}
+            else:
+                raise
 
         return response
 
@@ -1178,7 +1299,10 @@ def _get_proxy_group_name_for_user(user_id, username):
     # Truncate username so full name is at most 60 characters.
     full_username_length = len(username) + len(user_id) + 1
     chars_to_drop = full_username_length - 60
-    truncated_username = username[:-chars_to_drop]
+    if chars_to_drop > 0:
+        truncated_username = username[:-chars_to_drop]
+    else:
+        truncated_username = username
     name = truncated_username + '-' + user_id
 
     return name
