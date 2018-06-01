@@ -1029,6 +1029,9 @@ class GoogleCloudManager(CloudManager):
                 self._admin_service.members().delete(
                     groupKey=group_id, memberKey=member_email).execute()
             )
+            # Google's api returns empty string on success
+            if response == '':
+                response = {}
         except HttpError as err:
             if err.resp.status == 404:
                 # not found, member isn't in group. This is fine
