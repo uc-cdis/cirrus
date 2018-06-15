@@ -350,7 +350,7 @@ class GoogleCloudManager(CloudManager):
         bucket = self._storage_client.get_bucket(bucket_name)
         return bucket.get_iam_policy()
 
-    def create_bucket(
+    def create_or_update_bucket(
             self, name, storage_class=None, public=False, requester_pays=False,
             access_logs_bucket=None):
         """
@@ -382,8 +382,13 @@ class GoogleCloudManager(CloudManager):
                 'storage_class {} not one of {}. Did not create bucket...'
                 .format(storage_class, GOOGLE_STORAGE_CLASSES))
 
-        bucket = storage.bucket.Bucket(
-            client=self._storage_client, name=name)
+        try:
+            bucket_exists = True
+            bucket = self._storage_client.get_bucket(name)
+        except google_exceptions.NotFound:
+            bucket_exists = False
+            bucket = storage.bucket.Bucket(
+                client=self._storage_client, name=name)
 
         if requester_pays is not None:
             bucket.requester_pays = requester_pays
@@ -391,13 +396,20 @@ class GoogleCloudManager(CloudManager):
         if storage_class:
             bucket.storage_class = storage_class
 
-        bucket.create()
+        if not bucket_exists:
+            bucket.create()
 
         if public:
             # update bucket iam policy with allAuthN users having read access
             policy = bucket.get_iam_policy()
             role = GooglePolicyRole('roles/storage.objectViewer')
             policy[str(role)] = ['allAuthenticatedUsers']
+            bucket.set_iam_policy(policy)
+        else:
+            policy = bucket.get_iam_policy()
+            role = GooglePolicyRole('roles/storage.objectViewer')
+            if 'allAuthenticatedUsers' in policy.get(str(role)):
+                policy[str(role)].remove('allAuthenticatedUsers')
             bucket.set_iam_policy(policy)
 
         if access_logs_bucket:
