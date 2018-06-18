@@ -132,7 +132,7 @@ class GoogleCloudManager(CloudManager):
         self._admin_service = None
         self._storage_client = None
 
-    def create_proxy_group_for_user(self, user_id, username):
+    def create_proxy_group_for_user(self, user_id, username, prefix=''):
         """
         Creates a proxy group for the given user, creates a service account
         for the user, and adds the service account to the group.
@@ -177,7 +177,7 @@ class GoogleCloudManager(CloudManager):
                     }
                 }
         """
-        group_name = _get_proxy_group_name_for_user(user_id, username)
+        group_name = _get_proxy_group_name_for_user(user_id, username, prefix)
         service_account_id = get_valid_service_account_id_for_user(
             user_id, username
         )
@@ -1285,7 +1285,7 @@ def _get_service_account_cred_from_key_response(key_response):
     return json.loads(base64.b64decode(key_response["privateKeyData"]))
 
 
-def _get_proxy_group_name_for_user(user_id, username):
+def _get_proxy_group_name_for_user(user_id, username, prefix=''):
     """
     Return a valid proxy group name based on user_id and username
 
@@ -1302,6 +1302,10 @@ def _get_proxy_group_name_for_user(user_id, username):
     """
     # allow alphanumeric and some special chars
     user_id = str(user_id)
+
+    prefix = prefix.replace('-', '_').replace(' ', '_')
+    username = username.replace('-', '_').replace(' ', '_')
+
     username = ''.join([
         item for item in str(username)
         if item.isalnum() or item in ['-', '_', '.', '\'']
@@ -1312,28 +1316,48 @@ def _get_proxy_group_name_for_user(user_id, username):
         username = username[1:]
 
     # Truncate username so full name is at most 60 characters.
-    full_username_length = len(username) + len(user_id) + 1
-    chars_to_drop = full_username_length - 60
+    full_name_length = len(username) + len('-') + len(user_id)
+    if prefix:
+        full_name_length += len(prefix) + len('-')
+
+    chars_to_drop = full_name_length - 60
     if chars_to_drop > 0:
-        truncated_username = username[:-chars_to_drop]
+        if chars_to_drop <= len(username):
+            truncated_username = username[:-chars_to_drop]
+        else:
+            raise IndexError(
+                'Cannot create name for proxy group for user {} with id {} '
+                'and prefix: {}. Name must include ID and prefix, consider '
+                'shortening the prefix if you continue to get this error. '
+                'Google has specific length requirements on names.'
+                .format(username, user_id, prefix))
     else:
         truncated_username = username
     name = truncated_username + '-' + user_id
 
+    if prefix:
+        name = prefix + '-' + name
+
     return name
 
 
-def _get_user_id_from_proxy_group(proxy_group):
+def _get_prefix_from_proxy_group(proxy_group):
     """
-    Return user id by analyzing proxy_group name
+    Return prefix by analyzing proxy_group name
 
     Args:
         proxy_group (str): proxy group name
 
     Returns:
-        str: User id
+        str: prefix if exists, empty string if not
     """
-    return proxy_group.split('@')[0].split("-")[1].strip()
+    split_name = proxy_group.split('@')[0].split("-")
+
+    # if there's only two sections, there's no prefix
+    if len(split_name) <= 2:
+        return ''
+
+    return proxy_group.split('@')[0].split("-")[-3].strip()
 
 
 def _get_user_name_from_proxy_group(proxy_group):
@@ -1346,4 +1370,17 @@ def _get_user_name_from_proxy_group(proxy_group):
     Returns:
         str: Username
     """
-    return proxy_group.split('@')[0].split("-")[0].strip()
+    return proxy_group.split('@')[0].split("-")[-2].strip()
+
+
+def _get_user_id_from_proxy_group(proxy_group):
+    """
+    Return user id by analyzing proxy_group name
+
+    Args:
+        proxy_group (str): proxy group name
+
+    Returns:
+        str: User id
+    """
+    return proxy_group.split('@')[0].split("-")[-1].strip()
