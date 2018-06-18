@@ -162,7 +162,7 @@ class GoogleCloudManager(CloudManager):
                     string
                 ]
             }
-                    
+
         """
         group_name = _get_proxy_group_name_for_user(user_id, username)
         # Create group
