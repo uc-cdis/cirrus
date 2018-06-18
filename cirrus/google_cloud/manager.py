@@ -134,8 +134,7 @@ class GoogleCloudManager(CloudManager):
 
     def create_proxy_group_for_user(self, user_id, username):
         """
-        Creates a proxy group for the given user, does NOT create a 
-        service account for the proxy group
+        Creates a proxy group for the given user
 
         Args:
             user_id (int): User's Unique ID
@@ -146,7 +145,7 @@ class GoogleCloudManager(CloudManager):
             `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/Policy>`_
 
             .. code-block:: python
-            
+
             new_group_response = {
                 "kind": "admin#directory#group",
                 "id": string,
