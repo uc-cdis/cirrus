@@ -71,6 +71,11 @@ def get_valid_service_account_id_for_client(client_id, user_id):
 
     google_regex = re.compile(GOOGLE_SERVICE_ACCOUNT_REGEX)
     match = google_regex.match(client_id)
+    if not match:
+        # if we couldn't match, try starting with alphanumeric
+        client_id = 'client-' + client_id
+        match = google_regex.match(client_id)
+
     if match:
         # this matching ensures client_id starts with alphabetical character
         client_id = match.group(0)
