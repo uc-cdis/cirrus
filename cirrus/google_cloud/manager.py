@@ -334,7 +334,7 @@ class GoogleCloudManager(CloudManager):
         Returns:
             list(str): list of members
 
-        .. code-block:: python
+            .. code-block:: python
 
             {
               "version": 1,
@@ -364,14 +364,19 @@ class GoogleCloudManager(CloudManager):
         members = []
 
         api_url = _get_google_api_url(
-                "projects/" + self.project_idi + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL)
+                "projects/" + self.project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL)
         response = self._authed_request("POST", api_url)
+        if response.status_code != 200:
+            return members
 
         bindings = response.json().get('bindings',[])
         for binding in bindings:
             if not isinstance(binding,dict):
                 continue
-            members.append(binding.get('members',[]))
+            users = binding.get('members',[])
+            for user in users:
+                if user.startswith('user:'):
+                    members.append(user[5:])
 
         return members
 
