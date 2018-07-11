@@ -44,6 +44,22 @@ GOOGLE_STORAGE_CLASSES = [
     'STANDARD'  # alias for MULTI_REGIONAL/REGIONAL, based on location
 ]
 
+COMPUTE_ENGINE_DEFAULT = 'COMPUTE_ENGINE_DEFAULT'
+GOOGLE_API = 'GOOGLE_API'
+COMPUTE_ENGINE_API = 'COMPUTE_ENGINE_API'
+USER_MANAGED = 'USER_MANAGED'
+
+GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING = [
+    ('appspot.gserviceaccount.com', COMPUTE_ENGINE_DEFAULT),
+    ('cloudservices.gserviceaccount.com', GOOGLE_API),
+    ('compute-system.iam.gserviceaccount.com', COMPUTE_ENGINE_API),
+    ('', USER_MANAGED),
+]
+
+ALLOWED_SERVICE_ACCOUNT_TYPES = [
+    COMPUTE_ENGINE_DEFAULT,
+    USER_MANAGED,
+]
 
 class GoogleCloudManager(CloudManager):
     """
@@ -478,6 +494,23 @@ class GoogleCloudManager(CloudManager):
         response = self._authed_request("GET", api_url)
 
         return response.json()
+
+    def _service_account_type(self, service_account):
+
+        email_domain = service_account['email'].split("@")[-1]
+        for (domain, type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
+            if domain in email_domain:
+                return type
+            else:
+                return None
+
+    def is_valid_service_account_type(self, account_id):
+
+        sa = self.get_service_account(account_id)
+        if sa:
+            return self._service_account_type(sa) in ALLOWED_SERVICE_ACCOUNT_TYPES
+        else:
+            return False
 
     def get_all_service_accounts(self):
         """
