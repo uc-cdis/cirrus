@@ -296,7 +296,8 @@ class GoogleCloudManager(CloudManager):
 
         user_id = _get_user_id_from_proxy_group(proxy_group["email"])
         username = _get_user_name_from_proxy_group(proxy_group["email"])
-        all_service_accounts = self.get_service_accounts_from_group(proxy_group_id)
+        all_service_accounts = self.get_service_accounts_from_group(
+            proxy_group_id)
 
         # create dict with first part of email as key and whole email as value
         service_account_emails = {
@@ -364,22 +365,22 @@ class GoogleCloudManager(CloudManager):
         members = []
 
         api_url = _get_google_api_url(
-                "projects/" + self.project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL)
+            "projects/" + self.project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL)
         response = self._authed_request("POST", api_url)
         if response.status_code != 200:
-            return members
+            raise Exception('Unable to get IAM policy for project {}. The status code is {}'.format(
+                self.project_id, response.status_code))
 
-        bindings = response.json().get('bindings',[])
+        bindings = response.json().get('bindings', [])
         for binding in bindings:
-            if not isinstance(binding,dict):
+            if not hasattr(binding, 'get'):
                 continue
-            users = binding.get('members',[])
+            users = binding.get('members', [])
             for user in users:
-                if user.startswith('user:'):
-                    members.append(user[5:])
+                if user.startswith(GooglePolicyMember.USER):
+                    members.append(user[len(GooglePolicyMember.USER)+1:])
 
         return members
-
 
     def get_project_info(self):
         """
@@ -515,11 +516,11 @@ class GoogleCloudManager(CloudManager):
                     'on bucket {bucket_name}. cirrus '
                     'does not support the access level {access_level}.'
                     .format(
-                            access_level=access_level,
-                            group_email=group_email,
-                            bucket_name=bucket_name
-                        )
+                        access_level=access_level,
+                        group_email=group_email,
+                        bucket_name=bucket_name
                     )
+                )
 
         for role in roles:
             policy[str(role)] = [str(member)]
@@ -824,7 +825,8 @@ class GoogleCloudManager(CloudManager):
             "projects/" + self.project_id + "/serviceAccounts/" + account +
             "/keys", GOOGLE_IAM_API_URL)
 
-        response = self._authed_request("GET", api_url + "&keyTypes=USER_MANAGED").json()
+        response = self._authed_request(
+            "GET", api_url + "&keyTypes=USER_MANAGED").json()
         keys = response.get("keys", [])
 
         return keys
@@ -881,7 +883,8 @@ class GoogleCloudManager(CloudManager):
             "resource": resource
         }
 
-        response = self._authed_request("POST", api_url, data=json.dumps(resource))
+        response = self._authed_request(
+            "POST", api_url, data=json.dumps(resource))
 
         return response.json()
 
@@ -919,7 +922,8 @@ class GoogleCloudManager(CloudManager):
                     ]
                 }
         """
-        api_url = _get_google_api_url(resource + ":setIamPolicy", GOOGLE_IAM_API_URL)
+        api_url = _get_google_api_url(
+            resource + ":setIamPolicy", GOOGLE_IAM_API_URL)
 
         # "etag is used for optimistic concurrency control as a way to help
         # prevent simultaneous updates of a policy from overwriting each other"
@@ -936,7 +940,8 @@ class GoogleCloudManager(CloudManager):
         # etag = current_policy["etag"]
         # new_policy.etag = etag
 
-        response = self._authed_request("POST", api_url, data=(str(new_policy)))
+        response = self._authed_request(
+            "POST", api_url, data=(str(new_policy)))
 
         return response.json()
 
@@ -1330,7 +1335,8 @@ def _is_key_expired(key, expiration_in_days):
     """
     expired = False
     google_date_format = "%Y-%m-%dT%H:%M:%SZ"
-    creation_time = datetime.strptime(key["validAfterTime"], google_date_format)
+    creation_time = datetime.strptime(
+        key["validAfterTime"], google_date_format)
     current_time = datetime.strptime(datetime.utcnow().strftime(google_date_format),
                                      google_date_format)
     current_life_in_seconds = (current_time - creation_time).total_seconds()

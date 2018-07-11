@@ -1141,6 +1141,32 @@ def test_get_project_members_with_wrong_project_id(test_cloud_manager):
 
     test_cloud_manager._authed_session.post.return_value = _fake_response(
         403, faked_reponse_body)
+
+    with pytest.raises(Exception) as excinfo:
+        test_cloud_manager.get_project_members()
+    assert str(
+        excinfo.value) == 'Unable to get IAM policy for project test_project. The status code is 403'
+
+
+def test_get_project_with_no_user_members(test_cloud_manager):
+    """
+    Test for project with no user members
+    """
+    faked_reponse_body = {
+        "version": 1,
+        "etag": "BwVvrr5i9Jc=",
+        "bindings": [
+            {
+                "role": "roles/compute.serviceAgent",
+                "members": [
+                    "serviceAccount:my-other-app@appspot.gserviceaccount.com"
+                ]
+            }
+        ]
+    }
+
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, faked_reponse_body)
     members = test_cloud_manager.get_project_members()
     assert members == []
 
@@ -1156,7 +1182,8 @@ def test_get_project_members(test_cloud_manager):
             {
                 "role": "roles/compute.serviceAgent",
                 "members": [
-                    "user:test@gmail.com"
+                    "user:test@gmail.com",
+                    "serviceAccount:my-other-app@appspot.gserviceaccount.com"
                 ]
             },
             {
