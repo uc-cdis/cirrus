@@ -501,8 +501,8 @@ class GoogleCloudManager(CloudManager):
         for (domain, type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
             if domain in email_domain:
                 return type
-            else:
-                return None
+
+        return None
 
     def is_valid_service_account_type(self, account_id):
 
