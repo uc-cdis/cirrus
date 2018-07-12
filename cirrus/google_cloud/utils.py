@@ -9,18 +9,6 @@ from cirrus.google_cloud.errors import GoogleNamingError
 
 GOOGLE_SERVICE_ACCOUNT_REGEX = "[a-z][a-z\d\-]*[a-z\d]"
 
-COMPUTE_ENGINE_DEFAULT = 'COMPUTE_ENGINE_DEFAULT'
-GOOGLE_API = 'GOOGLE_API'
-COMPUTE_ENGINE_API = 'COMPUTE_ENGINE_API'
-USER_MANAGED = 'USER_MANAGED'
-
-GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING = [
-    ('appspot.gserviceaccount.com', COMPUTE_ENGINE_DEFAULT),
-    ('cloudservices.gserviceaccount.com', GOOGLE_API),
-    ('compute-system.iam.gserviceaccount.com', COMPUTE_ENGINE_API),
-    ('', USER_MANAGED),
-]
-
 
 def get_valid_service_account_id_for_user(user_id, username):
     """
@@ -188,13 +176,3 @@ def _get_string_to_sign(
     string_to_sign += '/' + str(path_to_resource)
 
     return string_to_sign
-
-
-def get_service_account_type(service_account):
-
-    email_domain = service_account['email'].split("@")[-1]
-    for (domain, type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
-        if domain in email_domain:
-            return type
-
-    return None

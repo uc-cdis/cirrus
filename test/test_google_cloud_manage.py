@@ -13,12 +13,15 @@ except ImportError:
     from mock import MagicMock
     from mock import patch
 
-from cirrus import GoogleCloudManager
 from cirrus.google_cloud.manager import (
     _get_proxy_group_name_for_user,
     _get_prefix_from_proxy_group,
     _get_user_name_from_proxy_group,
-    _get_user_id_from_proxy_group
+    _get_user_id_from_proxy_group,
+    COMPUTE_ENGINE_DEFAULT,
+    GOOGLE_API,
+    COMPUTE_ENGINE_API,
+    USER_MANAGED
 )
 from cirrus.google_cloud.manager import get_valid_service_account_id_for_user
 from cirrus.config import config
@@ -1070,6 +1073,40 @@ def test_service_account_keys_when_empty(test_cloud_manager):
         any(account in str(arg) for arg in args) or
         any(account in str(kwarg) for kwarg in kwargs.values())
     )
+
+def test_get_service_account_type(test_cloud_manager):
+
+    service_account = {
+        "email": "test@appspot.gserviceaccount.com"
+    }
+    test_cloud_manager._authed_session.get.return_value = (
+        _fake_response(200, service_account)
+    )
+    assert test_cloud_manager.get_service_account_type(service_account) == COMPUTE_ENGINE_DEFAULT
+
+    service_account = {
+        "email": "test@cloudservices.gserviceaccount.com"
+    }
+    test_cloud_manager._authed_session.get.return_value = (
+        _fake_response(200, service_account)
+    )
+    assert test_cloud_manager.get_service_account_type(service_account) == GOOGLE_API
+
+    service_account = {
+        "email": "test@compute-system.iam.gserviceaccount.com"
+    }
+    test_cloud_manager._authed_session.get.return_value = (
+        _fake_response(200, service_account)
+    )
+    assert test_cloud_manager.get_service_account_type(service_account) == COMPUTE_ENGINE_API
+
+    service_account = {
+        "email": "test@gmail.com"
+    }
+    test_cloud_manager._authed_session.get.return_value = (
+        _fake_response(200, service_account)
+    )
+    assert test_cloud_manager.get_service_account_type(service_account) == USER_MANAGED
 
 
 if __name__ == "__main__":
