@@ -1072,39 +1072,5 @@ def test_service_account_keys_when_empty(test_cloud_manager):
     )
 
 
-def test_is_valid_service_account(test_cloud_manager):
-
-    response = {
-        "email":"test@appspot.gserviceaccount.com"
-    }
-    test_cloud_manager._authed_session.get.return_value = (
-        _fake_response(200, response)
-    )
-    assert test_cloud_manager.is_valid_service_account_type("")
-
-    response = {
-        "email": "test@cloudservices.gserviceaccount.com"
-    }
-    test_cloud_manager._authed_session.get.return_value = (
-        _fake_response(200, response)
-    )
-    assert not test_cloud_manager.is_valid_service_account_type("")
-
-    response = {
-        "email": "test@compute-system.iam.gserviceaccount.com"
-    }
-    test_cloud_manager._authed_session.get.return_value = (
-        _fake_response(200, response)
-    )
-    assert not test_cloud_manager.is_valid_service_account_type("")
-
-    response = {
-        "email": "test@gmail.com"
-    }
-    test_cloud_manager._authed_session.get.return_value = (
-        _fake_response(200, response)
-    )
-    assert test_cloud_manager.is_valid_service_account_type("")
-
 if __name__ == "__main__":
     pytest.main(['-x', "-v", '.'])

@@ -192,9 +192,9 @@ def _get_string_to_sign(
 
 def get_service_account_type(service_account):
 
-        email_domain = service_account['email'].split("@")[-1]
-        for (domain, type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
-            if domain in email_domain:
-                return type
+    email_domain = service_account['email'].split("@")[-1]
+    for (domain, type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
+        if domain in email_domain:
+            return type
 
-        return None
+    return None

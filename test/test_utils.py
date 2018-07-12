@@ -6,9 +6,14 @@ except ImportError:
     from mock import MagicMock
     from mock import patch
 
-from cirrus.google_cloud.utils import _get_string_to_sign
 from cirrus.google_cloud.utils import (
-    get_signed_url, get_valid_service_account_id_for_client
+    _get_string_to_sign,
+    get_valid_service_account_id_for_client,
+    get_service_account_type,
+    COMPUTE_ENGINE_DEFAULT,
+    GOOGLE_API,
+    COMPUTE_ENGINE_API,
+    USER_MANAGED,
 )
 
 
@@ -73,3 +78,26 @@ def test_get_string_to_sign_no_optional_params():
         '1388534400\n'
         '/bucket/objectname'
     )
+
+
+def test_get_service_account_type():
+
+    service_account = {
+        "email": "test@appspot.gserviceaccount.com"
+    }
+    assert get_service_account_type(service_account) == COMPUTE_ENGINE_DEFAULT
+
+    service_account = {
+        "email": "test@cloudservices.gserviceaccount.com"
+    }
+    assert get_service_account_type(service_account) == GOOGLE_API
+
+    service_account = {
+        "email": "test@compute-system.iam.gserviceaccount.com"
+    }
+    assert get_service_account_type(service_account) == COMPUTE_ENGINE_API
+
+    service_account = {
+        "email": "test@gmail.com"
+    }
+    assert get_service_account_type(service_account) == USER_MANAGED
