@@ -20,8 +20,32 @@ class GooglePolicy(object):
             version (int): version for the policy
         """
         self.bindings = bindings
+        self.members = set()
+        for binding in bindings:
+            self.members.union(binding.members)
+        self.roles = set()
+        for binding in bindings:
+            self.roles.add(binding.role)
         self.etag = etag
         self.version = version
+
+    @classmethod
+    def from_json(cls, json):
+        """
+        Constructs a Google Policy from call to Google getIamPolicy
+
+        Args:
+            json: json result from call to Google getIamPolicy
+
+        Returns:
+            GooglePolicy: GooglePolicy object represented by api_result
+        """
+
+        policy_bindings = []
+        json_bindings = json["bindings"]
+        for jb in json_bindings:
+            policy_bindings.append(GooglePolicyBinding.from_json(jb))
+        return GooglePolicy(policy_bindings)
 
     def __str__(self):
         """
@@ -53,7 +77,35 @@ class GooglePolicyBinding(object):
             members (List(GooglePolicyMember)): Member(s) who should have the given role
         """
         self.role = role
-        self.members = members
+        for m in members:
+            m.role = role
+        self.role.members = set()
+        self.role.members.update(members)
+        self.members = set()
+        self.members.update(members)
+
+    @classmethod
+    def from_json(cls, json):
+        """
+        Constructs a Binding for a Google Policy from call to Google getIamPolicy
+
+        Args:
+            json: individual binding parsed from GooglePolicy return from
+            call to Google getIamPolicy
+
+        Return:
+            GooglePolicyBinding: policy binding object represented by api_result
+        """
+
+        role = GooglePolicyRole(json["role"])
+        members = []
+
+        for m in json["members"]:
+            type = m.split(":", 1)[0]
+            email = m.split(":", 1)[1]
+            members.add(GooglePolicyMember(type, email))
+
+        return GooglePolicyBinding(role, members)
 
     def get_dict(self):
         """
@@ -121,6 +173,14 @@ class GooglePolicyMember(object):
         output = "{}:{}".format(self.member_type, self.email_id)
         return output
 
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        return self.member_type == other.member_type and self.email_id == other.email_id
+
+    def __hash__(self):
+        return hash((self.member_type, self.email_id))
+
 
 class GooglePolicyRole(object):
     """
@@ -149,6 +209,14 @@ class GooglePolicyRole(object):
             str: Representation of the Role for Google's API
         """
         return "{}{}".format(GooglePolicyRole.ROLE_PREFIX, self.name)
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
 
 
 def get_iam_service_account_email(project_id, account_id):
