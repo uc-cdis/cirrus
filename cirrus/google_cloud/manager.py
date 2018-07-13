@@ -495,9 +495,9 @@ class GoogleCloudManager(CloudManager):
 
         service_account = self.get_service_account(account)
         email_domain = service_account['email'].split("@")[-1]
-        for (domain, type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
+        for (domain, sa_type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
             if domain in email_domain:
-                return type
+                return sa_type
 
         return None
 
