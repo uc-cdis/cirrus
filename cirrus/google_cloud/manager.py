@@ -377,18 +377,16 @@ class GoogleCloudManager(CloudManager):
             bucket.create()
 
         if public is not None:
+            policy = bucket.get_iam_policy()
+            role = GooglePolicyRole('roles/storage.objectViewer')
             if public:
-                # update bucket iam policy with allAuthN users having read access
-                policy = bucket.get_iam_policy()
-                role = GooglePolicyRole('roles/storage.objectViewer')
+                # update bucket iam policy with allAuthN users having
+                # read access
                 policy[str(role)] = ['allAuthenticatedUsers']
-                bucket.set_iam_policy(policy)
             else:
-                policy = bucket.get_iam_policy()
-                role = GooglePolicyRole('roles/storage.objectViewer')
                 if 'allAuthenticatedUsers' in policy.get(str(role)):
                     policy[str(role)].remove('allAuthenticatedUsers')
-                bucket.set_iam_policy(policy)
+            bucket.set_iam_policy(policy)
 
         if access_logs_bucket:
             bucket.enable_logging(access_logs_bucket, object_prefix=name)
