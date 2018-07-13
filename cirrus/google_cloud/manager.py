@@ -7,6 +7,8 @@ import base64
 from datetime import datetime
 import json
 
+from google.api_core.exceptions import GoogleAPIError
+
 try:
     from urllib.parse import urljoin
 except ImportError:
@@ -30,6 +32,8 @@ from cirrus.google_cloud.iam import GooglePolicyMember
 from cirrus.google_cloud.iam import GooglePolicyRole
 from cirrus.google_cloud.services import GoogleAdminService
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
+
+from iam import GooglePolicy
 
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
@@ -1187,6 +1191,28 @@ class GoogleCloudManager(CloudManager):
             raise GoogleAuthError()
 
         return response
+
+    def get_project_membership(self, project_id=None):
+        """
+        Gets a list of members associated with project
+
+        Args:
+            project_id(str): unique id of project, if None project's own ID is used
+
+        Returns:
+            list<GooglePolicyMember>: list of members in project
+        """
+        project_id = project_id or self.project_id
+        api_url = _get_google_api_url(
+            "projects/" + self.project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL)
+        response = self._authed_request("POST", api_url)
+
+        if response.status_code != 200:
+            raise GoogleAPIError(
+                'Unable to get IAM policy for project {}. The status code is {}'
+                .format(project_id, response.status_code))
+
+        return list(GooglePolicy.from_json(response).members)
 
 
 def _get_google_api_url(relative_path, root_api_url):
