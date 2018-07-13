@@ -23,7 +23,7 @@ from googleapiclient.errors import HttpError
 
 from cirrus.config import config
 from cirrus.core import CloudManager
-from cirrus.google_cloud.errors import GoogleAuthError
+from cirrus.google_cloud.errors import GoogleAuthError, GoogleAPIError
 from cirrus.google_cloud.iam import GooglePolicy
 from cirrus.google_cloud.iam import GooglePolicyBinding
 from cirrus.google_cloud.iam import GooglePolicyMember
@@ -328,7 +328,7 @@ class GoogleCloudManager(CloudManager):
             org = info["parent"]["id"]
         return org
 
-    def get_project_members(self):
+    def get_project_members(self, project_id=None):
         """
         Get all the members given a project
 
@@ -363,13 +363,14 @@ class GoogleCloudManager(CloudManager):
             }
         """
         members = []
+        project_id = project_id or self.project_id
 
         api_url = _get_google_api_url(
-            "projects/" + self.project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL)
+            "projects/" + project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL)
         response = self._authed_request("POST", api_url)
         if response.status_code != 200:
-            raise Exception('Unable to get IAM policy for project {}. The status code is {}'.format(
-                self.project_id, response.status_code))
+            raise GoogleAPIError('Unable to get IAM policy for project {}. The status code is {}'.format(
+                project_id, response.status_code))
 
         bindings = response.json().get('bindings', [])
         for binding in bindings:

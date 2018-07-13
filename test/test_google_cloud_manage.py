@@ -27,6 +27,7 @@ from cirrus.google_cloud.manager import (
 )
 from cirrus.google_cloud.manager import get_valid_service_account_id_for_user
 from cirrus.config import config
+from cirrus.google_cloud.errors import GoogleAPIError
 
 from test.conftest import mock_get_group
 from test.conftest import mock_get_service_accounts_from_group
@@ -1128,8 +1129,9 @@ def test_get_service_account_type_user_managed(test_cloud_manager):
     assert test_cloud_manager.get_service_account_type(service_account) == USER_MANAGED_SERVICE_ACCOUNT
 
 
-def test_get_project_members_with_wrong_project_id(test_cloud_manager):
+def test_get_project_members_with_failure(test_cloud_manager):
     """
+    Test for the case with failure
     """
     faked_reponse_body = {
         "error": {
@@ -1142,10 +1144,8 @@ def test_get_project_members_with_wrong_project_id(test_cloud_manager):
     test_cloud_manager._authed_session.post.return_value = _fake_response(
         403, faked_reponse_body)
 
-    with pytest.raises(Exception) as excinfo:
+    with pytest.raises(GoogleAPIError):
         test_cloud_manager.get_project_members()
-    assert str(
-        excinfo.value) == 'Unable to get IAM policy for project test_project. The status code is 403'
 
 
 def test_get_project_with_no_user_members(test_cloud_manager):
