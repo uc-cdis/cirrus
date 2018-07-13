@@ -44,16 +44,19 @@ GOOGLE_STORAGE_CLASSES = [
     'STANDARD'  # alias for MULTI_REGIONAL/REGIONAL, based on location
 ]
 
-COMPUTE_ENGINE_DEFAULT = 'COMPUTE_ENGINE_DEFAULT'
-GOOGLE_API = 'GOOGLE_API'
-COMPUTE_ENGINE_API = 'COMPUTE_ENGINE_API'
-USER_MANAGED = 'USER_MANAGED'
+COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT = (
+    'COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT'
+)
+GOOGLE_API_SERVICE_ACCOUNT = 'GOOGLE_API_SERVICE_ACCOUNT'
+COMPUTE_ENGINE_API_SERVICE_ACCOUNT = 'COMPUTE_ENGINE_API_SERVICE_ACCOUNT'
+USER_MANAGED_SERVICE_ACCOUNT = 'USER_MANAGED_SERVICE_ACCOUNT'
 
 GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING = [
-    ('appspot.gserviceaccount.com', COMPUTE_ENGINE_DEFAULT),
-    ('cloudservices.gserviceaccount.com', GOOGLE_API),
-    ('compute-system.iam.gserviceaccount.com', COMPUTE_ENGINE_API),
-    ('', USER_MANAGED),
+    ('appspot.gserviceaccount.com', COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT),
+    ('cloudservices.gserviceaccount.com', GOOGLE_API_SERVICE_ACCOUNT),
+    ('compute-system.iam.gserviceaccount.com',
+     COMPUTE_ENGINE_API_SERVICE_ACCOUNT),
+    ('iam.gserviceaccount.com', USER_MANAGED_SERVICE_ACCOUNT),
 ]
 
 
@@ -492,7 +495,15 @@ class GoogleCloudManager(CloudManager):
         return response.json()
 
     def get_service_account_type(self, account):
+        """
+        Get the type of service account referred to by account param
 
+        Args:
+            account (str): account id of service account
+
+        Returns:
+            String: type of service account
+        """
         service_account = self.get_service_account(account)
         email_domain = service_account['email'].split("@")[-1]
         for (domain, sa_type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
