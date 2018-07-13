@@ -13,15 +13,17 @@ except ImportError:
     from mock import MagicMock
     from mock import patch
 
+from cirrus.google_cloud import (
+    COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT,
+    GOOGLE_API_SERVICE_ACCOUNT,
+    COMPUTE_ENGINE_API_SERVICE_ACCOUNT,
+    USER_MANAGED_SERVICE_ACCOUNT,
+)
 from cirrus.google_cloud.manager import (
     _get_proxy_group_name_for_user,
     _get_prefix_from_proxy_group,
     _get_user_name_from_proxy_group,
     _get_user_id_from_proxy_group,
-    COMPUTE_ENGINE_DEFAULT,
-    GOOGLE_API,
-    COMPUTE_ENGINE_API,
-    USER_MANAGED
 )
 from cirrus.google_cloud.manager import get_valid_service_account_id_for_user
 from cirrus.config import config
@@ -1082,7 +1084,7 @@ def test_get_service_account_type(test_cloud_manager):
     test_cloud_manager._authed_session.get.return_value = (
         _fake_response(200, service_account)
     )
-    assert test_cloud_manager.get_service_account_type(service_account) == COMPUTE_ENGINE_DEFAULT
+    assert test_cloud_manager.get_service_account_type(service_account) == COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT
 
     service_account = {
         "email": "test@cloudservices.gserviceaccount.com"
@@ -1090,7 +1092,7 @@ def test_get_service_account_type(test_cloud_manager):
     test_cloud_manager._authed_session.get.return_value = (
         _fake_response(200, service_account)
     )
-    assert test_cloud_manager.get_service_account_type(service_account) == GOOGLE_API
+    assert test_cloud_manager.get_service_account_type(service_account) == GOOGLE_API_SERVICE_ACCOUNT
 
     service_account = {
         "email": "test@compute-system.iam.gserviceaccount.com"
@@ -1098,15 +1100,15 @@ def test_get_service_account_type(test_cloud_manager):
     test_cloud_manager._authed_session.get.return_value = (
         _fake_response(200, service_account)
     )
-    assert test_cloud_manager.get_service_account_type(service_account) == COMPUTE_ENGINE_API
+    assert test_cloud_manager.get_service_account_type(service_account) == COMPUTE_ENGINE_API_SERVICE_ACCOUNT
 
     service_account = {
-        "email": "test@gmail.com"
+        "email": "test@1234.iam.gserviceaccount.com'"
     }
     test_cloud_manager._authed_session.get.return_value = (
         _fake_response(200, service_account)
     )
-    assert test_cloud_manager.get_service_account_type(service_account) == USER_MANAGED
+    assert test_cloud_manager.get_service_account_type(service_account) == USER_MANAGED_SERVICE_ACCOUNT
 
 
 if __name__ == "__main__":
