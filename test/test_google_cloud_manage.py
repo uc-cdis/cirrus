@@ -1076,7 +1076,8 @@ def test_service_account_keys_when_empty(test_cloud_manager):
         any(account in str(kwarg) for kwarg in kwargs.values())
     )
 
-def test_get_service_account_type(test_cloud_manager):
+
+def test_get_service_account_type_compute_engine_default(test_cloud_manager):
 
     service_account = {
         "email": "test@appspot.gserviceaccount.com"
@@ -1086,6 +1087,9 @@ def test_get_service_account_type(test_cloud_manager):
     )
     assert test_cloud_manager.get_service_account_type(service_account) == COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT
 
+
+def test_get_service_account_type_google_api(test_cloud_manager):
+
     service_account = {
         "email": "test@cloudservices.gserviceaccount.com"
     }
@@ -1094,6 +1098,9 @@ def test_get_service_account_type(test_cloud_manager):
     )
     assert test_cloud_manager.get_service_account_type(service_account) == GOOGLE_API_SERVICE_ACCOUNT
 
+
+def test_get_service_account_type_compute_engine_api(test_cloud_manager):
+
     service_account = {
         "email": "test@compute-system.iam.gserviceaccount.com"
     }
@@ -1101,6 +1108,9 @@ def test_get_service_account_type(test_cloud_manager):
         _fake_response(200, service_account)
     )
     assert test_cloud_manager.get_service_account_type(service_account) == COMPUTE_ENGINE_API_SERVICE_ACCOUNT
+
+
+def test_get_service_account_type_user_managed(test_cloud_manager):
 
     service_account = {
         "email": "test@1234.iam.gserviceaccount.com'"

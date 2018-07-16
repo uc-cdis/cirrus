@@ -51,6 +51,11 @@ GOOGLE_API_SERVICE_ACCOUNT = 'GOOGLE_API_SERVICE_ACCOUNT'
 COMPUTE_ENGINE_API_SERVICE_ACCOUNT = 'COMPUTE_ENGINE_API_SERVICE_ACCOUNT'
 USER_MANAGED_SERVICE_ACCOUNT = 'USER_MANAGED_SERVICE_ACCOUNT'
 
+"""
+This mapping is order-specific. More specific domains should appear
+earlier in the list. For example, `compute-system.iam.gserviceaccount.com`
+should appear before `iam.gserviceaccount.com`
+"""
 GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING = [
     ('appspot.gserviceaccount.com', COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT),
     ('cloudservices.gserviceaccount.com', GOOGLE_API_SERVICE_ACCOUNT),
