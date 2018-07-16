@@ -1194,7 +1194,7 @@ class GoogleCloudManager(CloudManager):
         resource IDs. The first resource ID is always the
         project itself, followed by succesive parent resources.
         https://cloud.google.com/resource-manager/reference/rest/v1/projects/getAncestry
-        
+
         Args:
             project_id(str): the project_id of which to get the ancestry,
                 uses self.project_id if None is given
