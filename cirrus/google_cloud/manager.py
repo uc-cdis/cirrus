@@ -358,7 +358,7 @@ class GoogleCloudManager(CloudManager):
                 {
                   "role": "roles/owner",
                   "members": [
-                    "user:test@planx-pla.net"
+                    "user:test@example.net"
                   ]
                 }
               ]

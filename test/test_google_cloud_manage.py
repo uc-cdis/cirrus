@@ -1131,7 +1131,7 @@ def test_get_service_account_type_user_managed(test_cloud_manager):
 
 def test_get_project_members_with_failure_due_to_permission_denied(test_cloud_manager):
     """
-    Test for the case with failure
+    Test for the case with failure.
     """
     faked_reponse_body = {
         "error": {
