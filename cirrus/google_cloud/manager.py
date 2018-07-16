@@ -1188,6 +1188,51 @@ class GoogleCloudManager(CloudManager):
 
         return response
 
+    def get_project_ancestry(self, project_id=None):
+        """
+        Gets a project's ancestry, represented by a list of
+        resource IDs. The first resource ID is always the
+        project itself, followed by succesive parent resources.
+        https://cloud.google.com/resource-manager/reference/rest/v1/projects/getAncestry
+        
+        Args:
+            project_id(str): the project_id of which to get the ancestry,
+                uses self.project_id if None is given
+        Returns:
+            [(str, str)]: a list of tuples, each of which represents a
+            resource ID where the first element of the tuple is the
+            type of the resource ID and the second is the ID itself
+        """
+        project_id = project_id or self.project_id
+        api_url = _get_google_api_url(
+            "projects/" + project_id + ":getAncestry", GOOGLE_CLOUD_RESOURCE_URL
+        )
+        response = self._authed_request("POST", api_url)
+
+        ancestors = []
+        if response:
+            for ancestor in response['ancestor']:
+                r_id_type = ancestor['resourceID']['type']
+                r_id = ancestor['resourceID']['id']
+                ancestors.append((r_id_type, r_id))
+        return ancestors
+
+    def has_parent_organization(self):
+        """
+        Determines if a project has a parent organization,
+        i.e if this project belongs to organization
+
+        Returns:
+            Bool: True iff the project has a parent organization
+        """
+        ancestry = self.get_project_ancestry()
+
+        for (r_id_type, r_id) in ancestry:
+            if r_id_type == "organization":
+                return True
+
+        return False
+
 
 def _get_google_api_url(relative_path, root_api_url):
     """
