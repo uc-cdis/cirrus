@@ -331,6 +331,8 @@ class GoogleCloudManager(CloudManager):
     def get_project_members(self, project_id=None):
         """
         Get all the members given a project
+        Args:
+            project_id(str): google project id
 
         Returns:
             list(str): list of members

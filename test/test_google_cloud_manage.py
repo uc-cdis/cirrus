@@ -1129,7 +1129,7 @@ def test_get_service_account_type_user_managed(test_cloud_manager):
     assert test_cloud_manager.get_service_account_type(service_account) == USER_MANAGED_SERVICE_ACCOUNT
 
 
-def test_get_project_members_with_failure(test_cloud_manager):
+def test_get_project_members_with_failure_due_to_permission_denied(test_cloud_manager):
     """
     Test for the case with failure
     """
