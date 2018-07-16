@@ -32,26 +32,26 @@ before being able to bask in its beauty.
 You *should* only have to do this once so don't freak out.
 
 By default, all the configurations needed by `cirrus` are assumed to be environmental
-variables (which is recommended). You can manually add them to the
-`cirrus/config.py` file though, just don't accidentally check in sensitive information...
+variables. You can also provide the configuration programatically in Python (instructions are later in the README).
 
 **Note:** This guide should cover necessary configuration,
 but in the effort of not having to maintain everything in two places,
-make sure to check the `cirrus/config.py` for the other configuration options.
+make sure to check the `cirrus/config.py` for other configuration options.
 
 ### Google Cloud Platform (GCP) Configuration
 To use this library for GCP, it must be configured with credentials for a
 Google Cloud Platform project along with a few other things.
 
 #### Project Configuration
-`cirrus` supports the management of a single GCP project.
-This could be modified in the future with a few changes, but for now, it assumes
-everything will be in a single project. Thus, we need the Project ID (which
-you can find in the Cloud Console).
+`cirrus` supports the management of GCP projects. We need the name of a single default Google project to manage though.
+
+Managing another project is possible by passing the `project_id` when initializing a `GoogleCloudManager`.
+
+Make sure what you provide is the actual Project **ID** and not just the Project **Name**. Google requires these are globally unique, so if you used `test-project` during creation, Google may have appended something to the end to make the name unique.
 
 ```
 # The unique ID for the Google Cloud Project to manage by default
-export GOOGLE_PROJECT_ID="test-project-0"
+GOOGLE_PROJECT_ID="test-project-0"
 ```
 
 Enable APIs and services on your project:
@@ -59,15 +59,23 @@ Enable APIs and services on your project:
 - Admin SDK
 
 #### Credentials
-You'll need a service account with what permissions you need to manage the project.
+You'll need a service account with what permissions you want to allow `cirrus` to have. What these are depends on what functionality of `cirrus` you plan on using.
 
-Then you need to create a key for that service account and download the keyfile.
+For service account management you will probably need the following pre-defined Google roles:
+- `Service Account Admin` -to manage service accounts
+- `Service Account Token Creator` -to manage service account keys
+- `Viewer` -to see project information
+- `Storage Admin` -to manage Google Storage buckets
+
+NOTE: It's possible you may need more or less roles/permissions (since Google may change these roles in the future). Just pay attention to any unauthorized errors you get when using `cirrus` and see what permission Google is expecting.
+
+Now you need to create a key for that service account and download the keyfile.
 
 Now, set `GOOGLE_APPLICATION_CREDENTIALS` to the path to that keyfile.
 
 ```
 # Path to credentials for accessing the Google Cloud Project
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/keyfile/service-account-0.json"
+GOOGLE_APPLICATION_CREDENTIALS="/path/to/keyfile/service-account-0.json"
 ```
 
 In addition to credentials, `cirrus` needs to know the email address for
@@ -75,11 +83,11 @@ those credentials. You should be able to find the service account's email
 in the Cloud Console.
 ```
 # Admin email for Google Cloud Project (should be a service account)
-export GOOGLE_ADMIN_EMAIL="admin@test-project-0.iam.gserviceaccount.com"
+GOOGLE_ADMIN_EMAIL="admin@test-project-0.iam.gserviceaccount.com"
 ```
 
 #### Group Management
-In order to manage groups, `cirrus` assumes you have a Cloud Identity
+In order to manage groups, `cirrus` assumes you have a [Cloud Identity](https://www.google.com/a/signup/?enterprise_product=IDENTITY_GCP#0)
 (or GSuite) domain. The method `cirrus` uses to manage groups is called
 "domain-wide delegation" for a service account. You will need to follow
 a few guides on settings that up, as it requires you to enable access to the
@@ -98,6 +106,8 @@ https://www.googleapis.com/auth/admin.directory.group.member.readonly,
 https://www.googleapis.com/auth/admin.directory.user.security
 ```
 
+**IMPORTANT NOTE:** When providing the above scopes in Cloud Identity, make sure the `Client Name` is the Oauth Client ID for the service account and **not** the service account's email. You can find the Client ID in the "APIs & Services -> Credentials" section of the Google Project in GCP. When you delegate domain-wide authority for a service account a new Client ID should automatically be created.
+
 You [may need to wait](https://groups.google.com/forum/#!topic/google-apps-manager/tY_2mW5NLBk) (up to 48 hours) before access is granted.
 
 Once that's all done, you need to give `cirrus` information about the domain
@@ -105,17 +115,36 @@ and an admin user we can delegate to. The admin email you use needs
 permissions to manage groups within your domain.
 ```
 # Domain for group management
-export GOOGLE_IDENTITY_DOMAIN="mydomain.com"
+GOOGLE_IDENTITY_DOMAIN="mydomain.com"
 
 # Admin email for admin domain-wide service account to act for
-export GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL="admin@mydomain.com"
+GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL="admin@mydomain.com"
 ```
 
 Last but not least, you'll need to set up an API key for your GCP project and
 provide it to `cirrus` to include in the Google API calls.
 ```
 # API key to use during API calls
-export GOOGLE_API_KEY="abcdefghijklmnopqrstuvwxyz"
+GOOGLE_API_KEY="abcdefghijklmnopqrstuvwxyz"
+```
+
+### Setting Configuration Programatically
+`cirrus`, by default, reads in necessary configurations from environmental variables. You can, however, provide all these config vars programatically by calling the `update` function on the config object in `cirrus` and passing in a dictionary.
+
+For example:
+```
+from cirrus.config import config as cirrus_config
+
+settings = {
+    "GOOGLE_PROJECT_ID": "some-project-id-123456789",
+    "GOOGLE_APPLICATION_CREDENTIALS": "full/path/to/creds",
+    "GOOGLE_ADMIN_EMAIL": "some-project-id-123456789",
+    "GOOGLE_IDENTITY_DOMAIN": "mydomain.com",
+    "GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL": "admin@mydomain.com",
+    "GOOGLE_API_KEY": "abcdefghijklmnopqrstuvwxyz"
+}
+
+cirrus_config.update(**settings)
 ```
 
 ## Google Specific Implementation Details
@@ -142,7 +171,7 @@ export GOOGLE_API_KEY="abcdefghijklmnopqrstuvwxyz"
 - Can use same service for multiple different APIs
 - Relies less* on Google's libraries (double-edged sword)
 
-*Still uses Google libraries for auth
+*Still uses Google libraries for auth*
 
 ## Building the Documentation
 - `pip install -r dev-requirements.txt`

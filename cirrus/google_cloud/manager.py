@@ -35,6 +35,7 @@ from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
+GOOGLE_LOGGING_EMAIL = 'cloud-storage-analytics@google.com'
 
 GOOGLE_STORAGE_CLASSES = [
     'MULTI_REGIONAL',
@@ -327,8 +328,8 @@ class GoogleCloudManager(CloudManager):
         return bucket.get_iam_policy()
 
     def create_or_update_bucket(
-            self, name, storage_class=None, public=False, requester_pays=False,
-            access_logs_bucket=None):
+            self, name, storage_class=None, public=None, requester_pays=False,
+            access_logs_bucket=None, for_logging=False):
         """
         Create a Google Storage bucket.
 
@@ -338,13 +339,16 @@ class GoogleCloudManager(CloudManager):
         Args:
             name (str): Globally unique name for new Google Bucket
             storage_class (str, optional): one of GOOGLE_STORAGE_CLASSES
-            public (bool, optional): Whether or not all data in bucket should
-                be open to the public (will only allow access by authN'd users
-                to support access logs)
+            public (bool or None, optional): Whether or not all data in bucket
+                should be open to the public (will only allow access by authN'd
+                users to support access logs). Keeping as None will not update
+                the IAM policy at all.
             requester_pays (bool, optional): Whether requester pays for API
                 requests for this bucket and its blobs.
             access_logs_bucket (str, optional): Google bucket name to store
                 access logs for this newly created bucket
+            for_logging (bool, optional): Whether or not this bucket will
+                be used as a bucket to store access logs.
 
         Raises:
             GoogleAuthError: Description
@@ -375,21 +379,24 @@ class GoogleCloudManager(CloudManager):
         if not bucket_exists:
             bucket.create()
 
-        if public:
-            # update bucket iam policy with allAuthN users having read access
+        if public is not None:
             policy = bucket.get_iam_policy()
             role = GooglePolicyRole('roles/storage.objectViewer')
-            policy[str(role)] = ['allAuthenticatedUsers']
-            bucket.set_iam_policy(policy)
-        else:
-            policy = bucket.get_iam_policy()
-            role = GooglePolicyRole('roles/storage.objectViewer')
-            if 'allAuthenticatedUsers' in policy.get(str(role)):
-                policy[str(role)].remove('allAuthenticatedUsers')
+            if public:
+                # update bucket iam policy with allAuthN users having
+                # read access
+                policy[str(role)] = ['allAuthenticatedUsers']
+            else:
+                if 'allAuthenticatedUsers' in policy.get(str(role)):
+                    policy[str(role)].remove('allAuthenticatedUsers')
             bucket.set_iam_policy(policy)
 
         if access_logs_bucket:
-            bucket.enable_logging(access_logs_bucket)
+            bucket.enable_logging(access_logs_bucket, object_prefix=name)
+
+        if for_logging:
+            bucket.acl.group(GOOGLE_LOGGING_EMAIL).grant_write()
+            bucket.acl.save()
 
         bucket.update()
 
