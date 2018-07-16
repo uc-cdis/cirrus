@@ -100,9 +100,9 @@ class GooglePolicyBinding(object):
         members = []
 
         for m in json["members"]:
-            type = m.split(":", 1)[0]
+            m_type = m.split(":", 1)[0]
             email = m.split(":", 1)[1]
-            members.append(GooglePolicyMember(type, email))
+            members.append(GooglePolicyMember(m_type, email))
 
         return GooglePolicyBinding(role, members)
 
