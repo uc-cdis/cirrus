@@ -115,8 +115,8 @@ def test_create_google_policy_from_json():
     mems1 = [mem11, mem12, mem13, mem23]
     mems2 = [mem21, mem22, mem23]
 
-    bind1 = GooglePolicyBinding(role1, mems1)
-    bind2 = GooglePolicyBinding(role2, mems2)
+    GooglePolicyBinding(role1, mems1)
+    GooglePolicyBinding(role2, mems2)
 
     # check policy has correct number of members and roles
     assert len(policy.members) == 6
