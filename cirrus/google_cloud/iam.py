@@ -21,10 +21,9 @@ class GooglePolicy(object):
         """
         self.bindings = bindings
         self.members = set()
-        for binding in bindings:
-            self.members.union(binding.members)
         self.roles = set()
         for binding in bindings:
+            self.members.update(binding.members)
             self.roles.add(binding.role)
         self.etag = etag
         self.version = version
@@ -78,11 +77,9 @@ class GooglePolicyBinding(object):
         """
         self.role = role
         for m in members:
-            m.role = role
-        self.role.members = set()
+            m.roles.add(role)
         self.role.members.update(members)
-        self.members = set()
-        self.members.update(members)
+        self.members = set(members)
 
     @classmethod
     def from_json(cls, json):
@@ -101,9 +98,9 @@ class GooglePolicyBinding(object):
         members = []
 
         for m in json["members"]:
-            type = m.split(":", 1)[0]
+            m_type = m.split(":", 1)[0]
             email = m.split(":", 1)[1]
-            members.add(GooglePolicyMember(type, email))
+            members.append(GooglePolicyMember(m_type, email))
 
         return GooglePolicyBinding(role, members)
 
@@ -162,6 +159,7 @@ class GooglePolicyMember(object):
         """
         self.member_type = member_type
         self.email_id = email_id
+        self.roles = set()
 
     def __str__(self):
         """
@@ -200,6 +198,7 @@ class GooglePolicyRole(object):
             name = name.strip()[len(GooglePolicyRole.ROLE_PREFIX):]
 
         self.name = name
+        self.members = set()
 
     def __str__(self):
         """

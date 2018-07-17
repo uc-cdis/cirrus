@@ -13,15 +13,21 @@ except ImportError:
     from mock import MagicMock
     from mock import patch
 
-from cirrus import GoogleCloudManager
+from cirrus.google_cloud import (
+    COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT,
+    GOOGLE_API_SERVICE_ACCOUNT,
+    COMPUTE_ENGINE_API_SERVICE_ACCOUNT,
+    USER_MANAGED_SERVICE_ACCOUNT,
+)
 from cirrus.google_cloud.manager import (
     _get_proxy_group_name_for_user,
     _get_prefix_from_proxy_group,
     _get_user_name_from_proxy_group,
-    _get_user_id_from_proxy_group
+    _get_user_id_from_proxy_group,
 )
 from cirrus.google_cloud.manager import get_valid_service_account_id_for_user
 from cirrus.config import config
+from cirrus.google_cloud.errors import GoogleAPIError
 
 from test.conftest import mock_get_group
 from test.conftest import mock_get_service_accounts_from_group
@@ -246,7 +252,8 @@ def test_create_service_account_valid(test_cloud_manager):
     args, kwargs = test_cloud_manager.set_iam_policy.call_args
     assert (
         any(expected_new_service_account in str(arg) for arg in args) or
-        any(expected_new_service_account in str(kwarg) for kwarg in kwargs.values())
+        any(expected_new_service_account in str(kwarg)
+            for kwarg in kwargs.values())
     )
 
 
@@ -256,7 +263,8 @@ def test_delete_service_account(test_cloud_manager):
     given account
     """
     # Setup #
-    test_cloud_manager._authed_session.delete.return_value = _fake_response(200)
+    test_cloud_manager._authed_session.delete.return_value = _fake_response(
+        200)
 
     account = "some_service_account"
 
@@ -318,7 +326,8 @@ def test_delete_service_account_key(test_cloud_manager):
     Test that deleting a service account key actually calls google API with given account
     """
     # Setup #
-    test_cloud_manager._authed_session.delete.return_value = _fake_response(200)
+    test_cloud_manager._authed_session.delete.return_value = _fake_response(
+        200)
 
     account = "some_service_account"
     key = "some_service_account_key_name"
@@ -486,7 +495,8 @@ def test_set_iam_policy(test_cloud_manager):
         200, {"some_policy": "some_value"})
 
     # Call #
-    service_account_policy = test_cloud_manager.set_iam_policy(account, resource)
+    service_account_policy = test_cloud_manager.set_iam_policy(
+        account, resource)
 
     # Test #
     assert service_account_policy["some_policy"] == "some_value"
@@ -985,7 +995,8 @@ def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
     # Setup #
     # Make now a specific time by faking out datetime class with custom class
     # that always returns a specific time
-    NewDatetime.utcnow = classmethod(lambda cls: cls(2017, 12, 12, 20, 41, 56, 999439))
+    NewDatetime.utcnow = classmethod(
+        lambda cls: cls(2017, 12, 12, 20, 41, 56, 999439))
     account = "some-service-account@test-domain.com"
     config.update(SERVICE_KEY_EXPIRATION_IN_DAYS=3)
 
@@ -996,7 +1007,8 @@ def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
             "name": expired_key_name_1,
             "privateKeyType": "",
             "keyAlgorithm": "",
-            "validAfterTime": "2017-11-11T14:49:16Z",  # almost 30 days expired from fake "now"
+            # almost 30 days expired from fake "now"
+            "validAfterTime": "2017-11-11T14:49:16Z",
             "validBeforeTime": "",
         },
         {
@@ -1010,7 +1022,8 @@ def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
             "name": expired_key_name_2,
             "privateKeyType": "",
             "keyAlgorithm": "",
-            "validAfterTime": "2017-11-11T14:49:16Z",  # almost 30 days expired from fake "now"
+            # almost 30 days expired from fake "now"
+            "validAfterTime": "2017-11-11T14:49:16Z",
             "validBeforeTime": "",
         }
     ]
@@ -1070,6 +1083,122 @@ def test_service_account_keys_when_empty(test_cloud_manager):
         any(account in str(arg) for arg in args) or
         any(account in str(kwarg) for kwarg in kwargs.values())
     )
+
+
+def test_get_service_account_type_compute_engine_default(test_cloud_manager):
+
+    service_account = {
+        "email": "test@appspot.gserviceaccount.com"
+    }
+    test_cloud_manager._authed_session.get.return_value = (
+        _fake_response(200, service_account)
+    )
+    assert test_cloud_manager.get_service_account_type(service_account) == COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT
+
+
+def test_get_service_account_type_google_api(test_cloud_manager):
+
+    service_account = {
+        "email": "test@cloudservices.gserviceaccount.com"
+    }
+    test_cloud_manager._authed_session.get.return_value = (
+        _fake_response(200, service_account)
+    )
+    assert test_cloud_manager.get_service_account_type(service_account) == GOOGLE_API_SERVICE_ACCOUNT
+
+
+def test_get_service_account_type_compute_engine_api(test_cloud_manager):
+
+    service_account = {
+        "email": "test@compute-system.iam.gserviceaccount.com"
+    }
+    test_cloud_manager._authed_session.get.return_value = (
+        _fake_response(200, service_account)
+    )
+    assert test_cloud_manager.get_service_account_type(service_account) == COMPUTE_ENGINE_API_SERVICE_ACCOUNT
+
+
+def test_get_service_account_type_user_managed(test_cloud_manager):
+
+    service_account = {
+        "email": "test@1234.iam.gserviceaccount.com'"
+    }
+    test_cloud_manager._authed_session.get.return_value = (
+        _fake_response(200, service_account)
+    )
+    assert test_cloud_manager.get_service_account_type(service_account) == USER_MANAGED_SERVICE_ACCOUNT
+
+
+def test_get_project_members_with_failure_due_to_permission_denied(test_cloud_manager):
+    """
+    Test for the case with failure.
+    """
+    faked_reponse_body = {
+        "error": {
+            "code": 403,
+            "message": "The caller does not have permission",
+            "status": "PERMISSION_DENIED"
+        }
+    }
+
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        403, faked_reponse_body)
+
+    with pytest.raises(GoogleAPIError):
+        test_cloud_manager.get_project_members()
+
+
+def test_get_project_with_no_user_members(test_cloud_manager):
+    """
+    Test for project with no user members
+    """
+    faked_reponse_body = {
+        "version": 1,
+        "etag": "BwVvrr5i9Jc=",
+        "bindings": [
+            {
+                "role": "roles/compute.serviceAgent",
+                "members": [
+                    "serviceAccount:my-other-app@appspot.gserviceaccount.com"
+                ]
+            }
+        ]
+    }
+
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, faked_reponse_body)
+    members = test_cloud_manager.get_project_members()
+    assert members == []
+
+
+def test_get_project_members(test_cloud_manager):
+    """
+    Test get project members with success
+    """
+    faked_reponse_body = {
+        "version": 1,
+        "etag": "BwVvrr5i9Jc=",
+        "bindings": [
+            {
+                "role": "roles/compute.serviceAgent",
+                "members": [
+                    "user:test@gmail.com",
+                    "serviceAccount:my-other-app@appspot.gserviceaccount.com"
+                ]
+            },
+            {
+                "role": "roles/owner",
+                "members": [
+                    "user:test@example.net"
+                ]
+            }
+        ]
+    }
+
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, faked_reponse_body)
+    members = test_cloud_manager.get_project_members()
+    assert members == ['test@gmail.com', 'test@example.net']
 
 
 if __name__ == "__main__":

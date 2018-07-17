@@ -28,3 +28,16 @@ class GoogleAuthError(Exception):
             message = GoogleAuthError.GOOGLE_AUTH_ERROR_MESSAGE
 
         super(GoogleAuthError, self).__init__(message)
+
+
+class GoogleAPIError(Exception):
+
+    GOOGLE_API_ERROR_MESSAGE = (
+        "There was an issue with requesting Google API "
+    )
+
+    def __init__(self, message=None, *args):
+        if not message:
+            message = GoogleAPIError.GOOGLE_API_ERROR_MESSAGE
+
+        super(GoogleAPIError, self).__init__(message)
