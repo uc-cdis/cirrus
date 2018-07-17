@@ -332,63 +332,6 @@ class GoogleCloudManager(CloudManager):
             org = info["parent"]["id"]
         return org
 
-    def get_project_members(self, project_id=None):
-        """
-        Get all the members given a project
-        Args:
-            project_id(str): google project id
-
-        Returns:
-            list(str): list of members
-
-            .. code-block:: python
-
-            {
-              "version": 1,
-              "etag": "BwVvrr5i9Jc=",
-              "bindings": [
-                {
-                  "role": "roles/compute.serviceAgent",
-                  "members": [
-                    "serviceAccount:service-xxxx@compute-system.iam.gserviceaccount.com"
-                  ]
-                },
-                {
-                  "role": "roles/container.serviceAgent",
-                  "members": [
-                    "serviceAccount:service-xxxx@container-engine-robot.iam.gserviceaccount.com"
-                  ]
-                },
-                {
-                  "role": "roles/owner",
-                  "members": [
-                    "user:test@example.net"
-                  ]
-                }
-              ]
-            }
-        """
-        members = []
-        project_id = project_id or self.project_id
-
-        api_url = _get_google_api_url(
-            "projects/" + project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL)
-        response = self._authed_request("POST", api_url)
-        if response.status_code != 200:
-            raise GoogleAPIError('Unable to get IAM policy for project {}. The status code is {}'.format(
-                project_id, response.status_code))
-
-        bindings = response.json().get('bindings', [])
-        for binding in bindings:
-            if not hasattr(binding, 'get'):
-                continue
-            users = binding.get('members', [])
-            for user in users:
-                if user.startswith(GooglePolicyMember.USER):
-                    members.append(user[len(GooglePolicyMember.USER)+1:])
-
-        return members
-
     def get_project_info(self):
         """
         GET the info for the given project
@@ -1319,7 +1262,7 @@ class GoogleCloudManager(CloudManager):
                 'Unable to get IAM policy for project {}. The status code is {}'
                 .format(project_id, response.status_code))
 
-        return list(GooglePolicy.from_json(response).members)
+        return list(GooglePolicy.from_json(response.json()).members)
 
 
 def _get_google_api_url(relative_path, root_api_url):
