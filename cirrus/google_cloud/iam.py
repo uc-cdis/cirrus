@@ -21,10 +21,9 @@ class GooglePolicy(object):
         """
         self.bindings = bindings
         self.members = set()
-        for binding in bindings:
-            self.members.update(binding.members)
         self.roles = set()
         for binding in bindings:
+            self.members.update(binding.members)
             self.roles.add(binding.role)
         self.etag = etag
         self.version = version
@@ -80,8 +79,7 @@ class GooglePolicyBinding(object):
         for m in members:
             m.roles.add(role)
         self.role.members.update(members)
-        self.members = set()
-        self.members.update(members)
+        self.members = set(members)
 
     @classmethod
     def from_json(cls, json):
