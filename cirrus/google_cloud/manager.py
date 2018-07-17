@@ -33,8 +33,6 @@ from cirrus.google_cloud.iam import GooglePolicyRole
 from cirrus.google_cloud.services import GoogleAdminService
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 
-from iam import GooglePolicy
-
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
