@@ -23,7 +23,7 @@ from googleapiclient.errors import HttpError
 
 from cirrus.config import config
 from cirrus.core import CloudManager
-from cirrus.google_cloud.errors import GoogleAuthError
+from cirrus.google_cloud.errors import GoogleAuthError, GoogleAPIError
 from cirrus.google_cloud.iam import GooglePolicy
 from cirrus.google_cloud.iam import GooglePolicyBinding
 from cirrus.google_cloud.iam import GooglePolicyMember
@@ -35,6 +35,7 @@ from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
+GOOGLE_LOGGING_EMAIL = 'cloud-storage-analytics@google.com'
 
 GOOGLE_STORAGE_CLASSES = [
     'MULTI_REGIONAL',
@@ -42,6 +43,26 @@ GOOGLE_STORAGE_CLASSES = [
     'NEARLINE',
     'COLDLINE',
     'STANDARD'  # alias for MULTI_REGIONAL/REGIONAL, based on location
+]
+
+COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT = (
+    'COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT'
+)
+GOOGLE_API_SERVICE_ACCOUNT = 'GOOGLE_API_SERVICE_ACCOUNT'
+COMPUTE_ENGINE_API_SERVICE_ACCOUNT = 'COMPUTE_ENGINE_API_SERVICE_ACCOUNT'
+USER_MANAGED_SERVICE_ACCOUNT = 'USER_MANAGED_SERVICE_ACCOUNT'
+
+"""
+This mapping is order-specific. More specific domains should appear
+earlier in the list. For example, `compute-system.iam.gserviceaccount.com`
+should appear before `iam.gserviceaccount.com`
+"""
+GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING = [
+    ('appspot.gserviceaccount.com', COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT),
+    ('cloudservices.gserviceaccount.com', GOOGLE_API_SERVICE_ACCOUNT),
+    ('compute-system.iam.gserviceaccount.com',
+     COMPUTE_ENGINE_API_SERVICE_ACCOUNT),
+    ('iam.gserviceaccount.com', USER_MANAGED_SERVICE_ACCOUNT),
 ]
 
 
@@ -275,7 +296,8 @@ class GoogleCloudManager(CloudManager):
 
         user_id = _get_user_id_from_proxy_group(proxy_group["email"])
         username = _get_user_name_from_proxy_group(proxy_group["email"])
-        all_service_accounts = self.get_service_accounts_from_group(proxy_group_id)
+        all_service_accounts = self.get_service_accounts_from_group(
+            proxy_group_id)
 
         # create dict with first part of email as key and whole email as value
         service_account_emails = {
@@ -306,6 +328,63 @@ class GoogleCloudManager(CloudManager):
             org = info["parent"]["id"]
         return org
 
+    def get_project_members(self, project_id=None):
+        """
+        Get all the members given a project
+        Args:
+            project_id(str): google project id
+
+        Returns:
+            list(str): list of members
+
+            .. code-block:: python
+
+            {
+              "version": 1,
+              "etag": "BwVvrr5i9Jc=",
+              "bindings": [
+                {
+                  "role": "roles/compute.serviceAgent",
+                  "members": [
+                    "serviceAccount:service-xxxx@compute-system.iam.gserviceaccount.com"
+                  ]
+                },
+                {
+                  "role": "roles/container.serviceAgent",
+                  "members": [
+                    "serviceAccount:service-xxxx@container-engine-robot.iam.gserviceaccount.com"
+                  ]
+                },
+                {
+                  "role": "roles/owner",
+                  "members": [
+                    "user:test@example.net"
+                  ]
+                }
+              ]
+            }
+        """
+        members = []
+        project_id = project_id or self.project_id
+
+        api_url = _get_google_api_url(
+            "projects/" + project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL)
+        response = self._authed_request("POST", api_url)
+        if response.status_code != 200:
+            raise GoogleAPIError('Unable to get IAM policy for project {}. The status code is {}'.format(
+                project_id, response.status_code))
+
+        bindings = response.json().get('bindings', [])
+        for binding in bindings:
+            if not hasattr(binding, 'get'):
+                continue
+            users = binding.get('members', [])
+            for user in users:
+                if user.startswith(GooglePolicyMember.USER):
+                    members.append(user[len(GooglePolicyMember.USER)+1:])
+
+        return members
+
     def get_project_info(self):
         """
         GET the info for the given project
@@ -328,7 +407,7 @@ class GoogleCloudManager(CloudManager):
 
     def create_or_update_bucket(
             self, name, storage_class=None, public=None, requester_pays=False,
-            access_logs_bucket=None):
+            access_logs_bucket=None, for_logging=False):
         """
         Create a Google Storage bucket.
 
@@ -346,6 +425,8 @@ class GoogleCloudManager(CloudManager):
                 requests for this bucket and its blobs.
             access_logs_bucket (str, optional): Google bucket name to store
                 access logs for this newly created bucket
+            for_logging (bool, optional): Whether or not this bucket will
+                be used as a bucket to store access logs.
 
         Raises:
             GoogleAuthError: Description
@@ -391,6 +472,10 @@ class GoogleCloudManager(CloudManager):
         if access_logs_bucket:
             bucket.enable_logging(access_logs_bucket, object_prefix=name)
 
+        if for_logging:
+            bucket.acl.group(GOOGLE_LOGGING_EMAIL).grant_write()
+            bucket.acl.save()
+
         bucket.update()
 
     def give_group_access_to_bucket(
@@ -434,11 +519,11 @@ class GoogleCloudManager(CloudManager):
                     'on bucket {bucket_name}. cirrus '
                     'does not support the access level {access_level}.'
                     .format(
-                            access_level=access_level,
-                            group_email=group_email,
-                            bucket_name=bucket_name
-                        )
+                        access_level=access_level,
+                        group_email=group_email,
+                        bucket_name=bucket_name
                     )
+                )
 
         for role in roles:
             policy[str(role)] = [str(member)]
@@ -478,6 +563,24 @@ class GoogleCloudManager(CloudManager):
         response = self._authed_request("GET", api_url)
 
         return response.json()
+
+    def get_service_account_type(self, account):
+        """
+        Get the type of service account referred to by account param
+
+        Args:
+            account (str): account id of service account
+
+        Returns:
+            String: type of service account
+        """
+        service_account = self.get_service_account(account)
+        email_domain = service_account['email'].split("@")[-1]
+        for (domain, sa_type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
+            if domain in email_domain:
+                return sa_type
+
+        return None
 
     def get_all_service_accounts(self):
         """
@@ -725,7 +828,8 @@ class GoogleCloudManager(CloudManager):
             "projects/" + self.project_id + "/serviceAccounts/" + account +
             "/keys", GOOGLE_IAM_API_URL)
 
-        response = self._authed_request("GET", api_url + "&keyTypes=USER_MANAGED").json()
+        response = self._authed_request(
+            "GET", api_url + "&keyTypes=USER_MANAGED").json()
         keys = response.get("keys", [])
 
         return keys
@@ -782,7 +886,8 @@ class GoogleCloudManager(CloudManager):
             "resource": resource
         }
 
-        response = self._authed_request("POST", api_url, data=json.dumps(resource))
+        response = self._authed_request(
+            "POST", api_url, data=json.dumps(resource))
 
         return response.json()
 
@@ -820,7 +925,8 @@ class GoogleCloudManager(CloudManager):
                     ]
                 }
         """
-        api_url = _get_google_api_url(resource + ":setIamPolicy", GOOGLE_IAM_API_URL)
+        api_url = _get_google_api_url(
+            resource + ":setIamPolicy", GOOGLE_IAM_API_URL)
 
         # "etag is used for optimistic concurrency control as a way to help
         # prevent simultaneous updates of a policy from overwriting each other"
@@ -837,7 +943,8 @@ class GoogleCloudManager(CloudManager):
         # etag = current_policy["etag"]
         # new_policy.etag = etag
 
-        response = self._authed_request("POST", api_url, data=(str(new_policy)))
+        response = self._authed_request(
+            "POST", api_url, data=(str(new_policy)))
 
         return response.json()
 
@@ -1276,7 +1383,8 @@ def _is_key_expired(key, expiration_in_days):
     """
     expired = False
     google_date_format = "%Y-%m-%dT%H:%M:%SZ"
-    creation_time = datetime.strptime(key["validAfterTime"], google_date_format)
+    creation_time = datetime.strptime(
+        key["validAfterTime"], google_date_format)
     current_time = datetime.strptime(datetime.utcnow().strftime(google_date_format),
                                      google_date_format)
     current_life_in_seconds = (current_time - creation_time).total_seconds()
