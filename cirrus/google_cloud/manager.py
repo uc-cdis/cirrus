@@ -1318,9 +1318,9 @@ class GoogleCloudManager(CloudManager):
 
         ancestors = []
         if response:
-            for ancestor in response['ancestor']:
-                r_id_type = ancestor['resourceID']['type']
-                r_id = ancestor['resourceID']['id']
+            for ancestor in response.json()['ancestor']:
+                r_id_type = ancestor['resourceId']['type']
+                r_id = ancestor['resourceId']['id']
                 ancestors.append((r_id_type, r_id))
         return ancestors
 
