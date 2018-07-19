@@ -1159,9 +1159,10 @@ def test_get_project_membership(test_cloud_manager):
     members = test_cloud_manager.get_project_membership()
     for mem in members:
         assert mem in [
-        GooglePolicyMember("user", "test@gmail.com"),
-        GooglePolicyMember("serviceAccount", "my-other-app@appspot.gserviceaccount.com"),
-        GooglePolicyMember("user", "test@example.net")
+            GooglePolicyMember("user", "test@gmail.com"),
+            GooglePolicyMember("serviceAccount",
+                               "my-other-app@appspot.gserviceaccount.com"),
+            GooglePolicyMember("user", "test@example.net")
     ]
 
 
