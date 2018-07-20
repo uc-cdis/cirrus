@@ -1240,6 +1240,65 @@ class GoogleCloudManager(CloudManager):
 
         return response
 
+    def get_project_ancestry(self, project_id=None):
+        """
+        Gets a project's ancestry, represented by a list of
+        resource IDs. The first resource ID is always the
+        project itself, followed by succesive parent resources.
+        https://cloud.google.com/resource-manager/reference/rest/v1/projects/getAncestry
+
+        Args:
+            project_id(str): the project_id of which to get the ancestry,
+                uses self.project_id if None is given
+        Returns:
+            [(str, str)]: a list of tuples, each of which represents a
+            resource ID where the first element of the tuple is the
+            type of the resource ID and the second is the ID itself
+        """
+        project_id = project_id or self.project_id
+        api_url = _get_google_api_url(
+            "projects/" + project_id + ":getAncestry", GOOGLE_CLOUD_RESOURCE_URL
+        )
+        response = self._authed_request("POST", api_url).json()
+
+        ancestors = []
+        if response:
+            response_ancestors = response.get('ancestor')
+            if response_ancestors:
+                for ancestor in response_ancestors:
+                    resource_id = ancestor.get('resourceId')
+                    if resource_id:
+                        r_id_type = resource_id.get('type')
+                        r_id = resource_id.get('id')
+                        ancestors.append((r_id_type, r_id))
+                        if not r_id_type:
+                            raise GoogleAPIError('"type" key not found in getAncestry result')
+                        if not r_id:
+                            raise GoogleAPIError('"id" key not found in getAncestry result')
+                    else:
+                        raise GoogleAPIError('"resourceId" key not found in getAncestry result')
+            else:
+                raise GoogleAPIError('"ancestor" key not found in getAncestry result')
+        else:
+            raise GoogleAPIError('Response body not found in getAncestry result')
+        return ancestors
+
+    def has_parent_organization(self):
+        """
+        Determines if a project has a parent organization,
+        i.e if this project belongs to organization
+
+        Returns:
+            Bool: True iff the project has a parent organization
+        """
+        ancestry = self.get_project_ancestry()
+
+        for (r_id_type, _) in ancestry:
+            if r_id_type == "organization":
+                return True
+
+        return False
+
     def get_project_membership(self, project_id=None):
         """
         Gets a list of members associated with project

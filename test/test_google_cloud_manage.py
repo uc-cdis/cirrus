@@ -1166,5 +1166,84 @@ def test_get_project_membership(test_cloud_manager):
     ]
 
 
+def test_get_project_ancestry(test_cloud_manager):
+    """
+    Check that get_project_acnestry correctly parses
+    response into two ancestors. The resource itself
+    is always first, followed by any folders, followed by
+    a parent organization (if one exists)
+    """
+    faked_response_body = {
+        "ancestor": [
+            {
+                "resourceId": {
+                    "type": "project",
+                    "id": "1"
+                }
+            },
+            {
+                "resourceId": {
+                    "type": "organization",
+                    "id": "2"
+                }
+            }
+        ]
+    }
+
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, faked_response_body)
+    ancestry = test_cloud_manager.get_project_ancestry()
+    assert ancestry[0] == ("project", "1")
+    assert ancestry[1] == ("organization", "2")
+
+
+def test_has_parent_organization(test_cloud_manager):
+    """
+    Check that a project with a parent organization
+    is idenitifed as having one by has_parent_organization
+    function
+    """
+    faked_response_body = {
+        "ancestor": [
+            {
+                "resourceId": {
+                    "type": "project",
+                    "id": "1"
+                }
+            },
+            {
+                "resourceId": {
+                    "type": "organization",
+                    "id": "2"
+                }
+            }
+        ]
+    }
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, faked_response_body)
+
+    assert test_cloud_manager.has_parent_organization()
+
+
+def test_has_no_parent_organization(test_cloud_manager):
+    """
+    Check that a project without a parent organization
+    is not identified as having a parent organization
+    """
+    faked_response_body = {
+        "ancestor": [
+            {
+                "resourceId": {
+                    "type": "project",
+                    "id": "1"
+                }
+            }
+        ]
+    }
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, faked_response_body)
+
+    assert not test_cloud_manager.has_parent_organization()
+
 if __name__ == "__main__":
     pytest.main(['-x', "-v", '.'])
