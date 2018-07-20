@@ -28,6 +28,7 @@ from cirrus.google_cloud.manager import (
 from cirrus.google_cloud.manager import get_valid_service_account_id_for_user
 from cirrus.config import config
 from cirrus.google_cloud.errors import GoogleAPIError
+from cirrus.google_cloud.iam import GooglePolicyMember
 
 from test.conftest import mock_get_group
 from test.conftest import mock_get_service_accounts_from_group
@@ -1129,49 +1130,7 @@ def test_get_service_account_type_user_managed(test_cloud_manager):
     assert test_cloud_manager.get_service_account_type(service_account) == USER_MANAGED_SERVICE_ACCOUNT
 
 
-def test_get_project_members_with_failure_due_to_permission_denied(test_cloud_manager):
-    """
-    Test for the case with failure.
-    """
-    faked_reponse_body = {
-        "error": {
-            "code": 403,
-            "message": "The caller does not have permission",
-            "status": "PERMISSION_DENIED"
-        }
-    }
-
-    test_cloud_manager._authed_session.post.return_value = _fake_response(
-        403, faked_reponse_body)
-
-    with pytest.raises(GoogleAPIError):
-        test_cloud_manager.get_project_members()
-
-
-def test_get_project_with_no_user_members(test_cloud_manager):
-    """
-    Test for project with no user members
-    """
-    faked_reponse_body = {
-        "version": 1,
-        "etag": "BwVvrr5i9Jc=",
-        "bindings": [
-            {
-                "role": "roles/compute.serviceAgent",
-                "members": [
-                    "serviceAccount:my-other-app@appspot.gserviceaccount.com"
-                ]
-            }
-        ]
-    }
-
-    test_cloud_manager._authed_session.post.return_value = _fake_response(
-        200, faked_reponse_body)
-    members = test_cloud_manager.get_project_members()
-    assert members == []
-
-
-def test_get_project_members(test_cloud_manager):
+def test_get_project_membership(test_cloud_manager):
     """
     Test get project members with success
     """
@@ -1197,8 +1156,14 @@ def test_get_project_members(test_cloud_manager):
 
     test_cloud_manager._authed_session.post.return_value = _fake_response(
         200, faked_reponse_body)
-    members = test_cloud_manager.get_project_members()
-    assert members == ['test@gmail.com', 'test@example.net']
+    members = test_cloud_manager.get_project_membership()
+    for mem in members:
+        assert mem in [
+            GooglePolicyMember("user", "test@gmail.com"),
+            GooglePolicyMember("serviceAccount",
+                               "my-other-app@appspot.gserviceaccount.com"),
+            GooglePolicyMember("user", "test@example.net")
+    ]
 
 
 def test_get_project_ancestry(test_cloud_manager):
