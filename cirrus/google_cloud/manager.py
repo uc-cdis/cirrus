@@ -1259,14 +1259,28 @@ class GoogleCloudManager(CloudManager):
         api_url = _get_google_api_url(
             "projects/" + project_id + ":getAncestry", GOOGLE_CLOUD_RESOURCE_URL
         )
-        response = self._authed_request("POST", api_url)
+        response = self._authed_request("POST", api_url).json()
 
         ancestors = []
         if response:
-            for ancestor in response.json()['ancestor']:
-                r_id_type = ancestor['resourceId']['type']
-                r_id = ancestor['resourceId']['id']
-                ancestors.append((r_id_type, r_id))
+            response_ancestors = response.get('ancestor')
+            if response_ancestors:
+                for ancestor in response_ancestors:
+                    resource_id = ancestor.get('resourceId')
+                    if resource_id:
+                        r_id_type = resource_id.get('type')
+                        r_id = resource_id.get('id')
+                        ancestors.append((r_id_type, r_id))
+                        if not r_id_type:
+                            raise GoogleAPIError('"type" key not found in getAncestry result')
+                        if not r_id:
+                            raise GoogleAPIError('"id" key not found in getAncestry result')
+                    else:
+                        raise GoogleAPIError('"resourceId" key not found in getAncestry result')
+            else:
+                raise GoogleAPIError('"ancestor" key not found in getAncestry result')
+        else:
+            raise GoogleAPIError('Response body not found in getAncestry result')
         return ancestors
 
     def has_parent_organization(self):
