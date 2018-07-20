@@ -1167,7 +1167,12 @@ def test_get_project_membership(test_cloud_manager):
 
 
 def test_get_project_ancestry(test_cloud_manager):
-
+    """
+    Check that get_project_acnestry correctly parses
+    response into two ancestors. The resource itself
+    is always first, followed by any folders, followed by
+    a parent organization (if one exists)
+    """
     faked_response_body = {
         "ancestor": [
             {
@@ -1193,7 +1198,11 @@ def test_get_project_ancestry(test_cloud_manager):
 
 
 def test_has_parent_organization(test_cloud_manager):
-
+    """
+    Check that a project with a parent organization
+    is idenitifed as having one by has_parent_organization
+    function
+    """
     faked_response_body = {
         "ancestor": [
             {
@@ -1217,6 +1226,10 @@ def test_has_parent_organization(test_cloud_manager):
 
 
 def test_has_no_parent_organization(test_cloud_manager):
+    """
+    Check that a project without a parent organization
+    is not identified as having a parent organization
+    """
     faked_response_body = {
         "ancestor": [
             {
