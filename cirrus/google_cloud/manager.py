@@ -1293,7 +1293,7 @@ class GoogleCloudManager(CloudManager):
         """
         ancestry = self.get_project_ancestry()
 
-        for (r_id_type, r_id) in ancestry:
+        for (r_id_type, _) in ancestry:
             if r_id_type == "organization":
                 return True
 
