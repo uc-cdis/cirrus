@@ -314,7 +314,7 @@ class GoogleCloudManager(CloudManager):
         if service_account_id_for_user in service_account_emails:
             primary_email = service_account_emails[service_account_id_for_user]
 
-        return self.get_service_account(primary_email)
+        return self.get_service_account(primary_email).json()
 
     def get_project_organization(self):
         """
@@ -507,7 +507,7 @@ class GoogleCloudManager(CloudManager):
 
         response = self._authed_request("GET", api_url)
 
-        return response.json()
+        return response
 
     def get_service_account_type(self, account):
         """
@@ -519,8 +519,12 @@ class GoogleCloudManager(CloudManager):
         Returns:
             String: type of service account
         """
-        service_account = self.get_service_account(account)
-        email_domain = service_account['email'].split("@")[-1]
+        response = self.get_service_account(account)
+        if respone.status_code != 200:
+            # TODO: Need to have better handle non-200 status code
+            return None
+        service_account = response.json()
+        email_domain = service_account.get('email', '').split("@")[-1]
         for (domain, sa_type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
             if domain in email_domain:
                 return sa_type
