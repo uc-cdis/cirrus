@@ -520,7 +520,7 @@ class GoogleCloudManager(CloudManager):
             String: type of service account
         """
         response = self.get_service_account(account)
-        if respone.status_code != 200:
+        if response.status_code != 200:
             # TODO: Need to have better handle non-200 status code
             return None
         service_account = response.json()

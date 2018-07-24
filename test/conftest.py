@@ -13,6 +13,15 @@ from cirrus.google_cloud.manager import _get_proxy_group_name_for_user
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 
 
+class MockResponse:
+    def __init__(self, json_data, status_code):
+        self.json_data = json_data
+        self.status_code = status_code
+
+    def json(self):
+        return self.json_data
+
+
 def get_test_cloud_manager():
     project_id = "test_project"
     manager = GoogleCloudManager(project_id)
@@ -85,8 +94,10 @@ def mock_get_service_accounts_from_group(
 
 
 def mock_get_service_account(test_cloud_manager, primary_service_account):
+
     test_cloud_manager.get_service_account = MagicMock()
-    test_cloud_manager.get_service_account.return_value = {
+
+    test_cloud_manager.get_service_account.return_value = MockResponse({
         "name": "",
         "projectId": "",
         "uniqueId": "",
@@ -94,4 +105,4 @@ def mock_get_service_account(test_cloud_manager, primary_service_account):
         "displayName": "",
         "etag": "",
         "oauth2ClientId": "",
-    }
+    }, 200)
