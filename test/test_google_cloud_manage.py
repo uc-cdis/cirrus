@@ -467,20 +467,16 @@ def test_get_service_account_policy_valid(test_cloud_manager):
 
     # Call #
     service_account_policy = test_cloud_manager.get_service_account_policy(
-        account, resource)
+        account)
 
     # Test #
-    assert service_account_policy["some_policy"] == "some_value"
+    assert service_account_policy.json()["some_policy"] == "some_value"
 
     # make sure accoutn and resource are in the call to post
     args, kwargs = test_cloud_manager._authed_session.post.call_args
     assert (
         any(account in str(arg) for arg in args) or
         any(account in str(kwarg) for kwarg in kwargs.values())
-    )
-    assert (
-        any(resource in str(arg) for arg in args) or
-        any(resource in str(kwarg) for kwarg in kwargs.values())
     )
 
 

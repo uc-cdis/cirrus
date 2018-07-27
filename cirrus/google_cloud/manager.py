@@ -856,6 +856,7 @@ class GoogleCloudManager(CloudManager):
         Returns:
             dict: JSON response from API call, which should contain the IAM policy
             `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/Policy>`_
+            `https://cloud.google.com/iam/docs/granting-roles-to-service-accounts`
 
             .. code-block:: python
 
