@@ -791,17 +791,17 @@ class GoogleCloudManager(CloudManager):
             if _is_key_expired(key, config.SERVICE_KEY_EXPIRATION_IN_DAYS):
                 self.delete_service_account_key(account, key["name"])
 
-    def get_service_account_policy(self, account, resource):
+    def get_service_account_policy(self, account):
         """
         Return the IAM policy for a given service account on given resource.
 
         Args:
             account (str): email address or the uniqueId of a service account.
-            resource (str): The resource for which the policy is being requested
 
         Returns:
             dict: JSON response from API call, which should contain the IAM policy
             `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/Policy>`_
+            `https://cloud.google.com/iam/docs/granting-roles-to-service-accounts`
 
             .. code-block:: python
 
@@ -827,14 +827,7 @@ class GoogleCloudManager(CloudManager):
             "projects/" + self.project_id + "/serviceAccounts/" + account +
             ":getIamPolicy", GOOGLE_IAM_API_URL)
 
-        resource = {
-            "resource": resource
-        }
-
-        response = self._authed_request(
-            "POST", api_url, data=json.dumps(resource))
-
-        return response.json()
+        return self._authed_request("POST", api_url)
 
     def set_iam_policy(self, resource, new_policy):
         """
