@@ -127,7 +127,7 @@ def test_get_service_account_valid(test_cloud_manager):
         200, {"uniqueId": "123"})
 
     # Call #
-    service_account = test_cloud_manager.get_service_account("123")
+    service_account = test_cloud_manager.get_service_account("123").json()
 
     # Test #
     assert service_account["uniqueId"] == "123"
