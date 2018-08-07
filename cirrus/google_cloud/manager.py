@@ -323,9 +323,14 @@ class GoogleCloudManager(CloudManager):
             str: Organiztion name or None
         """
         info = self.get_project_info()
+
+        if 'error' in info:
+            raise GoogleAPIError(str(info))
+
         org = None
-        if info["parent"]["type"] == "organization":
+        if info.get("parent", {}).get("type") == "organization":
             org = info["parent"]["id"]
+
         return org
 
     def get_project_members(self, project_id=None):
