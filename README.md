@@ -54,9 +54,15 @@ Make sure what you provide is the actual Project **ID** and not just the Project
 GOOGLE_PROJECT_ID="test-project-0"
 ```
 
-Enable APIs and services on your project:
+Enable APIs and services on your project (you can selectively enable these depending on which functions of cirrus you plan on using):
 - Google Identity and Access Management (IAM) API
+    - To manage IAM policies
 - Admin SDK
+    - For group/user management
+- Cloud Resource Manager API
+    - For reading Project metadata
+
+The Google+ API may have to be enabled for some features to work as well.
 
 #### Credentials
 You'll need a service account with what permissions you want to allow `cirrus` to have. What these are depends on what functionality of `cirrus` you plan on using.
