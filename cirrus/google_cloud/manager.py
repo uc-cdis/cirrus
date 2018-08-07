@@ -7,6 +7,8 @@ import base64
 from datetime import datetime
 import json
 
+from google.api_core.exceptions import GoogleAPIError
+
 try:
     from urllib.parse import urljoin
 except ImportError:
@@ -332,63 +334,6 @@ class GoogleCloudManager(CloudManager):
             org = info["parent"]["id"]
 
         return org
-
-    def get_project_members(self, project_id=None):
-        """
-        Get all the members given a project
-        Args:
-            project_id(str): google project id
-
-        Returns:
-            list(str): list of members
-
-            .. code-block:: python
-
-            {
-              "version": 1,
-              "etag": "BwVvrr5i9Jc=",
-              "bindings": [
-                {
-                  "role": "roles/compute.serviceAgent",
-                  "members": [
-                    "serviceAccount:service-xxxx@compute-system.iam.gserviceaccount.com"
-                  ]
-                },
-                {
-                  "role": "roles/container.serviceAgent",
-                  "members": [
-                    "serviceAccount:service-xxxx@container-engine-robot.iam.gserviceaccount.com"
-                  ]
-                },
-                {
-                  "role": "roles/owner",
-                  "members": [
-                    "user:test@example.net"
-                  ]
-                }
-              ]
-            }
-        """
-        members = []
-        project_id = project_id or self.project_id
-
-        api_url = _get_google_api_url(
-            "projects/" + project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL)
-        response = self._authed_request("POST", api_url)
-        if response.status_code != 200:
-            raise GoogleAPIError('Unable to get IAM policy for project {}. The status code is {}'.format(
-                project_id, response.status_code))
-
-        bindings = response.json().get('bindings', [])
-        for binding in bindings:
-            if not hasattr(binding, 'get'):
-                continue
-            users = binding.get('members', [])
-            for user in users:
-                if user.startswith(GooglePolicyMember.USER):
-                    members.append(user[len(GooglePolicyMember.USER)+1:])
-
-        return members
 
     def get_project_info(self):
         """
@@ -851,17 +796,17 @@ class GoogleCloudManager(CloudManager):
             if _is_key_expired(key, config.SERVICE_KEY_EXPIRATION_IN_DAYS):
                 self.delete_service_account_key(account, key["name"])
 
-    def get_service_account_policy(self, account, resource):
+    def get_service_account_policy(self, account):
         """
         Return the IAM policy for a given service account on given resource.
 
         Args:
             account (str): email address or the uniqueId of a service account.
-            resource (str): The resource for which the policy is being requested
 
         Returns:
             dict: JSON response from API call, which should contain the IAM policy
             `Google API Reference <https://cloud.google.com/iam/reference/rest/v1/Policy>`_
+            `https://cloud.google.com/iam/docs/granting-roles-to-service-accounts`
 
             .. code-block:: python
 
@@ -887,14 +832,7 @@ class GoogleCloudManager(CloudManager):
             "projects/" + self.project_id + "/serviceAccounts/" + account +
             ":getIamPolicy", GOOGLE_IAM_API_URL)
 
-        resource = {
-            "resource": resource
-        }
-
-        response = self._authed_request(
-            "POST", api_url, data=json.dumps(resource))
-
-        return response.json()
+        return self._authed_request("POST", api_url)
 
     def set_iam_policy(self, resource, new_policy):
         """
@@ -1299,6 +1237,87 @@ class GoogleCloudManager(CloudManager):
             raise GoogleAuthError()
 
         return response
+
+    def get_project_ancestry(self, project_id=None):
+        """
+        Gets a project's ancestry, represented by a list of
+        resource IDs. The first resource ID is always the
+        project itself, followed by succesive parent resources.
+        https://cloud.google.com/resource-manager/reference/rest/v1/projects/getAncestry
+
+        Args:
+            project_id(str): the project_id of which to get the ancestry,
+                uses self.project_id if None is given
+        Returns:
+            [(str, str)]: a list of tuples, each of which represents a
+            resource ID where the first element of the tuple is the
+            type of the resource ID and the second is the ID itself
+        """
+        project_id = project_id or self.project_id
+        api_url = _get_google_api_url(
+            "projects/" + project_id + ":getAncestry", GOOGLE_CLOUD_RESOURCE_URL
+        )
+        response = self._authed_request("POST", api_url).json()
+
+        ancestors = []
+        if response:
+            response_ancestors = response.get('ancestor')
+            if response_ancestors:
+                for ancestor in response_ancestors:
+                    resource_id = ancestor.get('resourceId')
+                    if resource_id:
+                        r_id_type = resource_id.get('type')
+                        r_id = resource_id.get('id')
+                        ancestors.append((r_id_type, r_id))
+                        if not r_id_type:
+                            raise GoogleAPIError('"type" key not found in getAncestry result')
+                        if not r_id:
+                            raise GoogleAPIError('"id" key not found in getAncestry result')
+                    else:
+                        raise GoogleAPIError('"resourceId" key not found in getAncestry result')
+            else:
+                raise GoogleAPIError('"ancestor" key not found in getAncestry result')
+        else:
+            raise GoogleAPIError('Response body not found in getAncestry result')
+        return ancestors
+
+    def has_parent_organization(self):
+        """
+        Determines if a project has a parent organization,
+        i.e if this project belongs to organization
+
+        Returns:
+            Bool: True iff the project has a parent organization
+        """
+        ancestry = self.get_project_ancestry()
+
+        for (r_id_type, _) in ancestry:
+            if r_id_type == "organization":
+                return True
+
+        return False
+
+    def get_project_membership(self, project_id=None):
+        """
+        Gets a list of members associated with project
+
+        Args:
+            project_id(str): unique id of project, if None project's own ID is used
+
+        Returns:
+            list<GooglePolicyMember>: list of members in project
+        """
+        project_id = project_id or self.project_id
+        api_url = _get_google_api_url(
+            "projects/" + self.project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL)
+        response = self._authed_request("POST", api_url)
+
+        if response.status_code != 200:
+            raise GoogleAPIError(
+                'Unable to get IAM policy for project {}. The status code is {}'
+                .format(project_id, response.status_code))
+
+        return list(GooglePolicy.from_json(response.json()).members)
 
 
 def _get_google_api_url(relative_path, root_api_url):

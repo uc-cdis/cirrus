@@ -28,6 +28,7 @@ from cirrus.google_cloud.manager import (
 from cirrus.google_cloud.manager import get_valid_service_account_id_for_user
 from cirrus.config import config
 from cirrus.google_cloud.errors import GoogleAPIError
+from cirrus.google_cloud.iam import GooglePolicyMember
 
 from test.conftest import mock_get_group
 from test.conftest import mock_get_service_accounts_from_group
@@ -467,20 +468,16 @@ def test_get_service_account_policy_valid(test_cloud_manager):
 
     # Call #
     service_account_policy = test_cloud_manager.get_service_account_policy(
-        account, resource)
+        account)
 
     # Test #
-    assert service_account_policy["some_policy"] == "some_value"
+    assert service_account_policy.json()["some_policy"] == "some_value"
 
     # make sure accoutn and resource are in the call to post
     args, kwargs = test_cloud_manager._authed_session.post.call_args
     assert (
         any(account in str(arg) for arg in args) or
         any(account in str(kwarg) for kwarg in kwargs.values())
-    )
-    assert (
-        any(resource in str(arg) for arg in args) or
-        any(resource in str(kwarg) for kwarg in kwargs.values())
     )
 
 
@@ -1129,49 +1126,7 @@ def test_get_service_account_type_user_managed(test_cloud_manager):
     assert test_cloud_manager.get_service_account_type(service_account) == USER_MANAGED_SERVICE_ACCOUNT
 
 
-def test_get_project_members_with_failure_due_to_permission_denied(test_cloud_manager):
-    """
-    Test for the case with failure.
-    """
-    faked_reponse_body = {
-        "error": {
-            "code": 403,
-            "message": "The caller does not have permission",
-            "status": "PERMISSION_DENIED"
-        }
-    }
-
-    test_cloud_manager._authed_session.post.return_value = _fake_response(
-        403, faked_reponse_body)
-
-    with pytest.raises(GoogleAPIError):
-        test_cloud_manager.get_project_members()
-
-
-def test_get_project_with_no_user_members(test_cloud_manager):
-    """
-    Test for project with no user members
-    """
-    faked_reponse_body = {
-        "version": 1,
-        "etag": "BwVvrr5i9Jc=",
-        "bindings": [
-            {
-                "role": "roles/compute.serviceAgent",
-                "members": [
-                    "serviceAccount:my-other-app@appspot.gserviceaccount.com"
-                ]
-            }
-        ]
-    }
-
-    test_cloud_manager._authed_session.post.return_value = _fake_response(
-        200, faked_reponse_body)
-    members = test_cloud_manager.get_project_members()
-    assert members == []
-
-
-def test_get_project_members(test_cloud_manager):
+def test_get_project_membership(test_cloud_manager):
     """
     Test get project members with success
     """
@@ -1197,9 +1152,94 @@ def test_get_project_members(test_cloud_manager):
 
     test_cloud_manager._authed_session.post.return_value = _fake_response(
         200, faked_reponse_body)
-    members = test_cloud_manager.get_project_members()
-    assert members == ['test@gmail.com', 'test@example.net']
+    members = test_cloud_manager.get_project_membership()
+    for mem in members:
+        assert mem in [
+            GooglePolicyMember("user", "test@gmail.com"),
+            GooglePolicyMember("serviceAccount",
+                               "my-other-app@appspot.gserviceaccount.com"),
+            GooglePolicyMember("user", "test@example.net")
+    ]
 
+
+def test_get_project_ancestry(test_cloud_manager):
+    """
+    Check that get_project_acnestry correctly parses
+    response into two ancestors. The resource itself
+    is always first, followed by any folders, followed by
+    a parent organization (if one exists)
+    """
+    faked_response_body = {
+        "ancestor": [
+            {
+                "resourceId": {
+                    "type": "project",
+                    "id": "1"
+                }
+            },
+            {
+                "resourceId": {
+                    "type": "organization",
+                    "id": "2"
+                }
+            }
+        ]
+    }
+
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, faked_response_body)
+    ancestry = test_cloud_manager.get_project_ancestry()
+    assert ancestry[0] == ("project", "1")
+    assert ancestry[1] == ("organization", "2")
+
+
+def test_has_parent_organization(test_cloud_manager):
+    """
+    Check that a project with a parent organization
+    is idenitifed as having one by has_parent_organization
+    function
+    """
+    faked_response_body = {
+        "ancestor": [
+            {
+                "resourceId": {
+                    "type": "project",
+                    "id": "1"
+                }
+            },
+            {
+                "resourceId": {
+                    "type": "organization",
+                    "id": "2"
+                }
+            }
+        ]
+    }
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, faked_response_body)
+
+    assert test_cloud_manager.has_parent_organization()
+
+
+def test_has_no_parent_organization(test_cloud_manager):
+    """
+    Check that a project without a parent organization
+    is not identified as having a parent organization
+    """
+    faked_response_body = {
+        "ancestor": [
+            {
+                "resourceId": {
+                    "type": "project",
+                    "id": "1"
+                }
+            }
+        ]
+    }
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, faked_response_body)
+
+    assert not test_cloud_manager.has_parent_organization()
 
 if __name__ == "__main__":
     pytest.main(['-x', "-v", '.'])
