@@ -84,7 +84,7 @@ class GoogleCloudManager(CloudManager):
             through this client (used internally)
     """
 
-    def __init__(self, project_id=None, creds=None):
+    def __init__(self, project_id=None, creds=None, use_default=True):
         """
         Construct an instance of the Manager for the given Google project ID.
 
@@ -96,8 +96,12 @@ class GoogleCloudManager(CloudManager):
         super(GoogleCloudManager, self).__init__()
         if project_id:
             self.project_id = project_id
-        else:
+        elif use_default:
             self.project_id = config.GOOGLE_PROJECT_ID
+        else:
+            raise GoogleAuthError(
+                'Could not determine Google Project to manage.')
+
         self._authed_session = False
         self._service_account_email_domain = (
             self.project_id + ".iam.gserviceaccount.com"
