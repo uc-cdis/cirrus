@@ -33,7 +33,6 @@ def main():
         # _make_version_and_release_equal()
         _manually_append_source_path_to_sphinx_config()
 
-
     os.system(commands["retrieve_source_api_command"])
     os.system(commands["build_docs_command"])
 
@@ -45,18 +44,24 @@ def _build_commands():
         "sphinx-quickstart -p {PROJECT} -a {AUTHOR} -v {VERSION} --sep --makefile -q "
         "--ext-autodoc --ext-doctest --ext-coverage --ext-imgmath --ext-todo "
         "--ext-intersphinx --ext-viewcode "
-        "--extensions sphinx.ext.autodoc,sphinx.ext.napoleon {DOCS_DIR}".format(PROJECT=PROJECT_NAME,
-                                                             AUTHOR=getpass.getuser(),
-                                                             VERSION=1.0,
-                                                             DOCS_DIR=DOCUMENTATION_DIR))
-
-    commands["retrieve_source_api_command"] = (
-        "sphinx-apidoc -o {DOCS_DIR}/source {SOURCE_DIR}".format(DOCS_DIR=DOCUMENTATION_DIR,
-                                                                 SOURCE_DIR=SOURCE_CODE_DIR)
+        "--extensions sphinx.ext.autodoc,sphinx.ext.napoleon {DOCS_DIR}".format(
+            PROJECT=PROJECT_NAME,
+            AUTHOR=getpass.getuser(),
+            VERSION=1.0,
+            DOCS_DIR=DOCUMENTATION_DIR,
+        )
     )
 
-    commands["build_docs_command"] = (
-        "sphinx-build -b html {DOCS_DIR}/source {DOCS_DIR}/build".format(DOCS_DIR=DOCUMENTATION_DIR)
+    commands[
+        "retrieve_source_api_command"
+    ] = "sphinx-apidoc -o {DOCS_DIR}/source {SOURCE_DIR}".format(
+        DOCS_DIR=DOCUMENTATION_DIR, SOURCE_DIR=SOURCE_CODE_DIR
+    )
+
+    commands[
+        "build_docs_command"
+    ] = "sphinx-build -b html {DOCS_DIR}/source {DOCS_DIR}/build".format(
+        DOCS_DIR=DOCUMENTATION_DIR
     )
 
     return commands
@@ -72,10 +77,20 @@ def _manually_append_source_path_to_sphinx_config():
           remove previous paths added... This could cause issues in the
           future (and/or a long list of sys.path.insert's)
     """
-    with open(DOCUMENTATION_DIR + "/source/conf.py", "a+", encoding="UTF-8") as sphinx_config:
-        sphinx_config_abs_location = os.path.realpath(os.path.dirname(sphinx_config.name))
-        source_relative_to_sphinx_config = os.path.relpath(SOURCE_CODE_DIR, sphinx_config_abs_location)
-        command_to_add_path = u"sys.path.insert(0, os.path.abspath(\"" + source_relative_to_sphinx_config + "\"))"
+    with open(
+        DOCUMENTATION_DIR + "/source/conf.py", "a+", encoding="UTF-8"
+    ) as sphinx_config:
+        sphinx_config_abs_location = os.path.realpath(
+            os.path.dirname(sphinx_config.name)
+        )
+        source_relative_to_sphinx_config = os.path.relpath(
+            SOURCE_CODE_DIR, sphinx_config_abs_location
+        )
+        command_to_add_path = (
+            u'sys.path.insert(0, os.path.abspath("'
+            + source_relative_to_sphinx_config
+            + '"))'
+        )
 
         sphinx_config.seek(0)
 
@@ -84,14 +99,18 @@ def _manually_append_source_path_to_sphinx_config():
 
 
 def _create_custom_cfg_section_in_sphinx_conf():
-    with open(DOCUMENTATION_DIR + "/source/conf.py", "a+", encoding="UTF-8") as sphinx_config:
+    with open(
+        DOCUMENTATION_DIR + "/source/conf.py", "a+", encoding="UTF-8"
+    ) as sphinx_config:
         sphinx_config.write(u"\n# CUSTOM CONFIG FROM DOCS CREATION SCRIPT #\n")
         sphinx_config.write(u"import os\n")
         sphinx_config.write(u"import sys\n")
 
 
 def _make_version_and_release_equal():
-    with open(DOCUMENTATION_DIR + "/source/conf.py", "a", encoding="UTF-8") as sphinx_config:
+    with open(
+        DOCUMENTATION_DIR + "/source/conf.py", "a", encoding="UTF-8"
+    ) as sphinx_config:
         sphinx_config.write(u"\nrelease = version\n")
 
 

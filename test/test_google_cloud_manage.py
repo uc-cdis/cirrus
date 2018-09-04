@@ -53,11 +53,11 @@ def test_get_proxy_group_name_for_user():
         https://support.google.com/a/answer/33386
     for Google's naming restrictions
     """
-    user_id = '12345678912345678901234567890'
-    username = '.a-bcd..efg@hijkl<@$*)%amn.net'
+    user_id = "12345678912345678901234567890"
+    username = ".a-bcd..efg@hijkl<@$*)%amn.net"
     valid_name = _get_proxy_group_name_for_user(user_id, username)
 
-    assert valid_name == 'a_bcd.efghijklamn.net-12345678912345678901234567890'
+    assert valid_name == "a_bcd.efghijklamn.net-12345678912345678901234567890"
 
 
 def test_get_proxy_group_name_for_user_with_prefix():
@@ -68,13 +68,12 @@ def test_get_proxy_group_name_for_user_with_prefix():
         https://support.google.com/a/answer/33386
     for Google's naming restrictions
     """
-    user_id = '12345678912345678901234567890'
-    username = '.a-bcd..efg@hijkl<@$*)%amn.net'
-    prefix = 'Some App Name'
-    valid_name = _get_proxy_group_name_for_user(
-        user_id, username, prefix=prefix)
+    user_id = "12345678912345678901234567890"
+    username = ".a-bcd..efg@hijkl<@$*)%amn.net"
+    prefix = "Some App Name"
+    valid_name = _get_proxy_group_name_for_user(user_id, username, prefix=prefix)
 
-    assert valid_name == 'Some_App_Name-a_bcd.efghijklam-12345678912345678901234567890'
+    assert valid_name == "Some_App_Name-a_bcd.efghijklam-12345678912345678901234567890"
 
 
 def test_get_proxy_group_name_for_user_prefix_with_dashes():
@@ -85,35 +84,34 @@ def test_get_proxy_group_name_for_user_prefix_with_dashes():
         https://support.google.com/a/answer/33386
     for Google's naming restrictions
     """
-    user_id = '12345678912345678901234567890'
-    username = '.a-bcd..efg@hijkl<@$*)%amn.net'
-    prefix = 'Some-App-Name'
-    valid_name = _get_proxy_group_name_for_user(
-        user_id, username, prefix=prefix)
+    user_id = "12345678912345678901234567890"
+    username = ".a-bcd..efg@hijkl<@$*)%amn.net"
+    prefix = "Some-App-Name"
+    valid_name = _get_proxy_group_name_for_user(user_id, username, prefix=prefix)
 
-    assert valid_name == 'Some_App_Name-a_bcd.efghijklam-12345678912345678901234567890'
+    assert valid_name == "Some_App_Name-a_bcd.efghijklam-12345678912345678901234567890"
 
 
 def test_get_items_from_proxy_group_name():
-    valid_name = 'Some_App_Name-a_bcd.efghijklam-12345678912345678901234567890'
+    valid_name = "Some_App_Name-a_bcd.efghijklam-12345678912345678901234567890"
     prefix = _get_prefix_from_proxy_group(valid_name)
     username = _get_user_name_from_proxy_group(valid_name)
     user_id = _get_user_id_from_proxy_group(valid_name)
 
-    assert prefix == 'Some_App_Name'
-    assert username == 'a_bcd.efghijklam'
-    assert user_id == '12345678912345678901234567890'
+    assert prefix == "Some_App_Name"
+    assert username == "a_bcd.efghijklam"
+    assert user_id == "12345678912345678901234567890"
 
 
 def test_get_items_from_proxy_group_name_no_prefix():
-    valid_name = 'a_bcd.efghijklam-12345678912345678901234567890'
+    valid_name = "a_bcd.efghijklam-12345678912345678901234567890"
     prefix = _get_prefix_from_proxy_group(valid_name)
     username = _get_user_name_from_proxy_group(valid_name)
     user_id = _get_user_id_from_proxy_group(valid_name)
 
-    assert prefix == ''
-    assert username == 'a_bcd.efghijklam'
-    assert user_id == '12345678912345678901234567890'
+    assert prefix == ""
+    assert username == "a_bcd.efghijklam"
+    assert user_id == "12345678912345678901234567890"
 
 
 def test_get_service_account_valid(test_cloud_manager):
@@ -124,7 +122,8 @@ def test_get_service_account_valid(test_cloud_manager):
     # Setup #
     # Google API responds OK with some data
     test_cloud_manager._authed_session.get.return_value = _fake_response(
-        200, {"uniqueId": "123"})
+        200, {"uniqueId": "123"}
+    )
 
     # Call #
     service_account = test_cloud_manager.get_service_account("123")
@@ -163,8 +162,7 @@ def test_get_service_accounts_valid(test_cloud_manager):
         ],
         "nextPageToken": "",
     }
-    test_cloud_manager._authed_session.get.return_value = _fake_response(
-        200, response)
+    test_cloud_manager._authed_session.get.return_value = _fake_response(200, response)
 
     # Call #
     service_accounts = test_cloud_manager.get_all_service_accounts()
@@ -201,9 +199,7 @@ def test_get_all_service_accounts_pagination(test_cloud_manager):
     response_2["accounts"][0]["uniqueId"] = "1"
     response_2["nextPageToken"] = ""
 
-    two_pages = [
-        _fake_response(200, response), _fake_response(200, response_2)
-    ]
+    two_pages = [_fake_response(200, response), _fake_response(200, response_2)]
 
     test_cloud_manager._authed_session.get.side_effect = two_pages
 
@@ -217,9 +213,8 @@ def test_get_all_service_accounts_pagination(test_cloud_manager):
     assert "1" in all_ids
 
     args, kwargs = test_cloud_manager._authed_session.get.call_args
-    assert (
-        any("pageToken" in str(arg) for arg in args) or
-        any("pageToken" in str(kwarg) for kwarg in kwargs.values())
+    assert any("pageToken" in str(arg) for arg in args) or any(
+        "pageToken" in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -232,12 +227,16 @@ def test_create_service_account_valid(test_cloud_manager):
     service_account_unique_id = "123"
     test_cloud_manager.set_iam_policy = MagicMock()
     test_cloud_manager._authed_session.post.return_value = _fake_response(
-        200, {"uniqueId": service_account_unique_id})
+        200, {"uniqueId": service_account_unique_id}
+    )
 
     account_id = "some_new_service_account"
     expected_new_service_account = (
-        "projects/" + test_cloud_manager.project_id +
-        "/serviceAccounts/" + service_account_unique_id)
+        "projects/"
+        + test_cloud_manager.project_id
+        + "/serviceAccounts/"
+        + service_account_unique_id
+    )
 
     # Call #
     service_account = test_cloud_manager.create_service_account(account_id)
@@ -251,10 +250,8 @@ def test_create_service_account_valid(test_cloud_manager):
     # or kwarg not used during call)
     # Merits of this approach can be argued, I don't even know if I like it...
     args, kwargs = test_cloud_manager.set_iam_policy.call_args
-    assert (
-        any(expected_new_service_account in str(arg) for arg in args) or
-        any(expected_new_service_account in str(kwarg)
-            for kwarg in kwargs.values())
+    assert any(expected_new_service_account in str(arg) for arg in args) or any(
+        expected_new_service_account in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -264,8 +261,7 @@ def test_delete_service_account(test_cloud_manager):
     given account
     """
     # Setup #
-    test_cloud_manager._authed_session.delete.return_value = _fake_response(
-        200)
+    test_cloud_manager._authed_session.delete.return_value = _fake_response(200)
 
     account = "some_service_account"
 
@@ -277,9 +273,8 @@ def test_delete_service_account(test_cloud_manager):
 
     # Naive check to see if the new account appears in the call to delete
     args, kwargs = test_cloud_manager._authed_session.delete.call_args
-    assert (
-        any(account in str(arg) for arg in args) or
-        any(account in str(kwarg) for kwarg in kwargs.values())
+    assert any(account in str(arg) for arg in args) or any(
+        account in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -294,15 +289,15 @@ def test_create_service_account_key(test_cloud_manager):
     key_private_data = "1a2s3d4f5g6h"
     response = {
         "name": "projects/storied-bearing-184114/serviceAccounts/{}/keys/{}".format(
-            account, key_id),
+            account, key_id
+        ),
         "validBeforeTime": "2027-12-05T15:38:03Z",
         "privateKeyData": "{}".format(key_private_data),
         "privateKeyType": "TYPE_GOOGLE_CREDENTIALS_FILE",
         "keyAlgorithm": "KEY_ALG_RSA_2048",
-        "validAfterTime": "2017-12-07T15:38:03Z"
+        "validAfterTime": "2017-12-07T15:38:03Z",
     }
-    test_cloud_manager._authed_session.post.return_value = _fake_response(
-        200, response)
+    test_cloud_manager._authed_session.post.return_value = _fake_response(200, response)
 
     # Call #
     key = test_cloud_manager.create_service_account_key(account)
@@ -316,9 +311,8 @@ def test_create_service_account_key(test_cloud_manager):
 
     # Naive check to see if the new account appears in the call to post
     args, kwargs = test_cloud_manager._authed_session.post.call_args
-    assert (
-        any(account in str(arg) for arg in args) or
-        any(account in str(kwarg) for kwarg in kwargs.values())
+    assert any(account in str(arg) for arg in args) or any(
+        account in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -327,8 +321,7 @@ def test_delete_service_account_key(test_cloud_manager):
     Test that deleting a service account key actually calls google API with given account
     """
     # Setup #
-    test_cloud_manager._authed_session.delete.return_value = _fake_response(
-        200)
+    test_cloud_manager._authed_session.delete.return_value = _fake_response(200)
 
     account = "some_service_account"
     key = "some_service_account_key_name"
@@ -341,13 +334,11 @@ def test_delete_service_account_key(test_cloud_manager):
 
     # Naive check to see if the new account appears in the call to delete
     args, kwargs = test_cloud_manager._authed_session.delete.call_args
-    assert (
-        any(account in str(arg) for arg in args) or
-        any(account in str(kwarg) for kwarg in kwargs.values())
+    assert any(account in str(arg) for arg in args) or any(
+        account in str(kwarg) for kwarg in kwargs.values()
     )
-    assert (
-        any(key in str(arg) for arg in args) or
-        any(key in str(kwarg) for kwarg in kwargs.values())
+    assert any(key in str(arg) for arg in args) or any(
+        key in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -358,31 +349,36 @@ def test_get_service_account_keys_info(test_cloud_manager):
     # Setup #
     account = "some_service_account"
     response = {
-        "keys":
-        [
+        "keys": [
             {
                 "keyAlgorithm": "KEY_ALG_RSA_2048",
                 "validBeforeTime": "2027-12-09T14:49:16Z",
-                "name": "projects/some-project/serviceAccounts/{}/keys/e97ef9813897324fd164625a7d9d0337ee1a1dde".format(account),
-                "validAfterTime": "2017-12-11T14:49:16Z"
+                "name": "projects/some-project/serviceAccounts/{}/keys/e97ef9813897324fd164625a7d9d0337ee1a1dde".format(
+                    account
+                ),
+                "validAfterTime": "2017-12-11T14:49:16Z",
             },
             {
                 "keyAlgorithm": "KEY_ALG_RSA_2048",
                 "validBeforeTime": "2027-12-09T14:45:25Z",
-                "name": "projects/some-project/serviceAccounts/{}/keys/64bb771d02a582928e0102a0228f1e39c4cdc8af".format(account),
-                "validAfterTime": "2017-12-11T14:45:25Z"
+                "name": "projects/some-project/serviceAccounts/{}/keys/64bb771d02a582928e0102a0228f1e39c4cdc8af".format(
+                    account
+                ),
+                "validAfterTime": "2017-12-11T14:45:25Z",
             },
             {
                 "keyAlgorithm": "KEY_ALG_RSA_2048",
                 "validBeforeTime": "2027-12-06T16:12:47Z",
-                "name": "projects/some-project/serviceAccounts/{}/keys/36d605e665496c9c488ab9861e5a473b719079fc".format(account),
-                "validAfterTime": "2017-12-08T16:12:47Z"
-            }
+                "name": "projects/some-project/serviceAccounts/{}/keys/36d605e665496c9c488ab9861e5a473b719079fc".format(
+                    account
+                ),
+                "validAfterTime": "2017-12-08T16:12:47Z",
+            },
         ]
     }
 
-    test_cloud_manager._authed_session.get.return_value = (
-        _fake_response(200, json_response_as_dict=response)
+    test_cloud_manager._authed_session.get.return_value = _fake_response(
+        200, json_response_as_dict=response
     )
 
     # Call #
@@ -394,9 +390,8 @@ def test_get_service_account_keys_info(test_cloud_manager):
 
     # Naive check to see if the new account appears in the call
     args, kwargs = test_cloud_manager._authed_session.get.call_args
-    assert (
-        any(account in str(arg) for arg in args) or
-        any(account in str(kwarg) for kwarg in kwargs.values())
+    assert any(account in str(arg) for arg in args) or any(
+        account in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -410,7 +405,8 @@ def test_create_service_account_key_invalid_account(test_cloud_manager):
     fake_response = _fake_response(404, {})
     # fancy lambda to throw httperror for the bad response
     fake_response.raise_for_status.side_effect = HTTPError(
-        MagicMock(status=404), 'not found')
+        MagicMock(status=404), "not found"
+    )
     test_cloud_manager._authed_session.post.return_value = fake_response
 
     # Call #
@@ -425,9 +421,8 @@ def test_create_service_account_key_invalid_account(test_cloud_manager):
     # as any argument or keyword argument (in case API changes or kwarg not used during call)
     # Merits of this approach can be argued, I don't even know if I like it...
     args, kwargs = test_cloud_manager._authed_session.post.call_args
-    assert (
-        any(account in str(arg) for arg in args) or
-        any(account in str(kwarg) for kwarg in kwargs.values())
+    assert any(account in str(arg) for arg in args) or any(
+        account in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -438,17 +433,12 @@ def test_get_service_account_key(test_cloud_manager):
     # Setup #
     # Google API responds OK with some data
     key_name = "some-key-123"
-    response = {
-        "name": key_name,
-        "keyAlgorithm": "",
-    }
-    test_cloud_manager._authed_session.get.return_value = _fake_response(
-        200, response)
+    response = {"name": key_name, "keyAlgorithm": ""}
+    test_cloud_manager._authed_session.get.return_value = _fake_response(200, response)
     account = "abc"
 
     # Call #
-    key = test_cloud_manager.get_service_account_key(
-        account, key_name)
+    key = test_cloud_manager.get_service_account_key(account, key_name)
 
     # Test #
     assert key["name"] == key_name
@@ -464,20 +454,19 @@ def test_get_service_account_policy_valid(test_cloud_manager):
     account = "123"
     resource = "456"
     test_cloud_manager._authed_session.post.return_value = _fake_response(
-        200, {"some_policy": "some_value"})
+        200, {"some_policy": "some_value"}
+    )
 
     # Call #
-    service_account_policy = test_cloud_manager.get_service_account_policy(
-        account)
+    service_account_policy = test_cloud_manager.get_service_account_policy(account)
 
     # Test #
     assert service_account_policy.json()["some_policy"] == "some_value"
 
     # make sure accoutn and resource are in the call to post
     args, kwargs = test_cloud_manager._authed_session.post.call_args
-    assert (
-        any(account in str(arg) for arg in args) or
-        any(account in str(kwarg) for kwarg in kwargs.values())
+    assert any(account in str(arg) for arg in args) or any(
+        account in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -489,24 +478,22 @@ def test_set_iam_policy(test_cloud_manager):
     account = "123"
     resource = "456"
     test_cloud_manager._authed_session.post.return_value = _fake_response(
-        200, {"some_policy": "some_value"})
+        200, {"some_policy": "some_value"}
+    )
 
     # Call #
-    service_account_policy = test_cloud_manager.set_iam_policy(
-        account, resource)
+    service_account_policy = test_cloud_manager.set_iam_policy(account, resource)
 
     # Test #
     assert service_account_policy["some_policy"] == "some_value"
 
     # make sure accoutn and resource are in the call to post
     args, kwargs = test_cloud_manager._authed_session.post.call_args
-    assert (
-        any(account in str(arg) for arg in args) or
-        any(account in str(kwarg) for kwarg in kwargs.values())
+    assert any(account in str(arg) for arg in args) or any(
+        account in str(kwarg) for kwarg in kwargs.values()
     )
-    assert (
-        any(resource in str(arg) for arg in args) or
-        any(resource in str(kwarg) for kwarg in kwargs.values())
+    assert any(resource in str(arg) for arg in args) or any(
+        resource in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -528,9 +515,8 @@ def test_get_group(test_cloud_manager):
     # Test #
     assert group["id"] == group_id
     args, kwargs = test_cloud_manager._admin_service.groups.return_value.get.call_args
-    assert (
-        any((group_id == arg) for arg in args) or
-        any((group_id == kwarg) for kwarg in kwargs.values())
+    assert any((group_id == arg) for arg in args) or any(
+        (group_id == kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -541,33 +527,28 @@ def test_create_group(test_cloud_manager):
     # Setup #
     new_group_name = "Test Group!"
     new_group_email = "test-email@test-domain.com"
-    group = {
-        "email": new_group_email,
-        "name": new_group_name,
-        "description": "",
-    }
+    group = {"email": new_group_email, "name": new_group_name, "description": ""}
     mock_config = {
         "groups.return_value.insert.return_value.execute.return_value": group
     }
     test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
-    group = test_cloud_manager.create_group(name=new_group_name,
-                                            email=new_group_email)
+    group = test_cloud_manager.create_group(name=new_group_name, email=new_group_email)
 
     # Test #
     assert group["email"] == new_group_email
     assert group["name"] == new_group_name
 
     # check if new name and email are somewhere in the args to insert
-    args, kwargs = test_cloud_manager._admin_service.groups.return_value.insert.call_args
-    assert (
-        any(new_group_name in str(arg) for arg in args) or
-        any(new_group_name in str(kwarg) for kwarg in kwargs.values())
+    args, kwargs = (
+        test_cloud_manager._admin_service.groups.return_value.insert.call_args
     )
-    assert (
-        any(new_group_email in str(arg) for arg in args) or
-        any(new_group_email in str(kwarg) for kwarg in kwargs.values())
+    assert any(new_group_name in str(arg) for arg in args) or any(
+        new_group_name in str(kwarg) for kwarg in kwargs.values()
+    )
+    assert any(new_group_email in str(arg) for arg in args) or any(
+        new_group_email in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -586,7 +567,7 @@ def test_get_group_members(test_cloud_manager):
             "id": member_1_id,
             "email": "",
             "role": "",
-            "type": ""
+            "type": "",
         },
         {
             "kind": "admin#directory#member",
@@ -594,14 +575,14 @@ def test_get_group_members(test_cloud_manager):
             "id": member_2_id,
             "email": "",
             "role": "",
-            "type": ""
-        }
+            "type": "",
+        },
     ]
     full_response = {
         "kind": "admin#directory#members",
         "etag": "",
         "members": members,
-        "nextPageToken": ""
+        "nextPageToken": "",
     }
     mock_config = {
         "members.return_value.list.return_value.execute.return_value": full_response
@@ -619,9 +600,8 @@ def test_get_group_members(test_cloud_manager):
 
     # check if new name and email are somewhere in the args
     args, kwargs = test_cloud_manager._admin_service.members.return_value.list.call_args
-    assert (
-        any(group_id in str(arg) for arg in args) or
-        any(group_id in str(kwarg) for kwarg in kwargs.values())
+    assert any(group_id in str(arg) for arg in args) or any(
+        group_id in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -643,7 +623,7 @@ def test_get_group_members_pagination(test_cloud_manager):
             "id": member_1_id,
             "email": "",
             "role": "",
-            "type": ""
+            "type": "",
         },
         {
             "kind": "admin#directory#member",
@@ -651,27 +631,25 @@ def test_get_group_members_pagination(test_cloud_manager):
             "id": member_2_id,
             "email": "",
             "role": "",
-            "type": ""
-        }
+            "type": "",
+        },
     ]
     next_page_token = "abcdefg"
     full_response = {
         "kind": "admin#directory#members",
         "etag": "",
         "members": members,
-        "nextPageToken": next_page_token
+        "nextPageToken": next_page_token,
     }
     response_2 = copy.deepcopy(full_response)
     response_2["members"][0]["id"] = member_3_id
     response_2["members"][1]["id"] = member_4_id
     response_2["nextPageToken"] = ""
 
-    two_pages = [
-        full_response, response_2
-    ]
+    two_pages = [full_response, response_2]
 
     mock_config = {
-        "members.return_value.list.return_value.execute.side_effect": two_pages,
+        "members.return_value.list.return_value.execute.side_effect": two_pages
     }
 
     test_cloud_manager._admin_service.configure_mock(**mock_config)
@@ -688,9 +666,8 @@ def test_get_group_members_pagination(test_cloud_manager):
     assert member_4_id in all_ids
     args, kwargs = test_cloud_manager._admin_service.members.return_value.list.call_args
     assert kwargs["pageToken"] == next_page_token
-    assert (
-        any(group_id in str(arg) for arg in args) or
-        any(group_id in str(kwarg) for kwarg in kwargs.values())
+    assert any(group_id in str(arg) for arg in args) or any(
+        group_id in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -708,7 +685,7 @@ def test_add_member_to_group(test_cloud_manager):
         "id": new_member_id,
         "email": new_member_email,
         "role": "",
-        "type": ""
+        "type": "",
     }
     mock_config = {
         "members.return_value.insert.return_value.execute.return_value": member
@@ -716,22 +693,23 @@ def test_add_member_to_group(test_cloud_manager):
     test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
-    group = test_cloud_manager.add_member_to_group(member_email=new_member_email,
-                                                   group_id=group_id)
+    group = test_cloud_manager.add_member_to_group(
+        member_email=new_member_email, group_id=group_id
+    )
 
     # Test #
     assert group["email"] == new_member_email
     assert group["id"] == new_member_id
 
     # check if ngroup id and email are somewhere in the args to insert
-    args, kwargs = test_cloud_manager._admin_service.members.return_value.insert.call_args
-    assert (
-        any(new_member_email in str(arg) for arg in args) or
-        any(new_member_email in str(kwarg) for kwarg in kwargs.values())
+    args, kwargs = (
+        test_cloud_manager._admin_service.members.return_value.insert.call_args
     )
-    assert (
-        any(group_id in str(arg) for arg in args) or
-        any(group_id in str(kwarg) for kwarg in kwargs.values())
+    assert any(new_member_email in str(arg) for arg in args) or any(
+        new_member_email in str(kwarg) for kwarg in kwargs.values()
+    )
+    assert any(group_id in str(arg) for arg in args) or any(
+        group_id in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -743,27 +721,26 @@ def test_remove_member_from_group(test_cloud_manager):
     # Setup #
     new_member_email = "test-email@test-domain.com"
     group_id = "abc"
-    mock_config = {
-        "members.return_value.delete.return_value.execute.return_value": {}
-    }
+    mock_config = {"members.return_value.delete.return_value.execute.return_value": {}}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
     response = test_cloud_manager.remove_member_from_group(
-        member_email=new_member_email, group_id=group_id)
+        member_email=new_member_email, group_id=group_id
+    )
 
     # Test #
     assert not response
 
     # check if group id and email are somewhere in the args to delete
-    args, kwargs = test_cloud_manager._admin_service.members.return_value.delete.call_args
-    assert (
-        any(new_member_email in str(arg) for arg in args) or
-        any(new_member_email in str(kwarg) for kwarg in kwargs.values())
+    args, kwargs = (
+        test_cloud_manager._admin_service.members.return_value.delete.call_args
     )
-    assert (
-        any(group_id in str(arg) for arg in args) or
-        any(group_id in str(kwarg) for kwarg in kwargs.values())
+    assert any(new_member_email in str(arg) for arg in args) or any(
+        new_member_email in str(kwarg) for kwarg in kwargs.values()
+    )
+    assert any(group_id in str(arg) for arg in args) or any(
+        group_id in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -774,20 +751,19 @@ def test_get_primary_service_account(test_cloud_manager):
     test_domain = "test-domain.net"
     new_member_1_id = "1"
     new_member_1_username = "testuser"
-    primary_service_account = get_valid_service_account_id_for_user(
-        new_member_1_id, new_member_1_username
-    ) + "@" + test_domain
+    primary_service_account = (
+        get_valid_service_account_id_for_user(new_member_1_id, new_member_1_username)
+        + "@"
+        + test_domain
+    )
 
-    group_name = _get_proxy_group_name_for_user(
-        new_member_1_id, new_member_1_username)
+    group_name = _get_proxy_group_name_for_user(new_member_1_id, new_member_1_username)
     group_email = group_name + "@" + test_domain
     mock_get_group(test_cloud_manager, group_name, group_email)
 
-    mock_get_service_accounts_from_group(
-        test_cloud_manager, primary_service_account)
+    mock_get_service_accounts_from_group(test_cloud_manager, primary_service_account)
 
-    mock_get_service_account(
-        test_cloud_manager, primary_service_account)
+    mock_get_service_account(test_cloud_manager, primary_service_account)
 
     # Call #
     response = test_cloud_manager.get_primary_service_account(group_name)
@@ -798,14 +774,12 @@ def test_get_primary_service_account(test_cloud_manager):
 
     # check if group id is somewhere in the args to insert
     args, kwargs = test_cloud_manager.get_service_accounts_from_group.call_args
-    assert (
-        any(group_name in str(arg) for arg in args) or
-        any(group_name in str(kwarg) for kwarg in kwargs.values())
+    assert any(group_name in str(arg) for arg in args) or any(
+        group_name in str(kwarg) for kwarg in kwargs.values()
     )
     args, kwargs = test_cloud_manager.get_service_account.call_args
-    assert (
-        any(primary_service_account in str(arg) for arg in args) or
-        any(primary_service_account in str(kwarg) for kwarg in kwargs.values())
+    assert any(primary_service_account in str(arg) for arg in args) or any(
+        primary_service_account in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -818,26 +792,25 @@ def test_get_service_account_from_group_mult_accounts(test_cloud_manager):
     test_domain = "test-domain.net"
     new_member_1_id = "1"
     new_member_1_username = "testuser"
-    primary_service_account = get_valid_service_account_id_for_user(
-        new_member_1_id, new_member_1_username
-    ) + "@" + test_domain
+    primary_service_account = (
+        get_valid_service_account_id_for_user(new_member_1_id, new_member_1_username)
+        + "@"
+        + test_domain
+    )
 
-    group_name = _get_proxy_group_name_for_user(
-        new_member_1_id, new_member_1_username)
+    group_name = _get_proxy_group_name_for_user(new_member_1_id, new_member_1_username)
     group_email = group_name + "@" + test_domain
     mock_get_group(test_cloud_manager, group_name, group_email)
 
-    mock_get_service_accounts_from_group(
-        test_cloud_manager, primary_service_account)
+    mock_get_service_accounts_from_group(test_cloud_manager, primary_service_account)
 
-    mock_get_service_account(
-        test_cloud_manager, primary_service_account)
+    mock_get_service_account(test_cloud_manager, primary_service_account)
 
     test_cloud_manager.get_service_accounts_from_group = MagicMock()
     test_cloud_manager.get_service_accounts_from_group.return_value = [
         "some-other-account" + "@" + test_domain,
         primary_service_account,
-        "another-account" + "@" + test_domain
+        "another-account" + "@" + test_domain,
     ]
 
     # Call #
@@ -849,14 +822,12 @@ def test_get_service_account_from_group_mult_accounts(test_cloud_manager):
 
     # check if group id is somewhere in the args to insert
     args, kwargs = test_cloud_manager.get_service_accounts_from_group.call_args
-    assert (
-        any(group_name in str(arg) for arg in args) or
-        any(group_name in str(kwarg) for kwarg in kwargs.values())
+    assert any(group_name in str(arg) for arg in args) or any(
+        group_name in str(kwarg) for kwarg in kwargs.values()
     )
     args, kwargs = test_cloud_manager.get_service_account.call_args
-    assert (
-        any(primary_service_account in str(arg) for arg in args) or
-        any(primary_service_account in str(kwarg) for kwarg in kwargs.values())
+    assert any(primary_service_account in str(arg) for arg in args) or any(
+        primary_service_account in str(kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -880,19 +851,15 @@ def test_get_all_groups(test_cloud_manager):
                 "directMembersCount": "",
                 "description": "",
                 "adminCreated": "",
-                "aliases": [
-                    ""
-                ],
-                "nonEditableAliases": [
-                    ""
-                ]
+                "aliases": [""],
+                "nonEditableAliases": [""],
             }
         ],
-        "nextPageToken": ""
+        "nextPageToken": "",
     }
 
     mock_config = {
-        "groups.return_value.list.return_value.execute.return_value": response,
+        "groups.return_value.list.return_value.execute.return_value": response
     }
 
     test_cloud_manager._admin_service.configure_mock(**mock_config)
@@ -925,25 +892,19 @@ def test_get_all_groups_pagination(test_cloud_manager):
                 "directMembersCount": "",
                 "description": "",
                 "adminCreated": "",
-                "aliases": [
-                    ""
-                ],
-                "nonEditableAliases": [
-                    ""
-                ]
+                "aliases": [""],
+                "nonEditableAliases": [""],
             }
         ],
-        "nextPageToken": next_page_token
+        "nextPageToken": next_page_token,
     }
     response_2 = copy.deepcopy(response)
     response_2["nextPageToken"] = ""
 
-    two_pages = [
-        response, response_2
-    ]
+    two_pages = [response, response_2]
 
     mock_config = {
-        "groups.return_value.list.return_value.execute.side_effect": two_pages,
+        "groups.return_value.list.return_value.execute.side_effect": two_pages
     }
 
     test_cloud_manager._admin_service.configure_mock(**mock_config)
@@ -964,9 +925,7 @@ def test_delete_group(test_cloud_manager):
     """
     # Setup #
     group_id = "123"
-    mock_config = {
-        "groups.return_value.delete.return_value.execute.return_value": {}
-    }
+    mock_config = {"groups.return_value.delete.return_value.execute.return_value": {}}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
@@ -974,15 +933,17 @@ def test_delete_group(test_cloud_manager):
 
     # Test #
     assert response == {}
-    args, kwargs = test_cloud_manager._admin_service.groups.return_value.delete.call_args
-    assert (
-        any((group_id == arg) for arg in args) or
-        any((group_id == kwarg) for kwarg in kwargs.values())
+    args, kwargs = (
+        test_cloud_manager._admin_service.groups.return_value.delete.call_args
+    )
+    assert any((group_id == arg) for arg in args) or any(
+        (group_id == kwarg) for kwarg in kwargs.values()
     )
 
 
 class NewDatetime(datetime.datetime):
     "A manipulable date replacement"
+
     def __new__(cls, *args, **kwargs):
         return datetime.datetime.__new__(datetime.datetime, *args, **kwargs)
 
@@ -992,8 +953,7 @@ def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
     # Setup #
     # Make now a specific time by faking out datetime class with custom class
     # that always returns a specific time
-    NewDatetime.utcnow = classmethod(
-        lambda cls: cls(2017, 12, 12, 20, 41, 56, 999439))
+    NewDatetime.utcnow = classmethod(lambda cls: cls(2017, 12, 12, 20, 41, 56, 999439))
     account = "some-service-account@test-domain.com"
     config.update(SERVICE_KEY_EXPIRATION_IN_DAYS=3)
 
@@ -1022,7 +982,7 @@ def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
             # almost 30 days expired from fake "now"
             "validAfterTime": "2017-11-11T14:49:16Z",
             "validBeforeTime": "",
-        }
+        },
     ]
     test_cloud_manager.get_service_account_keys_info = MagicMock()
     test_cloud_manager.delete_service_account_key = MagicMock()
@@ -1040,14 +1000,12 @@ def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
     mock_calls = test_cloud_manager.delete_service_account_key.mock_calls
 
     _, args, kwargs = mock_calls[0]
-    assert (
-        any((expired_key_name_1 == arg) for arg in args) or
-        any((expired_key_name_1 == kwarg) for kwarg in kwargs.values())
+    assert any((expired_key_name_1 == arg) for arg in args) or any(
+        (expired_key_name_1 == kwarg) for kwarg in kwargs.values()
     )
     _, args, kwargs = mock_calls[1]
-    assert (
-        any((expired_key_name_1 == arg) for arg in args) or
-        any((expired_key_name_1 == kwarg) for kwarg in kwargs.values())
+    assert any((expired_key_name_1 == arg) for arg in args) or any(
+        (expired_key_name_1 == kwarg) for kwarg in kwargs.values()
     )
 
 
@@ -1063,8 +1021,8 @@ def test_service_account_keys_when_empty(test_cloud_manager):
     account = "some_service_account"
     response = {}
 
-    test_cloud_manager._authed_session.get.return_value = (
-        _fake_response(200, json_response_as_dict=response)
+    test_cloud_manager._authed_session.get.return_value = _fake_response(
+        200, json_response_as_dict=response
     )
 
     # Call #
@@ -1076,54 +1034,57 @@ def test_service_account_keys_when_empty(test_cloud_manager):
 
     # Naive check to see if the new account appears in the call
     args, kwargs = test_cloud_manager._authed_session.get.call_args
-    assert (
-        any(account in str(arg) for arg in args) or
-        any(account in str(kwarg) for kwarg in kwargs.values())
+    assert any(account in str(arg) for arg in args) or any(
+        account in str(kwarg) for kwarg in kwargs.values()
     )
 
 
 def test_get_service_account_type_compute_engine_default(test_cloud_manager):
 
-    service_account = {
-        "email": "test@appspot.gserviceaccount.com"
-    }
-    test_cloud_manager._authed_session.get.return_value = (
-        _fake_response(200, service_account)
+    service_account = {"email": "test@appspot.gserviceaccount.com"}
+    test_cloud_manager._authed_session.get.return_value = _fake_response(
+        200, service_account
     )
-    assert test_cloud_manager.get_service_account_type(service_account) == COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT
+    assert (
+        test_cloud_manager.get_service_account_type(service_account)
+        == COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT
+    )
 
 
 def test_get_service_account_type_google_api(test_cloud_manager):
 
-    service_account = {
-        "email": "test@cloudservices.gserviceaccount.com"
-    }
-    test_cloud_manager._authed_session.get.return_value = (
-        _fake_response(200, service_account)
+    service_account = {"email": "test@cloudservices.gserviceaccount.com"}
+    test_cloud_manager._authed_session.get.return_value = _fake_response(
+        200, service_account
     )
-    assert test_cloud_manager.get_service_account_type(service_account) == GOOGLE_API_SERVICE_ACCOUNT
+    assert (
+        test_cloud_manager.get_service_account_type(service_account)
+        == GOOGLE_API_SERVICE_ACCOUNT
+    )
 
 
 def test_get_service_account_type_compute_engine_api(test_cloud_manager):
 
-    service_account = {
-        "email": "test@compute-system.iam.gserviceaccount.com"
-    }
-    test_cloud_manager._authed_session.get.return_value = (
-        _fake_response(200, service_account)
+    service_account = {"email": "test@compute-system.iam.gserviceaccount.com"}
+    test_cloud_manager._authed_session.get.return_value = _fake_response(
+        200, service_account
     )
-    assert test_cloud_manager.get_service_account_type(service_account) == COMPUTE_ENGINE_API_SERVICE_ACCOUNT
+    assert (
+        test_cloud_manager.get_service_account_type(service_account)
+        == COMPUTE_ENGINE_API_SERVICE_ACCOUNT
+    )
 
 
 def test_get_service_account_type_user_managed(test_cloud_manager):
 
-    service_account = {
-        "email": "test@1234.iam.gserviceaccount.com'"
-    }
-    test_cloud_manager._authed_session.get.return_value = (
-        _fake_response(200, service_account)
+    service_account = {"email": "test@1234.iam.gserviceaccount.com'"}
+    test_cloud_manager._authed_session.get.return_value = _fake_response(
+        200, service_account
     )
-    assert test_cloud_manager.get_service_account_type(service_account) == USER_MANAGED_SERVICE_ACCOUNT
+    assert (
+        test_cloud_manager.get_service_account_type(service_account)
+        == USER_MANAGED_SERVICE_ACCOUNT
+    )
 
 
 def test_get_project_membership(test_cloud_manager):
@@ -1138,28 +1099,25 @@ def test_get_project_membership(test_cloud_manager):
                 "role": "roles/compute.serviceAgent",
                 "members": [
                     "user:test@gmail.com",
-                    "serviceAccount:my-other-app@appspot.gserviceaccount.com"
-                ]
+                    "serviceAccount:my-other-app@appspot.gserviceaccount.com",
+                ],
             },
-            {
-                "role": "roles/owner",
-                "members": [
-                    "user:test@example.net"
-                ]
-            }
-        ]
+            {"role": "roles/owner", "members": ["user:test@example.net"]},
+        ],
     }
 
     test_cloud_manager._authed_session.post.return_value = _fake_response(
-        200, faked_reponse_body)
+        200, faked_reponse_body
+    )
     members = test_cloud_manager.get_project_membership()
     for mem in members:
         assert mem in [
             GooglePolicyMember("user", "test@gmail.com"),
-            GooglePolicyMember("serviceAccount",
-                               "my-other-app@appspot.gserviceaccount.com"),
-            GooglePolicyMember("user", "test@example.net")
-    ]
+            GooglePolicyMember(
+                "serviceAccount", "my-other-app@appspot.gserviceaccount.com"
+            ),
+            GooglePolicyMember("user", "test@example.net"),
+        ]
 
 
 def test_get_project_ancestry(test_cloud_manager):
@@ -1171,23 +1129,14 @@ def test_get_project_ancestry(test_cloud_manager):
     """
     faked_response_body = {
         "ancestor": [
-            {
-                "resourceId": {
-                    "type": "project",
-                    "id": "1"
-                }
-            },
-            {
-                "resourceId": {
-                    "type": "organization",
-                    "id": "2"
-                }
-            }
+            {"resourceId": {"type": "project", "id": "1"}},
+            {"resourceId": {"type": "organization", "id": "2"}},
         ]
     }
 
     test_cloud_manager._authed_session.post.return_value = _fake_response(
-        200, faked_response_body)
+        200, faked_response_body
+    )
     ancestry = test_cloud_manager.get_project_ancestry()
     assert ancestry[0] == ("project", "1")
     assert ancestry[1] == ("organization", "2")
@@ -1201,22 +1150,13 @@ def test_has_parent_organization(test_cloud_manager):
     """
     faked_response_body = {
         "ancestor": [
-            {
-                "resourceId": {
-                    "type": "project",
-                    "id": "1"
-                }
-            },
-            {
-                "resourceId": {
-                    "type": "organization",
-                    "id": "2"
-                }
-            }
+            {"resourceId": {"type": "project", "id": "1"}},
+            {"resourceId": {"type": "organization", "id": "2"}},
         ]
     }
     test_cloud_manager._authed_session.post.return_value = _fake_response(
-        200, faked_response_body)
+        200, faked_response_body
+    )
 
     assert test_cloud_manager.has_parent_organization()
 
@@ -1226,20 +1166,13 @@ def test_has_no_parent_organization(test_cloud_manager):
     Check that a project without a parent organization
     is not identified as having a parent organization
     """
-    faked_response_body = {
-        "ancestor": [
-            {
-                "resourceId": {
-                    "type": "project",
-                    "id": "1"
-                }
-            }
-        ]
-    }
+    faked_response_body = {"ancestor": [{"resourceId": {"type": "project", "id": "1"}}]}
     test_cloud_manager._authed_session.post.return_value = _fake_response(
-        200, faked_response_body)
+        200, faked_response_body
+    )
 
     assert not test_cloud_manager.has_parent_organization()
 
+
 if __name__ == "__main__":
-    pytest.main(['-x', "-v", '.'])
+    pytest.main(["-x", "-v", "."])
