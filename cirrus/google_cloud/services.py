@@ -11,6 +11,7 @@ class GoogleService(object):
     """
     Generic Google servicing using Method 1 (Google's google-api-python-client)
     """
+
     def __init__(self, service_name, version, scopes, creds):
         """
         Create an object that can be used to build a service to interact
@@ -37,9 +38,7 @@ class GoogleService(object):
         Args:
             user_to_become (str): Email of user to become
         """
-        delegated_credentials = (
-            self.creds.with_subject(user_to_become)
-        )
+        delegated_credentials = self.creds.with_subject(user_to_become)
         self.creds = delegated_credentials
 
     def build_service(self):
@@ -54,8 +53,7 @@ class GoogleService(object):
             googleapiclient.discovery.Resource: Google Resource to interact with
             API
         """
-        return build(
-            self.service_name, self.version, credentials=self.creds)
+        return build(self.service_name, self.version, credentials=self.creds)
 
 
 class GoogleAdminService(GoogleService):
@@ -66,12 +64,13 @@ class GoogleAdminService(GoogleService):
     Attributes:
         SCOPES (List(str)): Scopes required for permission to do group management
     """
+
     SCOPES = [
         "https://www.googleapis.com/auth/admin.directory.group",
         "https://www.googleapis.com/auth/admin.directory.group.readonly",
         "https://www.googleapis.com/auth/admin.directory.group.member",
         "https://www.googleapis.com/auth/admin.directory.group.member.readonly",
-        "https://www.googleapis.com/auth/admin.directory.user.security"
+        "https://www.googleapis.com/auth/admin.directory.user.security",
     ]
 
     def __init__(self, creds):
@@ -79,9 +78,6 @@ class GoogleAdminService(GoogleService):
         Create the Google Admin Directory Service
         """
         super(GoogleAdminService, self).__init__(
-            "admin",
-            "directory_v1",
-            self.SCOPES,
-            creds=creds
+            "admin", "directory_v1", self.SCOPES, creds=creds
         )
         self.use_delegated_credentials(config.GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL)

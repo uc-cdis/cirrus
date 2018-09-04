@@ -16,6 +16,7 @@ class Config(object):
     Allows dynamically update configurations from .update() or
     setting environment variables
     """
+
     def __init__(self, **kwargs):
         self.configs = kwargs
 
@@ -27,52 +28,51 @@ class Config(object):
 
     @property
     def SERVICE_KEY_EXPIRATION_IN_DAYS(self):
-        return self.configs.get(
-            'SERVICE_KEY_EXPIRATION_IN_DAYS', 10)
+        return self.configs.get("SERVICE_KEY_EXPIRATION_IN_DAYS", 10)
 
     @property
     def GOOGLE_PROJECT_ID(self):
         # The unique ID for the Google Cloud Project to manage by default
         return os.environ.get(
-            'GOOGLE_PROJECT_ID',
-            self.configs.get('GOOGLE_PROJECT_ID', '')).strip('\'')
+            "GOOGLE_PROJECT_ID", self.configs.get("GOOGLE_PROJECT_ID", "")
+        ).strip("'")
 
     @property
     def GOOGLE_APPLICATION_CREDENTIALS(self):
         # Path to credentialso for accessing the Google Cloud Project
         return os.environ.get(
-            'GOOGLE_APPLICATION_CREDENTIALS',
-            self.configs.get('GOOGLE_APPLICATION_CREDENTIALS', '')
-                ).strip('\'')
+            "GOOGLE_APPLICATION_CREDENTIALS",
+            self.configs.get("GOOGLE_APPLICATION_CREDENTIALS", ""),
+        ).strip("'")
 
     @property
     def GOOGLE_ADMIN_EMAIL(self):
         # Admin email for Google Cloud Project
         return os.environ.get(
-            'GOOGLE_ADMIN_EMAIL',
-            self.configs.get('GOOGLE_ADMIN_EMAIL', '')).strip('\'')
+            "GOOGLE_ADMIN_EMAIL", self.configs.get("GOOGLE_ADMIN_EMAIL", "")
+        ).strip("'")
 
     @property
     def GOOGLE_IDENTITY_DOMAIN(self):
         # Domain for group management
         return os.environ.get(
-            'GOOGLE_IDENTITY_DOMAIN',
-            self.configs.get('GOOGLE_IDENTITY_DOMAIN', '')).strip('\'')
+            "GOOGLE_IDENTITY_DOMAIN", self.configs.get("GOOGLE_IDENTITY_DOMAIN", "")
+        ).strip("'")
 
     @property
     def GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL(self):
         # Admin email for admin domain-wide service account to act for
         return os.environ.get(
-            'GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL',
-            self.configs.get('GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL', '')
-            ).strip('\'')
+            "GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL",
+            self.configs.get("GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL", ""),
+        ).strip("'")
 
     @property
     def GOOGLE_API_KEY(self):
         # API key to use during API calls
         return os.environ.get(
-            'GOOGLE_API_KEY',
-            self.configs.get('GOOGLE_API_KEY', '')).strip('\'')
+            "GOOGLE_API_KEY", self.configs.get("GOOGLE_API_KEY", "")
+        ).strip("'")
 
 
 config = Config()

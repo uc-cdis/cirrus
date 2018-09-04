@@ -55,7 +55,9 @@ class GooglePolicy(object):
         """
         output_dict = dict()
         output_dict["policy"] = dict()
-        output_dict["policy"]["bindings"] = [binding.get_dict() for binding in self.bindings]
+        output_dict["policy"]["bindings"] = [
+            binding.get_dict() for binding in self.bindings
+        ]
         output_dict["policy"]["etag"] = self.etag
         output_dict["policy"]["version"] = self.version
 
@@ -184,6 +186,7 @@ class GooglePolicyRole(object):
     """
     A Role for use in a Google Policy
     """
+
     ROLE_PREFIX = "roles/"
 
     def __init__(self, name):
@@ -194,8 +197,11 @@ class GooglePolicyRole(object):
             name (str): The name of the Google role
         """
         # If the name provided already starts with the prefix, remove it
-        if name.strip()[:len(GooglePolicyRole.ROLE_PREFIX)] == GooglePolicyRole.ROLE_PREFIX:
-            name = name.strip()[len(GooglePolicyRole.ROLE_PREFIX):]
+        if (
+            name.strip()[: len(GooglePolicyRole.ROLE_PREFIX)]
+            == GooglePolicyRole.ROLE_PREFIX
+        ):
+            name = name.strip()[len(GooglePolicyRole.ROLE_PREFIX) :]
 
         self.name = name
         self.members = set()

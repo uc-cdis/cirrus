@@ -18,9 +18,7 @@ except ImportError:
 from google.auth.transport.requests import AuthorizedSession
 from google.cloud import exceptions as google_exceptions
 from google.cloud import storage
-from google.oauth2.service_account import (
-    Credentials as ServiceAccountCredentials
-)
+from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 from googleapiclient.errors import HttpError
 
 from cirrus.config import config
@@ -37,22 +35,20 @@ from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
-GOOGLE_LOGGING_EMAIL = 'cloud-storage-analytics@google.com'
+GOOGLE_LOGGING_EMAIL = "cloud-storage-analytics@google.com"
 
 GOOGLE_STORAGE_CLASSES = [
-    'MULTI_REGIONAL',
-    'REGIONAL',
-    'NEARLINE',
-    'COLDLINE',
-    'STANDARD'  # alias for MULTI_REGIONAL/REGIONAL, based on location
+    "MULTI_REGIONAL",
+    "REGIONAL",
+    "NEARLINE",
+    "COLDLINE",
+    "STANDARD",  # alias for MULTI_REGIONAL/REGIONAL, based on location
 ]
 
-COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT = (
-    'COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT'
-)
-GOOGLE_API_SERVICE_ACCOUNT = 'GOOGLE_API_SERVICE_ACCOUNT'
-COMPUTE_ENGINE_API_SERVICE_ACCOUNT = 'COMPUTE_ENGINE_API_SERVICE_ACCOUNT'
-USER_MANAGED_SERVICE_ACCOUNT = 'USER_MANAGED_SERVICE_ACCOUNT'
+COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT = "COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT"
+GOOGLE_API_SERVICE_ACCOUNT = "GOOGLE_API_SERVICE_ACCOUNT"
+COMPUTE_ENGINE_API_SERVICE_ACCOUNT = "COMPUTE_ENGINE_API_SERVICE_ACCOUNT"
+USER_MANAGED_SERVICE_ACCOUNT = "USER_MANAGED_SERVICE_ACCOUNT"
 
 """
 This mapping is order-specific. More specific domains should appear
@@ -60,11 +56,10 @@ earlier in the list. For example, `compute-system.iam.gserviceaccount.com`
 should appear before `iam.gserviceaccount.com`
 """
 GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING = [
-    ('appspot.gserviceaccount.com', COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT),
-    ('cloudservices.gserviceaccount.com', GOOGLE_API_SERVICE_ACCOUNT),
-    ('compute-system.iam.gserviceaccount.com',
-     COMPUTE_ENGINE_API_SERVICE_ACCOUNT),
-    ('iam.gserviceaccount.com', USER_MANAGED_SERVICE_ACCOUNT),
+    ("appspot.gserviceaccount.com", COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT),
+    ("cloudservices.gserviceaccount.com", GOOGLE_API_SERVICE_ACCOUNT),
+    ("compute-system.iam.gserviceaccount.com", COMPUTE_ENGINE_API_SERVICE_ACCOUNT),
+    ("iam.gserviceaccount.com", USER_MANAGED_SERVICE_ACCOUNT),
 ]
 
 
@@ -99,17 +94,14 @@ class GoogleCloudManager(CloudManager):
         elif use_default:
             self.project_id = config.GOOGLE_PROJECT_ID
         else:
-            raise GoogleAuthError(
-                'Could not determine Google Project to manage.')
+            raise GoogleAuthError("Could not determine Google Project to manage.")
 
         self._authed_session = False
         self._service_account_email_domain = (
             self.project_id + ".iam.gserviceaccount.com"
         )
         creds = creds or config.GOOGLE_APPLICATION_CREDENTIALS
-        self.credentials = (
-            ServiceAccountCredentials.from_service_account_file(creds)
-        )
+        self.credentials = ServiceAccountCredentials.from_service_account_file(creds)
 
     def __enter__(self):
         """
@@ -128,15 +120,15 @@ class GoogleCloudManager(CloudManager):
         # Using Google's recommended Google Cloud Client Library for Python
         # NOTE: This library requires using google.oauth2 for creds
         self._storage_client = storage.Client(
-            self.project_id, credentials=self.credentials)
+            self.project_id, credentials=self.credentials
+        )
 
         # Finally set up a generic authorized session where arbitrary
         # requests can be made to Google API(s)
         scopes = ["https://www.googleapis.com/auth/cloud-platform"]
         scopes.extend(admin_service.SCOPES)
 
-        self._authed_session = AuthorizedSession(
-            self.credentials.with_scopes(scopes))
+        self._authed_session = AuthorizedSession(self.credentials.with_scopes(scopes))
 
         return self
 
@@ -159,7 +151,7 @@ class GoogleCloudManager(CloudManager):
         self._admin_service = None
         self._storage_client = None
 
-    def create_proxy_group_for_user(self, user_id, username, prefix=''):
+    def create_proxy_group_for_user(self, user_id, username, prefix=""):
         """
         Creates a proxy group for the given user
 
@@ -232,9 +224,11 @@ class GoogleCloudManager(CloudManager):
             creds = _get_service_account_cred_from_key_response(key_info)
         except Exception as exc:
             raise Exception(
-                "Unable to get service " +
-                "account key for account: \n" + str(account) +
-                "\nError: " + str(exc)
+                "Unable to get service "
+                + "account key for account: \n"
+                + str(account)
+                + "\nError: "
+                + str(exc)
             )
 
         return creds
@@ -302,17 +296,15 @@ class GoogleCloudManager(CloudManager):
 
         user_id = _get_user_id_from_proxy_group(proxy_group["email"])
         username = _get_user_name_from_proxy_group(proxy_group["email"])
-        all_service_accounts = self.get_service_accounts_from_group(
-            proxy_group_id)
+        all_service_accounts = self.get_service_accounts_from_group(proxy_group_id)
 
         # create dict with first part of email as key and whole email as value
         service_account_emails = {
-            account.split("@")[0].strip(): account
-            for account in all_service_accounts
+            account.split("@")[0].strip(): account for account in all_service_accounts
         }
 
-        service_account_id_for_user = (
-            get_valid_service_account_id_for_user(user_id, username)
+        service_account_id_for_user = get_valid_service_account_id_for_user(
+            user_id, username
         )
 
         if service_account_id_for_user in service_account_emails:
@@ -330,7 +322,7 @@ class GoogleCloudManager(CloudManager):
         """
         info = self.get_project_info()
 
-        if 'error' in info:
+        if "error" in info:
             raise GoogleAPIError(str(info))
 
         org = None
@@ -349,7 +341,8 @@ class GoogleCloudManager(CloudManager):
             `Google API Reference <https://cloud.google.com/resource-manager/reference/rest/v1/projects/get>`_
         """
         api_url = _get_google_api_url(
-            "projects/" + self.project_id, GOOGLE_CLOUD_RESOURCE_URL)
+            "projects/" + self.project_id, GOOGLE_CLOUD_RESOURCE_URL
+        )
 
         response = self._authed_request("GET", api_url)
 
@@ -360,8 +353,14 @@ class GoogleCloudManager(CloudManager):
         return bucket.get_iam_policy()
 
     def create_or_update_bucket(
-            self, name, storage_class=None, public=None, requester_pays=False,
-            access_logs_bucket=None, for_logging=False):
+        self,
+        name,
+        storage_class=None,
+        public=None,
+        requester_pays=False,
+        access_logs_bucket=None,
+        for_logging=False,
+    ):
         """
         Create a Google Storage bucket.
 
@@ -391,16 +390,17 @@ class GoogleCloudManager(CloudManager):
 
         if storage_class and storage_class not in GOOGLE_STORAGE_CLASSES:
             raise ValueError(
-                'storage_class {} not one of {}. Did not create bucket...'
-                .format(storage_class, GOOGLE_STORAGE_CLASSES))
+                "storage_class {} not one of {}. Did not create bucket...".format(
+                    storage_class, GOOGLE_STORAGE_CLASSES
+                )
+            )
 
         try:
             bucket_exists = True
             bucket = self._storage_client.get_bucket(name)
         except google_exceptions.NotFound:
             bucket_exists = False
-            bucket = storage.bucket.Bucket(
-                client=self._storage_client, name=name)
+            bucket = storage.bucket.Bucket(client=self._storage_client, name=name)
 
         if requester_pays is not None:
             bucket.requester_pays = requester_pays
@@ -413,14 +413,14 @@ class GoogleCloudManager(CloudManager):
 
         if public is not None:
             policy = bucket.get_iam_policy()
-            role = GooglePolicyRole('roles/storage.objectViewer')
+            role = GooglePolicyRole("roles/storage.objectViewer")
             if public:
                 # update bucket iam policy with allAuthN users having
                 # read access
-                policy[str(role)] = ['allAuthenticatedUsers']
+                policy[str(role)] = ["allAuthenticatedUsers"]
             else:
-                if 'allAuthenticatedUsers' in policy.get(str(role)):
-                    policy[str(role)].remove('allAuthenticatedUsers')
+                if "allAuthenticatedUsers" in policy.get(str(role)):
+                    policy[str(role)].remove("allAuthenticatedUsers")
             bucket.set_iam_policy(policy)
 
         if access_logs_bucket:
@@ -432,8 +432,7 @@ class GoogleCloudManager(CloudManager):
 
         bucket.update()
 
-    def give_group_access_to_bucket(
-            self, group_email, bucket_name, access=None):
+    def give_group_access_to_bucket(self, group_email, bucket_name, access=None):
         """
         Give a group access to a bucket.
 
@@ -446,36 +445,36 @@ class GoogleCloudManager(CloudManager):
         Raises:
             ValueError: No bucket found with given name
         """
-        access = access or ['read']
+        access = access or ["read"]
         try:
             bucket = self._storage_client.get_bucket(bucket_name)
         except google_exceptions.NotFound:
-            raise ValueError('No bucket with name: {}'.format(bucket_name))
+            raise ValueError("No bucket with name: {}".format(bucket_name))
 
         # update bucket iam policy with group having access
         policy = bucket.get_iam_policy()
 
         member = GooglePolicyMember(
-            member_type=GooglePolicyMember.GROUP, email_id=group_email)
+            member_type=GooglePolicyMember.GROUP, email_id=group_email
+        )
 
         roles = []
         for access_level in access:
-            if access_level == 'admin':
-                roles.append(GooglePolicyRole('roles/storage.admin'))
+            if access_level == "admin":
+                roles.append(GooglePolicyRole("roles/storage.admin"))
                 break
-            elif access_level == 'read':
-                roles.append(GooglePolicyRole('roles/storage.objectViewer'))
-            elif access_level == 'write':
-                roles.append(GooglePolicyRole('roles/storage.objectCreator'))
+            elif access_level == "read":
+                roles.append(GooglePolicyRole("roles/storage.objectViewer"))
+            elif access_level == "write":
+                roles.append(GooglePolicyRole("roles/storage.objectCreator"))
             else:
                 raise Exception(
-                    'Unable to grant {access_level} access to {group_email} '
-                    'on bucket {bucket_name}. cirrus '
-                    'does not support the access level {access_level}.'
-                    .format(
+                    "Unable to grant {access_level} access to {group_email} "
+                    "on bucket {bucket_name}. cirrus "
+                    "does not support the access level {access_level}.".format(
                         access_level=access_level,
                         group_email=group_email,
-                        bucket_name=bucket_name
+                        bucket_name=bucket_name,
                     )
                 )
 
@@ -512,7 +511,8 @@ class GoogleCloudManager(CloudManager):
         """
         api_url = _get_google_api_url(
             "projects/" + self.project_id + "/serviceAccounts/" + str(account),
-            GOOGLE_IAM_API_URL)
+            GOOGLE_IAM_API_URL,
+        )
 
         response = self._authed_request("GET", api_url)
 
@@ -529,7 +529,7 @@ class GoogleCloudManager(CloudManager):
             String: type of service account
         """
         service_account = self.get_service_account(account)
-        email_domain = service_account['email'].split("@")[-1]
+        email_domain = service_account["email"].split("@")[-1]
         for (domain, sa_type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
             if domain in email_domain:
                 return sa_type
@@ -562,8 +562,8 @@ class GoogleCloudManager(CloudManager):
                 ]
         """
         api_url = _get_google_api_url(
-            "projects/" + self.project_id + "/serviceAccounts",
-            GOOGLE_IAM_API_URL)
+            "projects/" + self.project_id + "/serviceAccounts", GOOGLE_IAM_API_URL
+        )
 
         all_service_accounts = []
         response = self._authed_request("GET", api_url).json()
@@ -607,21 +607,22 @@ class GoogleCloudManager(CloudManager):
                 }
         """
         api_url = _get_google_api_url(
-            "projects/" + self.project_id + "/serviceAccounts",
-            GOOGLE_IAM_API_URL)
+            "projects/" + self.project_id + "/serviceAccounts", GOOGLE_IAM_API_URL
+        )
 
-        new_service_account = {
-            "accountId": str(account_id)
-        }
+        new_service_account = {"accountId": str(account_id)}
 
         response = self._authed_request(
-            "POST", api_url, data=json.dumps(new_service_account))
+            "POST", api_url, data=json.dumps(new_service_account)
+        )
 
         try:
             new_service_account_id = json.loads(response.text)["uniqueId"]
             new_service_account_resource = (
-                "projects/" + self.project_id +
-                "/serviceAccounts/" + new_service_account_id
+                "projects/"
+                + self.project_id
+                + "/serviceAccounts/"
+                + new_service_account_id
             )
 
             # need to give add the admin account permission to create keys for
@@ -629,17 +630,18 @@ class GoogleCloudManager(CloudManager):
             role = GooglePolicyRole(name="iam.serviceAccountKeyAdmin")
             member = GooglePolicyMember(
                 email_id=config.GOOGLE_ADMIN_EMAIL,
-                member_type=GooglePolicyMember.SERVICE_ACCOUNT)
+                member_type=GooglePolicyMember.SERVICE_ACCOUNT,
+            )
             binding = GooglePolicyBinding(role=role, members=[member])
             new_policy = GooglePolicy(bindings=[binding])
 
             self.set_iam_policy(
-                resource=new_service_account_resource, new_policy=new_policy)
+                resource=new_service_account_resource, new_policy=new_policy
+            )
         except Exception as exc:
             raise Exception(
                 "Error setting service account policy."
-                "\nReponse: " + str(response.__dict__) +
-                "\nError: " + str(exc)
+                "\nReponse: " + str(response.__dict__) + "\nError: " + str(exc)
             )
 
         return response.json()
@@ -658,7 +660,8 @@ class GoogleCloudManager(CloudManager):
         """
         api_url = _get_google_api_url(
             "projects/" + self.project_id + "/serviceAccounts/" + account,
-            GOOGLE_IAM_API_URL)
+            GOOGLE_IAM_API_URL,
+        )
 
         response = self._authed_request("DELETE", api_url)
 
@@ -693,8 +696,9 @@ class GoogleCloudManager(CloudManager):
         new_service_account_url = (
             "projects/" + self.project_id + "/serviceAccounts/" + account
         )
-        api_url = _get_google_api_url(new_service_account_url + "/keys",
-                                      GOOGLE_IAM_API_URL)
+        api_url = _get_google_api_url(
+            new_service_account_url + "/keys", GOOGLE_IAM_API_URL
+        )
 
         response = self._authed_request("POST", api_url)
 
@@ -715,8 +719,14 @@ class GoogleCloudManager(CloudManager):
         """
         key_name = key_name.split("/")[-1]
         api_url = _get_google_api_url(
-            "projects/" + self.project_id + "/serviceAccounts/" + account +
-            "/keys/" + key_name, GOOGLE_IAM_API_URL)
+            "projects/"
+            + self.project_id
+            + "/serviceAccounts/"
+            + account
+            + "/keys/"
+            + key_name,
+            GOOGLE_IAM_API_URL,
+        )
 
         response = self._authed_request("DELETE", api_url)
 
@@ -746,8 +756,14 @@ class GoogleCloudManager(CloudManager):
                 }
         """
         api_url = _get_google_api_url(
-            "projects/" + self.project_id + "/serviceAccounts/" + account +
-            "/keys/" + key_name, GOOGLE_IAM_API_URL)
+            "projects/"
+            + self.project_id
+            + "/serviceAccounts/"
+            + account
+            + "/keys/"
+            + key_name,
+            GOOGLE_IAM_API_URL,
+        )
 
         response = self._authed_request("GET", api_url)
 
@@ -779,11 +795,13 @@ class GoogleCloudManager(CloudManager):
                 ]
         """
         api_url = _get_google_api_url(
-            "projects/" + self.project_id + "/serviceAccounts/" + account +
-            "/keys", GOOGLE_IAM_API_URL)
+            "projects/" + self.project_id + "/serviceAccounts/" + account + "/keys",
+            GOOGLE_IAM_API_URL,
+        )
 
         response = self._authed_request(
-            "GET", api_url + "&keyTypes=USER_MANAGED").json()
+            "GET", api_url + "&keyTypes=USER_MANAGED"
+        ).json()
         keys = response.get("keys", [])
 
         return keys
@@ -833,8 +851,13 @@ class GoogleCloudManager(CloudManager):
                 }
         """
         api_url = _get_google_api_url(
-            "projects/" + self.project_id + "/serviceAccounts/" + account +
-            ":getIamPolicy", GOOGLE_IAM_API_URL)
+            "projects/"
+            + self.project_id
+            + "/serviceAccounts/"
+            + account
+            + ":getIamPolicy",
+            GOOGLE_IAM_API_URL,
+        )
 
         return self._authed_request("POST", api_url)
 
@@ -872,8 +895,7 @@ class GoogleCloudManager(CloudManager):
                     ]
                 }
         """
-        api_url = _get_google_api_url(
-            resource + ":setIamPolicy", GOOGLE_IAM_API_URL)
+        api_url = _get_google_api_url(resource + ":setIamPolicy", GOOGLE_IAM_API_URL)
 
         # "etag is used for optimistic concurrency control as a way to help
         # prevent simultaneous updates of a policy from overwriting each other"
@@ -890,8 +912,7 @@ class GoogleCloudManager(CloudManager):
         # etag = current_policy["etag"]
         # new_policy.etag = etag
 
-        response = self._authed_request(
-            "POST", api_url, data=(str(new_policy)))
+        response = self._authed_request("POST", api_url, data=(str(new_policy)))
 
         return response.json()
 
@@ -937,7 +958,8 @@ class GoogleCloudManager(CloudManager):
         all_groups = []
         response = (
             self._admin_service.groups()
-            .list(domain=config.GOOGLE_IDENTITY_DOMAIN).execute()
+            .list(domain=config.GOOGLE_IDENTITY_DOMAIN)
+            .execute()
         )
         all_groups.extend(response["groups"])
 
@@ -945,8 +967,11 @@ class GoogleCloudManager(CloudManager):
             while response["nextPageToken"]:
                 response = (
                     self._admin_service.groups()
-                    .list(pageToken=response["nextPageToken"],
-                          domain=config.GOOGLE_IDENTITY_DOMAIN).execute()
+                    .list(
+                        pageToken=response["nextPageToken"],
+                        domain=config.GOOGLE_IDENTITY_DOMAIN,
+                    )
+                    .execute()
                 )
                 all_groups.extend(response["groups"])
 
@@ -991,16 +1016,9 @@ class GoogleCloudManager(CloudManager):
             raise GoogleAuthError()
 
         if email is None:
-            email = (
-                name.replace(" ", "-").lower()
-                + "@" + config.GOOGLE_IDENTITY_DOMAIN
-            )
+            email = name.replace(" ", "-").lower() + "@" + config.GOOGLE_IDENTITY_DOMAIN
 
-        group = {
-            "email": email,
-            "name": name,
-            "description": "",
-        }
+        group = {"email": email, "name": name, "description": ""}
 
         response = self._admin_service.groups().insert(body=group).execute()
 
@@ -1032,15 +1050,13 @@ class GoogleCloudManager(CloudManager):
         if not self._authed_session:
             raise GoogleAuthError()
 
-        member_to_add = {
-            "email": member_email,
-            "role": "MEMBER"
-        }
+        member_to_add = {"email": member_email, "role": "MEMBER"}
 
         try:
             response = (
-                self._admin_service.members().insert(
-                    groupKey=group_id, body=member_to_add).execute()
+                self._admin_service.members()
+                .insert(groupKey=group_id, body=member_to_add)
+                .execute()
             )
         except HttpError as err:
             if err.resp.status == 409:
@@ -1068,11 +1084,12 @@ class GoogleCloudManager(CloudManager):
 
         try:
             response = (
-                self._admin_service.members().delete(
-                    groupKey=group_id, memberKey=member_email).execute()
+                self._admin_service.members()
+                .delete(groupKey=group_id, memberKey=member_email)
+                .execute()
             )
             # Google's api returns empty string on success
-            if response == '':
+            if response == "":
                 response = {}
         except HttpError as err:
             if err.resp.status == 404:
@@ -1136,10 +1153,7 @@ class GoogleCloudManager(CloudManager):
         if not self._authed_session:
             raise GoogleAuthError()
 
-        response = (
-            self._admin_service.groups()
-            .delete(groupKey=group_id).execute()
-        )
+        response = self._admin_service.groups().delete(groupKey=group_id).execute()
 
         return response
 
@@ -1172,18 +1186,15 @@ class GoogleCloudManager(CloudManager):
             raise GoogleAuthError()
 
         all_members = []
-        response = (
-            self._admin_service.members()
-            .list(groupKey=group_id).execute()
-        )
+        response = self._admin_service.members().list(groupKey=group_id).execute()
         all_members.extend(response.get("members", []))
 
         if "nextPageToken" in response:
             while response["nextPageToken"]:
                 response = (
                     self._admin_service.members()
-                    .list(pageToken=response["nextPageToken"],
-                          groupKey=group_id).execute()
+                    .list(pageToken=response["nextPageToken"], groupKey=group_id)
+                    .execute()
                 )
                 all_members.extend(response.get("members", []))
 
@@ -1206,9 +1217,11 @@ class GoogleCloudManager(CloudManager):
             raise GoogleAuthError()
 
         members_response = self.get_group_members(group_id)
-        emails = [member["email"]
-                  for member in members_response
-                  if self._service_account_email_domain in member["email"]]
+        emails = [
+            member["email"]
+            for member in members_response
+            if self._service_account_email_domain in member["email"]
+        ]
         return emails
 
     def _authed_request(self, method, url, data=""):
@@ -1265,24 +1278,30 @@ class GoogleCloudManager(CloudManager):
 
         ancestors = []
         if response:
-            response_ancestors = response.get('ancestor')
+            response_ancestors = response.get("ancestor")
             if response_ancestors:
                 for ancestor in response_ancestors:
-                    resource_id = ancestor.get('resourceId')
+                    resource_id = ancestor.get("resourceId")
                     if resource_id:
-                        r_id_type = resource_id.get('type')
-                        r_id = resource_id.get('id')
+                        r_id_type = resource_id.get("type")
+                        r_id = resource_id.get("id")
                         ancestors.append((r_id_type, r_id))
                         if not r_id_type:
-                            raise GoogleAPIError('"type" key not found in getAncestry result')
+                            raise GoogleAPIError(
+                                '"type" key not found in getAncestry result'
+                            )
                         if not r_id:
-                            raise GoogleAPIError('"id" key not found in getAncestry result')
+                            raise GoogleAPIError(
+                                '"id" key not found in getAncestry result'
+                            )
                     else:
-                        raise GoogleAPIError('"resourceId" key not found in getAncestry result')
+                        raise GoogleAPIError(
+                            '"resourceId" key not found in getAncestry result'
+                        )
             else:
                 raise GoogleAPIError('"ancestor" key not found in getAncestry result')
         else:
-            raise GoogleAPIError('Response body not found in getAncestry result')
+            raise GoogleAPIError("Response body not found in getAncestry result")
         return ancestors
 
     def has_parent_organization(self):
@@ -1313,13 +1332,16 @@ class GoogleCloudManager(CloudManager):
         """
         project_id = project_id or self.project_id
         api_url = _get_google_api_url(
-            "projects/" + self.project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL)
+            "projects/" + self.project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL
+        )
         response = self._authed_request("POST", api_url)
 
         if response.status_code != 200:
             raise GoogleAPIError(
-                'Unable to get IAM policy for project {}. The status code is {}'
-                .format(project_id, response.status_code))
+                "Unable to get IAM policy for project {}. The status code is {}".format(
+                    project_id, response.status_code
+                )
+            )
 
         return list(GooglePolicy.from_json(response.json()).members)
 
@@ -1366,10 +1388,10 @@ def _is_key_expired(key, expiration_in_days):
     """
     expired = False
     google_date_format = "%Y-%m-%dT%H:%M:%SZ"
-    creation_time = datetime.strptime(
-        key["validAfterTime"], google_date_format)
-    current_time = datetime.strptime(datetime.utcnow().strftime(google_date_format),
-                                     google_date_format)
+    creation_time = datetime.strptime(key["validAfterTime"], google_date_format)
+    current_time = datetime.strptime(
+        datetime.utcnow().strftime(google_date_format), google_date_format
+    )
     current_life_in_seconds = (current_time - creation_time).total_seconds()
 
     # seconds / seconds_per_minute / minutes_per_hour / hours_per_day
@@ -1397,7 +1419,7 @@ def _get_service_account_cred_from_key_response(key_response):
     return json.loads(base64.b64decode(key_response["privateKeyData"]))
 
 
-def _get_proxy_group_name_for_user(user_id, username, prefix=''):
+def _get_proxy_group_name_for_user(user_id, username, prefix=""):
     """
     Return a valid proxy group name based on user_id and username
 
@@ -1415,22 +1437,25 @@ def _get_proxy_group_name_for_user(user_id, username, prefix=''):
     # allow alphanumeric and some special chars
     user_id = str(user_id)
 
-    prefix = prefix.replace('-', '_').replace(' ', '_')
-    username = username.replace('-', '_').replace(' ', '_')
+    prefix = prefix.replace("-", "_").replace(" ", "_")
+    username = username.replace("-", "_").replace(" ", "_")
 
-    username = ''.join([
-        item for item in str(username)
-        if item.isalnum() or item in ['-', '_', '.', '\'']
-    ])
+    username = "".join(
+        [
+            item
+            for item in str(username)
+            if item.isalnum() or item in ["-", "_", ".", "'"]
+        ]
+    )
 
-    username = username.replace('..', '.')
-    if username[0] == '.':
+    username = username.replace("..", ".")
+    if username[0] == ".":
         username = username[1:]
 
     # Truncate username so full name is at most 60 characters.
-    full_name_length = len(username) + len('-') + len(user_id)
+    full_name_length = len(username) + len("-") + len(user_id)
     if prefix:
-        full_name_length += len(prefix) + len('-')
+        full_name_length += len(prefix) + len("-")
 
     chars_to_drop = full_name_length - 60
     if chars_to_drop > 0:
@@ -1438,17 +1463,19 @@ def _get_proxy_group_name_for_user(user_id, username, prefix=''):
             truncated_username = username[:-chars_to_drop]
         else:
             raise IndexError(
-                'Cannot create name for proxy group for user {} with id {} '
-                'and prefix: {}. Name must include ID and prefix, consider '
-                'shortening the prefix if you continue to get this error. '
-                'Google has specific length requirements on names.'
-                .format(username, user_id, prefix))
+                "Cannot create name for proxy group for user {} with id {} "
+                "and prefix: {}. Name must include ID and prefix, consider "
+                "shortening the prefix if you continue to get this error. "
+                "Google has specific length requirements on names.".format(
+                    username, user_id, prefix
+                )
+            )
     else:
         truncated_username = username
-    name = truncated_username + '-' + user_id
+    name = truncated_username + "-" + user_id
 
     if prefix:
-        name = prefix + '-' + name
+        name = prefix + "-" + name
 
     return name
 
@@ -1463,13 +1490,13 @@ def _get_prefix_from_proxy_group(proxy_group):
     Returns:
         str: prefix if exists, empty string if not
     """
-    split_name = proxy_group.split('@')[0].split("-")
+    split_name = proxy_group.split("@")[0].split("-")
 
     # if there's only two sections, there's no prefix
     if len(split_name) <= 2:
-        return ''
+        return ""
 
-    return proxy_group.split('@')[0].split("-")[-3].strip()
+    return proxy_group.split("@")[0].split("-")[-3].strip()
 
 
 def _get_user_name_from_proxy_group(proxy_group):
@@ -1482,7 +1509,7 @@ def _get_user_name_from_proxy_group(proxy_group):
     Returns:
         str: Username
     """
-    return proxy_group.split('@')[0].split("-")[-2].strip()
+    return proxy_group.split("@")[0].split("-")[-2].strip()
 
 
 def _get_user_id_from_proxy_group(proxy_group):
@@ -1495,4 +1522,4 @@ def _get_user_id_from_proxy_group(proxy_group):
     Returns:
         str: User id
     """
-    return proxy_group.split('@')[0].split("-")[-1].strip()
+    return proxy_group.split("@")[0].split("-")[-1].strip()

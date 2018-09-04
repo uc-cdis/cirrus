@@ -1,5 +1,3 @@
-
-
 class GoogleNamingError(Exception):
 
     GOOGLE_ERROR_MESSAGE = (
@@ -32,9 +30,7 @@ class GoogleAuthError(Exception):
 
 class GoogleAPIError(Exception):
 
-    GOOGLE_API_ERROR_MESSAGE = (
-        "There was an issue with requesting Google API "
-    )
+    GOOGLE_API_ERROR_MESSAGE = "There was an issue with requesting Google API "
 
     def __init__(self, message=None, *args):
         if not message:

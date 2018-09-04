@@ -26,7 +26,8 @@ def get_test_cloud_manager():
 @pytest.fixture
 def test_cloud_manager():
     patcher = patch(
-        'cirrus.google_cloud.manager.ServiceAccountCredentials.from_service_account_file')
+        "cirrus.google_cloud.manager.ServiceAccountCredentials.from_service_account_file"
+    )
     patcher.start()
     yield get_test_cloud_manager()
     patcher.stop()
@@ -39,20 +40,19 @@ def test_cloud_manager_group_and_service_accounts_mocked():
     test_domain = "test-domain.net"
     new_member_1_id = "1"
     new_member_1_username = "testuser"
-    primary_service_account = get_valid_service_account_id_for_user(
-        new_member_1_id, new_member_1_username
-    ) + "@" + test_domain
+    primary_service_account = (
+        get_valid_service_account_id_for_user(new_member_1_id, new_member_1_username)
+        + "@"
+        + test_domain
+    )
 
-    group_name = _get_proxy_group_name_for_user(
-        new_member_1_id, new_member_1_username)
+    group_name = _get_proxy_group_name_for_user(new_member_1_id, new_member_1_username)
     group_email = group_name + "@" + test_domain
     mock_get_group(test_cloud_manager, group_name, group_email)
 
-    mock_get_service_accounts_from_group(
-        test_cloud_manager, primary_service_account)
+    mock_get_service_accounts_from_group(test_cloud_manager, primary_service_account)
 
-    mock_get_service_account(
-        test_cloud_manager, primary_service_account)
+    mock_get_service_account(test_cloud_manager, primary_service_account)
 
     return test_cloud_manager
 
@@ -68,20 +68,16 @@ def mock_get_group(test_cloud_manager, group_name, group_email):
         "directMembersCount": 0,
         "description": "",
         "adminCreated": False,
-        "aliases": [
-            ""
-        ],
-        "nonEditableAliases": [
-            ""
-        ]
+        "aliases": [""],
+        "nonEditableAliases": [""],
     }
 
 
-def mock_get_service_accounts_from_group(
-        test_cloud_manager, primary_service_account):
+def mock_get_service_accounts_from_group(test_cloud_manager, primary_service_account):
     test_cloud_manager.get_service_accounts_from_group = MagicMock()
     test_cloud_manager.get_service_accounts_from_group.return_value = [
-        primary_service_account]
+        primary_service_account
+    ]
 
 
 def mock_get_service_account(test_cloud_manager, primary_service_account):

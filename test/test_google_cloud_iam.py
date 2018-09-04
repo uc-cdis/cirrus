@@ -16,14 +16,12 @@ def test_create_google_policy():
     # set up role and member objects
     role1 = GooglePolicyRole("roles/admin")
     mem11 = GooglePolicyMember("user", "mem11@gmail.com")
-    mem12 = GooglePolicyMember(
-        "serviceAccount", "mem12@iam.gserviceaccount.com")
+    mem12 = GooglePolicyMember("serviceAccount", "mem12@iam.gserviceaccount.com")
     mem13 = GooglePolicyMember("user", "mem13@gmail.com")
 
     role2 = GooglePolicyRole("roles/read")
     mem21 = GooglePolicyMember("user", "mem21@gmail.com")
-    mem22 = GooglePolicyMember(
-        "serviceAccount", "mem22@iam.gserviceaccount.com")
+    mem22 = GooglePolicyMember("serviceAccount", "mem22@iam.gserviceaccount.com")
     mem23 = GooglePolicyMember("user", "mem23@gmail.com")
 
     # group members for adding to policy binding
@@ -69,29 +67,25 @@ def test_create_google_policy_from_json():
     from json and has proper attributes
     """
     json = {
-        "bindings":
-            [
-                {
-                    "role": "roles/admin",
-                    "members":
-                        [
-                            "user:mem11@gmail.com",
-                            "serviceAccount:mem12@iam.gserviceaccount.com",
-                            "user:mem13@gmail.com",
-                            "user:mem23@gmail.com"
-                        ]
-
-                },
-                {
-                    "role": "roles/read",
-                    "members":
-                        [
-                            "user:mem21@gmail.com",
-                            "serviceAccount:mem22@iam.gserviceaccount.com",
-                            "user:mem23@gmail.com"
-                        ]
-                }
-            ]
+        "bindings": [
+            {
+                "role": "roles/admin",
+                "members": [
+                    "user:mem11@gmail.com",
+                    "serviceAccount:mem12@iam.gserviceaccount.com",
+                    "user:mem13@gmail.com",
+                    "user:mem23@gmail.com",
+                ],
+            },
+            {
+                "role": "roles/read",
+                "members": [
+                    "user:mem21@gmail.com",
+                    "serviceAccount:mem22@iam.gserviceaccount.com",
+                    "user:mem23@gmail.com",
+                ],
+            },
+        ]
     }
 
     # create policy from json
@@ -102,14 +96,12 @@ def test_create_google_policy_from_json():
     # get created as a part of policy creation from json
     role1 = GooglePolicyRole("roles/admin")
     mem11 = GooglePolicyMember("user", "mem11@gmail.com")
-    mem12 = GooglePolicyMember(
-        "serviceAccount", "mem12@iam.gserviceaccount.com")
+    mem12 = GooglePolicyMember("serviceAccount", "mem12@iam.gserviceaccount.com")
     mem13 = GooglePolicyMember("user", "mem13@gmail.com")
 
     role2 = GooglePolicyRole("roles/read")
     mem21 = GooglePolicyMember("user", "mem21@gmail.com")
-    mem22 = GooglePolicyMember(
-        "serviceAccount", "mem22@iam.gserviceaccount.com")
+    mem22 = GooglePolicyMember("serviceAccount", "mem22@iam.gserviceaccount.com")
     mem23 = GooglePolicyMember("user", "mem23@gmail.com")
 
     mems1 = [mem11, mem12, mem13, mem23]
