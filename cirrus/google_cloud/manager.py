@@ -45,6 +45,7 @@ GOOGLE_STORAGE_CLASSES = [
     "STANDARD",  # alias for MULTI_REGIONAL/REGIONAL, based on location
 ]
 
+APP_ENGINE_DEFAULT_SERVICE_ACCOUNT = "APP_ENGINE_DEFAULT_SERVICE_ACCOUNT"
 COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT = "COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT"
 GOOGLE_API_SERVICE_ACCOUNT = "GOOGLE_API_SERVICE_ACCOUNT"
 COMPUTE_ENGINE_API_SERVICE_ACCOUNT = "COMPUTE_ENGINE_API_SERVICE_ACCOUNT"
@@ -56,9 +57,10 @@ earlier in the list. For example, `compute-system.iam.gserviceaccount.com`
 should appear before `iam.gserviceaccount.com`
 """
 GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING = [
-    ("appspot.gserviceaccount.com", COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT),
+    ("appspot.gserviceaccount.com", APP_ENGINE_DEFAULT_SERVICE_ACCOUNT),
+    ("compute-system.iam.gserviceaccount.com", COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT),
     ("cloudservices.gserviceaccount.com", GOOGLE_API_SERVICE_ACCOUNT),
-    ("compute-system.iam.gserviceaccount.com", COMPUTE_ENGINE_API_SERVICE_ACCOUNT),
+    ("developer.gserviceaccount.com", COMPUTE_ENGINE_API_SERVICE_ACCOUNT),
     ("iam.gserviceaccount.com", USER_MANAGED_SERVICE_ACCOUNT),
 ]
 

@@ -1041,7 +1041,7 @@ def test_service_account_keys_when_empty(test_cloud_manager):
 
 def test_get_service_account_type_compute_engine_default(test_cloud_manager):
 
-    service_account = {"email": "test@appspot.gserviceaccount.com"}
+    service_account = {"email": "test@compute-system.iam.gserviceaccount.com"}
     test_cloud_manager._authed_session.get.return_value = _fake_response(
         200, service_account
     )
@@ -1065,7 +1065,7 @@ def test_get_service_account_type_google_api(test_cloud_manager):
 
 def test_get_service_account_type_compute_engine_api(test_cloud_manager):
 
-    service_account = {"email": "test@compute-system.iam.gserviceaccount.com"}
+    service_account = {"email": "test@developer.gserviceaccount.com"}
     test_cloud_manager._authed_session.get.return_value = _fake_response(
         200, service_account
     )
