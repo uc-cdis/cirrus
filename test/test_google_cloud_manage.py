@@ -14,7 +14,6 @@ except ImportError:
     from mock import patch
 
 from cirrus.google_cloud import (
-    APP_ENGINE_DEFAULT_SERVICE_ACCOUNT,
     COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT,
     GOOGLE_API_SERVICE_ACCOUNT,
     COMPUTE_ENGINE_API_SERVICE_ACCOUNT,
@@ -1037,18 +1036,6 @@ def test_service_account_keys_when_empty(test_cloud_manager):
     args, kwargs = test_cloud_manager._authed_session.get.call_args
     assert any(account in str(arg) for arg in args) or any(
         account in str(kwarg) for kwarg in kwargs.values()
-    )
-
-
-def test_get_service_account_type_compute_engine_default(test_cloud_manager):
-
-    service_account = {"email": "test@appspot.gserviceaccount.com"}
-    test_cloud_manager._authed_session.get.return_value = _fake_response(
-        200, service_account
-    )
-    assert (
-        test_cloud_manager.get_service_account_type(service_account)
-        == APP_ENGINE_DEFAULT_SERVICE_ACCOUNT
     )
 
 
