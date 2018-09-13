@@ -14,6 +14,7 @@ except ImportError:
     from mock import patch
 
 from cirrus.google_cloud import (
+    APP_ENGINE_DEFAULT_SERVICE_ACCOUNT,
     COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT,
     GOOGLE_API_SERVICE_ACCOUNT,
     COMPUTE_ENGINE_API_SERVICE_ACCOUNT,
@@ -1047,6 +1048,18 @@ def test_get_service_account_type_compute_engine_default(test_cloud_manager):
     )
     assert (
         test_cloud_manager.get_service_account_type(service_account)
+        == APP_ENGINE_DEFAULT_SERVICE_ACCOUNT
+    )
+
+
+def test_get_service_account_type_compute_engine_default(test_cloud_manager):
+
+    service_account = {"email": "test@compute-system.iam.gserviceaccount.com"}
+    test_cloud_manager._authed_session.get.return_value = _fake_response(
+        200, service_account
+    )
+    assert (
+        test_cloud_manager.get_service_account_type(service_account)
         == COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT
     )
 
@@ -1065,7 +1078,7 @@ def test_get_service_account_type_google_api(test_cloud_manager):
 
 def test_get_service_account_type_compute_engine_api(test_cloud_manager):
 
-    service_account = {"email": "test@compute-system.iam.gserviceaccount.com"}
+    service_account = {"email": "test@developer.gserviceaccount.com"}
     test_cloud_manager._authed_session.get.return_value = _fake_response(
         200, service_account
     )
