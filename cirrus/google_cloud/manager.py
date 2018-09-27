@@ -104,6 +104,7 @@ class GoogleCloudManager(CloudManager):
         )
         creds = creds or config.GOOGLE_APPLICATION_CREDENTIALS
         self.credentials = ServiceAccountCredentials.from_service_account_file(creds)
+        self.open_count = 0
 
     def __enter__(self):
         """
@@ -152,6 +153,40 @@ class GoogleCloudManager(CloudManager):
         self._authed_session = None
         self._admin_service = None
         self._storage_client = None
+
+    def open(self):
+        """
+        Run initialization code in __enter__, but do not return self
+        Used for initializing GCM without using `with` block
+
+        Args:
+            -
+        Return:
+            -
+
+        """
+        if self.open_count == 0:
+            self.__enter__()
+        self.open_count += 1
+        return
+
+    def close(self):
+        """
+        Run cleanup code in __exit__
+        Used for closing GCM without using `with` block
+        Args:
+            -
+        Return:
+            -
+        """
+        if self.open_count > 0:
+            self.open_count -= 1
+            if self.open_count == 0:
+                self._authed_session.close()
+                self._authed_session = None
+                self._admin_service = None
+                self._storage_client = None
+                self.is_open = False
 
     def create_proxy_group_for_user(self, user_id, username, prefix=""):
         """
