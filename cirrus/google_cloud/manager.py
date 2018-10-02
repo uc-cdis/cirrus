@@ -177,7 +177,6 @@ class GoogleCloudManager(CloudManager):
                 self._authed_session = None
                 self._admin_service = None
                 self._storage_client = None
-                self.is_open = False
 
     def create_proxy_group_for_user(self, user_id, username, prefix=""):
         """
