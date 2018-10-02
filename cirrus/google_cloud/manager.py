@@ -104,7 +104,9 @@ class GoogleCloudManager(CloudManager):
         )
         creds = creds or config.GOOGLE_APPLICATION_CREDENTIALS
         self.credentials = ServiceAccountCredentials.from_service_account_file(creds)
-        self.open_count = 0
+        # allows for open()/close() to be called multiple times without calling
+        # start up and shutdown code more than once
+        self._open_count = 0
 
     def __enter__(self):
         """
@@ -158,30 +160,19 @@ class GoogleCloudManager(CloudManager):
         """
         Run initialization code in __enter__, but do not return self
         Used for initializing GCM without using `with` block
-
-        Args:
-            -
-        Return:
-            -
-
         """
-        if self.open_count == 0:
+        if self._open_count == 0:
             self.__enter__()
-        self.open_count += 1
-        return
+        self._open_count += 1
 
     def close(self):
         """
         Run cleanup code in __exit__
         Used for closing GCM without using `with` block
-        Args:
-            -
-        Return:
-            -
         """
-        if self.open_count > 0:
-            self.open_count -= 1
-            if self.open_count == 0:
+        if self._open_count > 0:
+            self._open_count -= 1
+            if self._open_count == 0:
                 self._authed_session.close()
                 self._authed_session = None
                 self._admin_service = None
