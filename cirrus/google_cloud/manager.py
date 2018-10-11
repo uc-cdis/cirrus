@@ -160,6 +160,8 @@ class GoogleCloudManager(CloudManager):
         """
         Run initialization code in __enter__, but do not return self
         Used for initializing GCM without using `with` block
+        Meant to allow for multiple calls to open/close, with only
+        opening and closing once.
         """
         if self._open_count == 0:
             self.__enter__()
