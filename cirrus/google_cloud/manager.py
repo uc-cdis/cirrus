@@ -104,6 +104,9 @@ class GoogleCloudManager(CloudManager):
         )
         creds = creds or config.GOOGLE_APPLICATION_CREDENTIALS
         self.credentials = ServiceAccountCredentials.from_service_account_file(creds)
+        # allows for open()/close() to be called multiple times without calling
+        # start up and shutdown code more than once
+        self._open_count = 0
 
     def __enter__(self):
         """
@@ -152,6 +155,30 @@ class GoogleCloudManager(CloudManager):
         self._authed_session = None
         self._admin_service = None
         self._storage_client = None
+
+    def open(self):
+        """
+        Run initialization code in __enter__, but do not return self
+        Used for initializing GCM without using `with` block
+        Meant to allow for multiple calls to open/close, with only
+        opening and closing once.
+        """
+        if self._open_count == 0:
+            self.__enter__()
+        self._open_count += 1
+
+    def close(self):
+        """
+        Run cleanup code in __exit__
+        Used for closing GCM without using `with` block
+        """
+        if self._open_count > 0:
+            self._open_count -= 1
+            if self._open_count == 0:
+                self._authed_session.close()
+                self._authed_session = None
+                self._admin_service = None
+                self._storage_client = None
 
     def create_proxy_group_for_user(self, user_id, username, prefix=""):
         """
