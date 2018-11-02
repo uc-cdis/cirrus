@@ -31,6 +31,9 @@ from cirrus.google_cloud.iam import GooglePolicyRole
 from cirrus.google_cloud.services import GoogleAdminService
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 
+from cdislogging import get_logger
+
+logger = get_logger(__name__)
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
@@ -1123,6 +1126,21 @@ class GoogleCloudManager(CloudManager):
         except HttpError as err:
             if err.resp.status == 404:
                 # not found, member isn't in group. This is fine
+                response = {}
+            elif err.resp.status == 400:
+                # Google's API erroneously returns 400 sometimes
+                # we check to see if the SA was actually deleted
+                logger.warning(
+                    "When removing {} from group ({}), Google API "
+                    "returned status 400".format(member_email, group_id)
+                )
+                members = self.get_group_members(group_id)
+                for member in members:
+                    if member.get("email", "") == member_email:
+                        # member we tried to delete is still in the group
+                        raise
+
+                # reaching this point, indicates the member was succesfully removed
                 response = {}
             else:
                 raise
