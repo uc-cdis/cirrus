@@ -1134,14 +1134,15 @@ class GoogleCloudManager(CloudManager):
                     "When removing {} from group ({}), Google API "
                     "returned status 400".format(member_email, group_id)
                 )
-                members = self.get_group_members(group_id)
-                for member in members:
-                    if member.get("email", "") == member_email:
-                        # member we tried to delete is still in the group
-                        raise
-
-                # reaching this point, indicates the member was succesfully removed
-                response = {}
+                member_emails = [
+                    member.get("email", "")
+                    for member in self.get_group_members(group_id)
+                ]
+                if member_email in member_emails:
+                    raise
+                else:
+                    # reaching this point, indicates the member was succesfully removed
+                    response = {}
             else:
                 raise
 
