@@ -3,3 +3,4 @@ pytest
 pytest-cov
 codacy-coverage
 Sphinx==1.6.5
+-e git+https://git@github.com/uc-cdis/cdislogging.git@master#egg=cdislogging
