@@ -1061,7 +1061,7 @@ class GoogleCloudManager(CloudManager):
         Add given member email to given group
 
         Args:
-            member_email (str): email for member to add
+            member_email (str): email for member to add to group
             group_id (str): Group email or unique ID
 
         Returns:
