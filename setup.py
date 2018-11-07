@@ -9,7 +9,9 @@ setup(
         "google-api-python-client>=1.6.7",
         "google-auth>=1.4.1",
         "google-auth-httplib2>=0.0.3",
+        "cdislogging",
     ],
     include_package_data=True,
     packages=["cirrus", "cirrus.google_cloud"],
+    dependency_links=['http://github.com/uc-cdis/cdislogging/tarball/master#egg=cdislogging'],
 )

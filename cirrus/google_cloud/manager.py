@@ -31,6 +31,9 @@ from cirrus.google_cloud.iam import GooglePolicyRole
 from cirrus.google_cloud.services import GoogleAdminService
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 
+from cdislogging import get_logger
+
+logger = get_logger(__name__)
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
@@ -1058,7 +1061,7 @@ class GoogleCloudManager(CloudManager):
         Add given member email to given group
 
         Args:
-            member_email (str): email for member to add
+            member_email (str): email for member to add to group
             group_id (str): Group email or unique ID
 
         Returns:
@@ -1124,6 +1127,31 @@ class GoogleCloudManager(CloudManager):
             if err.resp.status == 404:
                 # not found, member isn't in group. This is fine
                 response = {}
+            elif err.resp.status == 400:
+                # Google's API erroneously returns 400 sometimes
+                # we check to see if the SA was actually deleted
+                logger.warning(
+                    "When removing {} from group ({}), Google API "
+                    "returned status 400".format(member_email, group_id)
+                )
+                member_emails = [
+                    member.get("email", "")
+                    for member in self.get_group_members(group_id)
+                ]
+                if member_email in member_emails:
+                    logger.warning(
+                        "{} was not removed from group ({})".format(
+                            member_email, group_id
+                        )
+                    )
+                    raise
+                else:
+                    # reaching this point, indicates the member was successfully removed
+                    logger.info(
+                        "Group ({}) members were checked and {} was "
+                        "successfully removed".format(group_id, member_email)
+                    )
+                    response = {}
             else:
                 raise
 
