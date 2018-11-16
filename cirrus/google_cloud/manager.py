@@ -2,19 +2,20 @@
 Google Cloud Management
 """
 
-# Builtin libs
 import base64
 from datetime import datetime
+import functools
 import json
-
-from google.api_core.exceptions import GoogleAPIError
+import sys
 
 try:
     from urllib.parse import urljoin
 except ImportError:
     from urlparse import urljoin
 
-# 3rd Party libs
+import backoff
+from cdislogging import get_logger
+from google.api_core.exceptions import GoogleAPIError
 from google.auth.transport.requests import AuthorizedSession
 from google.cloud import exceptions as google_exceptions
 from google.cloud import storage
@@ -30,6 +31,9 @@ from cirrus.google_cloud.iam import GooglePolicyMember
 from cirrus.google_cloud.iam import GooglePolicyRole
 from cirrus.google_cloud.services import GoogleAdminService
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
+
+
+logger = get_logger(__name__)
 
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
@@ -61,6 +65,44 @@ GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING = [
     ("compute-system.iam.gserviceaccount.com", COMPUTE_ENGINE_API_SERVICE_ACCOUNT),
     ("iam.gserviceaccount.com", USER_MANAGED_SERVICE_ACCOUNT),
 ]
+
+
+def _print_func_name(function):
+    return '{}.{}'.format(function.__module__, function.__name__)
+
+
+def _print_kwargs(kwargs):
+    return ", ".join("{}={}".format(k, repr(v)) for k, v in kwargs.items())
+
+
+def log_backoff_retry(details):
+    args_str = ", ".join(map(str, details["args"]))
+    kwargs_str = (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
+    func_call_log = "{}({}{})".format(_print_func_name(details["target"]), args_str, kwargs_str)
+    logger.info(
+        "backoff: call {func_call} delay {wait:0.1f} seconds after {tries} tries".format(
+            func_call=func_call_log, **details
+        )
+    )
+
+
+def log_backoff_giveup(details):
+    args_str = ", ".join(map(str, details["args"]))
+    kwargs_str = (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
+    func_call_log = "{}({}{})".format(_print_func_name(details["target"]), args_str, kwargs_str)
+    logger.error(
+        "backoff: gave up call {func_call} after {tries} tries; exception: {exc}".format(
+            func_call=func_call_log, exc=sys.exc_info(), **details
+        )
+    )
+
+
+# Default settings to control usage of backoff library.
+BACKOFF_SETTINGS = {
+    "on_backoff": log_backoff_retry,
+    "on_giveup": log_backoff_giveup,
+    "max_tries": 10,
+}
 
 
 class GoogleCloudManager(CloudManager):
@@ -151,6 +193,17 @@ class GoogleCloudManager(CloudManager):
         self._admin_service = None
         self._storage_client = None
 
+    def _require_authed_session(method):
+        """Decorate a method to require an active auth session for the manager."""
+
+        @functools.wraps(method)
+        def wrapper(self, *args, **kwargs):
+            if not self._authed_session:
+                raise GoogleAuthError()
+            return method(self, *args, **kwargs)
+
+        return wrapper
+
     def create_proxy_group_for_user(self, user_id, username, prefix=""):
         """
         Creates a proxy group for the given user
@@ -221,17 +274,13 @@ class GoogleCloudManager(CloudManager):
         """
         try:
             key_info = self.create_service_account_key(account)
-            creds = _get_service_account_cred_from_key_response(key_info)
-        except Exception as exc:
+            return _get_service_account_cred_from_key_response(key_info)
+        except Exception as e:
             raise Exception(
-                "Unable to get service "
-                + "account key for account: \n"
-                + str(account)
-                + "\nError: "
-                + str(exc)
+                "Unable to get service account key for account {}: {}".format(
+                    str(account), str(e)
+                )
             )
-
-        return creds
 
     def create_service_account_for_proxy_group(self, proxy_group_id, account_id):
         """
@@ -352,6 +401,7 @@ class GoogleCloudManager(CloudManager):
         bucket = self._storage_client.get_bucket(bucket_name)
         return bucket.get_iam_policy()
 
+    @_require_authed_session
     def create_or_update_bucket(
         self,
         name,
@@ -385,9 +435,6 @@ class GoogleCloudManager(CloudManager):
             GoogleAuthError: Description
             ValueError: Description
         """
-        if not self._authed_session:
-            raise GoogleAuthError()
-
         if storage_class and storage_class not in GOOGLE_STORAGE_CLASSES:
             raise ValueError(
                 "storage_class {} not one of {}. Did not create bucket...".format(
@@ -916,6 +963,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
+    @_require_authed_session
     def get_all_groups(self):
         """
         Return a list of all groups in the domain
@@ -952,9 +1000,6 @@ class GoogleCloudManager(CloudManager):
                   "nextPageToken": string
                 }
         """
-        if not self._authed_session:
-            raise GoogleAuthError()
-
         all_groups = []
         response = (
             self._admin_service.groups()
@@ -977,6 +1022,7 @@ class GoogleCloudManager(CloudManager):
 
         return all_groups
 
+    @_require_authed_session
     def create_group(self, name, email=None):
         """
         Create a group with given name.
@@ -1012,18 +1058,14 @@ class GoogleCloudManager(CloudManager):
                     ]
                 }
         """
-        if not self._authed_session:
-            raise GoogleAuthError()
-
         if email is None:
             email = name.replace(" ", "-").lower() + "@" + config.GOOGLE_IDENTITY_DOMAIN
-
         group = {"email": email, "name": name, "description": ""}
-
         response = self._admin_service.groups().insert(body=group).execute()
-
         return response
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @_require_authed_session
     def add_member_to_group(self, member_email, group_id):
         """
         Add given member email to given group
@@ -1047,11 +1089,7 @@ class GoogleCloudManager(CloudManager):
                     "type": string
                 }
         """
-        if not self._authed_session:
-            raise GoogleAuthError()
-
         member_to_add = {"email": member_email, "role": "MEMBER"}
-
         try:
             response = (
                 self._admin_service.members()
@@ -1060,14 +1098,14 @@ class GoogleCloudManager(CloudManager):
             )
         except HttpError as err:
             if err.resp.status == 409:
-                # conflict, member already exists in group. This is fine,
-                # don't raise an error, pass back member
-                response = member_to_add
-            else:
-                raise
-
+                # conflict, member already exists in group. This is fine, don't raise an
+                # error, pass back member
+                return member_to_add
+            raise
         return response
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @_require_authed_session
     def remove_member_from_group(self, member_email, group_id):
         """
         Remove given member email to given group
@@ -1079,9 +1117,6 @@ class GoogleCloudManager(CloudManager):
         Returns:
             Empty body if success
         """
-        if not self._authed_session:
-            raise GoogleAuthError()
-
         try:
             response = (
                 self._admin_service.members()
@@ -1089,17 +1124,15 @@ class GoogleCloudManager(CloudManager):
                 .execute()
             )
             # Google's api returns empty string on success
-            if response == "":
-                response = {}
+            return {} if response == "" else response
         except HttpError as err:
             if err.resp.status == 404:
                 # not found, member isn't in group. This is fine
-                response = {}
-            else:
-                raise
+                return {}
+            raise
 
-        return response
-
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @_require_authed_session
     def get_group(self, group_id):
         """
         Get a Google group
@@ -1130,15 +1163,12 @@ class GoogleCloudManager(CloudManager):
                     ]
                 }
         """
-        if not self._authed_session:
-            raise GoogleAuthError()
-
         groups = self._admin_service.groups()
         group = groups.get(groupKey=group_id)
-        response = group.execute()
+        return group.execute()
 
-        return response
-
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @_require_authed_session
     def delete_group(self, group_id):
         """
         Delete a Google group
@@ -1150,13 +1180,10 @@ class GoogleCloudManager(CloudManager):
             dict: JSON response from API call, which should be empty
             `Google API Reference <https://developers.google.com/admin-sdk/directory/v1/reference/groups/delete>`_
         """
-        if not self._authed_session:
-            raise GoogleAuthError()
+        return self._admin_service.groups().delete(groupKey=group_id).execute()
 
-        response = self._admin_service.groups().delete(groupKey=group_id).execute()
-
-        return response
-
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @_require_authed_session
     def get_group_members(self, group_id):
         """
         Get members from a Google group
@@ -1182,9 +1209,6 @@ class GoogleCloudManager(CloudManager):
                     ...
                 ]
         """
-        if not self._authed_session:
-            raise GoogleAuthError()
-
         all_members = []
         response = self._admin_service.members().list(groupKey=group_id).execute()
         all_members.extend(response.get("members", []))
@@ -1200,6 +1224,7 @@ class GoogleCloudManager(CloudManager):
 
         return all_members
 
+    @_require_authed_session
     def get_service_accounts_from_group(self, group_id):
         """
         Return the service account emails for a given group.
@@ -1213,17 +1238,13 @@ class GoogleCloudManager(CloudManager):
         Raises:
             Exception: If not authed
         """
-        if not self._authed_session:
-            raise GoogleAuthError()
-
-        members_response = self.get_group_members(group_id)
-        emails = [
+        return [
             member["email"]
-            for member in members_response
+            for member in self.get_group_members(group_id)
             if self._service_account_email_domain in member["email"]
         ]
-        return emails
 
+    @_require_authed_session
     def _authed_request(self, method, url, data=""):
         """
         Send a request to the provided URL using the authorized session on the project.
@@ -1240,20 +1261,14 @@ class GoogleCloudManager(CloudManager):
         Raises:
             Exception: Not within an authorized session
         """
-        if self._authed_session:
-            method = method.strip().lower()
-            if method == "get":
-                response = self._authed_session.get(url)
-            elif method == "post":
-                response = self._authed_session.post(url, data)
-            elif method == "delete":
-                response = self._authed_session.delete(url)
-            else:
-                raise ValueError("Unsupported method: " + str(method) + ".")
-        else:
-            raise GoogleAuthError()
-
-        return response
+        method = method.strip().lower()
+        if method == "get":
+            return self._authed_session.get(url)
+        elif method == "post":
+            return self._authed_session.post(url, data)
+        elif method == "delete":
+            return self._authed_session.delete(url)
+        raise ValueError("Unsupported method: " + str(method) + ".")
 
     def get_project_ancestry(self, project_id=None):
         """
@@ -1275,33 +1290,31 @@ class GoogleCloudManager(CloudManager):
             "projects/" + project_id + ":getAncestry", GOOGLE_CLOUD_RESOURCE_URL
         )
         response = self._authed_request("POST", api_url).json()
+        if not response:
+            raise GoogleAPIError("Response body not found in getAncestry result")
+        response_ancestors = response.get("ancestor")
+        if not response_ancestors:
+            raise GoogleAPIError('"ancestor" key not found in getAncestry result')
 
         ancestors = []
-        if response:
-            response_ancestors = response.get("ancestor")
-            if response_ancestors:
-                for ancestor in response_ancestors:
-                    resource_id = ancestor.get("resourceId")
-                    if resource_id:
-                        r_id_type = resource_id.get("type")
-                        r_id = resource_id.get("id")
-                        ancestors.append((r_id_type, r_id))
-                        if not r_id_type:
-                            raise GoogleAPIError(
-                                '"type" key not found in getAncestry result'
-                            )
-                        if not r_id:
-                            raise GoogleAPIError(
-                                '"id" key not found in getAncestry result'
-                            )
-                    else:
-                        raise GoogleAPIError(
-                            '"resourceId" key not found in getAncestry result'
-                        )
-            else:
-                raise GoogleAPIError('"ancestor" key not found in getAncestry result')
-        else:
-            raise GoogleAPIError("Response body not found in getAncestry result")
+        for ancestor in response_ancestors:
+            resource_id = ancestor.get("resourceId")
+            if not resource_id:
+                raise GoogleAPIError(
+                    '"resourceId" key not found in getAncestry result'
+                )
+            r_id_type = resource_id.get("type")
+            r_id = resource_id.get("id")
+            if not r_id_type:
+                raise GoogleAPIError(
+                    '"type" key not found in getAncestry result'
+                )
+            if not r_id:
+                raise GoogleAPIError(
+                    '"id" key not found in getAncestry result'
+                )
+            ancestors.append((r_id_type, r_id))
+
         return ancestors
 
     def has_parent_organization(self):
@@ -1313,12 +1326,7 @@ class GoogleCloudManager(CloudManager):
             Bool: True iff the project has a parent organization
         """
         ancestry = self.get_project_ancestry()
-
-        for (r_id_type, _) in ancestry:
-            if r_id_type == "organization":
-                return True
-
-        return False
+        return "organization" in {r_id_type for r_id_type, _ in ancestry}
 
     def get_project_membership(self, project_id=None):
         """
