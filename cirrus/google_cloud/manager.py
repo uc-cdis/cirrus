@@ -79,7 +79,7 @@ def log_backoff_retry(details):
     args_str = ", ".join(map(str, details["args"]))
     kwargs_str = (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
     func_call_log = "{}({}{})".format(_print_func_name(details["target"]), args_str, kwargs_str)
-    logger.info(
+    logger.warn(
         "backoff: call {func_call} delay {wait:0.1f} seconds after {tries} tries".format(
             func_call=func_call_log, **details
         )
@@ -101,7 +101,7 @@ def log_backoff_giveup(details):
 BACKOFF_SETTINGS = {
     "on_backoff": log_backoff_retry,
     "on_giveup": log_backoff_giveup,
-    "max_tries": 10,
+    "max_tries": 5,
 }
 
 

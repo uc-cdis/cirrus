@@ -1218,17 +1218,17 @@ def test_add_member_backoff_giveup(test_cloud_manager):
     }
     mock_config = {"members.side_effect": HttpError(MagicMock(), bytes("test"))}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
-    info = cirrus.google_cloud.manager.logger.info
+    warn = cirrus.google_cloud.manager.logger.warn
     error = cirrus.google_cloud.manager.logger.error
-    with mock.patch("cirrus.google_cloud.manager.logger.info") as logger_info, mock.patch("cirrus.google_cloud.manager.logger.error") as logger_error:
+    with mock.patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, mock.patch("cirrus.google_cloud.manager.logger.error") as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
-        logger_info.side_effect = info
+        logger_warn.side_effect = warn
         logger_error.side_effect = error
         with pytest.raises(HttpError):
             test_cloud_manager.add_member_to_group(
                 member_email=new_member_email, group_id=group_id
             )
-        assert logger_info.call_count == BACKOFF_SETTINGS["max_tries"] - 1
+        assert logger_warn.call_count == BACKOFF_SETTINGS["max_tries"] - 1
         assert logger_error.call_count == 1
 
 
