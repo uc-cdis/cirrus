@@ -73,7 +73,7 @@ GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING = [
 
 
 def _print_func_name(function):
-    return '{}.{}'.format(function.__module__, function.__name__)
+    return "{}.{}".format(function.__module__, function.__name__)
 
 
 def _print_kwargs(kwargs):
@@ -82,8 +82,12 @@ def _print_kwargs(kwargs):
 
 def log_backoff_retry(details):
     args_str = ", ".join(map(str, details["args"]))
-    kwargs_str = (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
-    func_call_log = "{}({}{})".format(_print_func_name(details["target"]), args_str, kwargs_str)
+    kwargs_str = (
+        (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
+    )
+    func_call_log = "{}({}{})".format(
+        _print_func_name(details["target"]), args_str, kwargs_str
+    )
     logger.warn(
         "backoff: call {func_call} delay {wait:0.1f} seconds after {tries} tries".format(
             func_call=func_call_log, **details
@@ -93,8 +97,12 @@ def log_backoff_retry(details):
 
 def log_backoff_giveup(details):
     args_str = ", ".join(map(str, details["args"]))
-    kwargs_str = (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
-    func_call_log = "{}({}{})".format(_print_func_name(details["target"]), args_str, kwargs_str)
+    kwargs_str = (
+        (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
+    )
+    func_call_log = "{}({}{})".format(
+        _print_func_name(details["target"]), args_str, kwargs_str
+    )
     logger.error(
         "backoff: gave up call {func_call} after {tries} tries; exception: {exc}".format(
             func_call=func_call_log, exc=sys.exc_info(), **details
@@ -1358,19 +1366,13 @@ class GoogleCloudManager(CloudManager):
         for ancestor in response_ancestors:
             resource_id = ancestor.get("resourceId")
             if not resource_id:
-                raise GoogleAPIError(
-                    '"resourceId" key not found in getAncestry result'
-                )
+                raise GoogleAPIError('"resourceId" key not found in getAncestry result')
             r_id_type = resource_id.get("type")
             r_id = resource_id.get("id")
             if not r_id_type:
-                raise GoogleAPIError(
-                    '"type" key not found in getAncestry result'
-                )
+                raise GoogleAPIError('"type" key not found in getAncestry result')
             if not r_id:
-                raise GoogleAPIError(
-                    '"id" key not found in getAncestry result'
-                )
+                raise GoogleAPIError('"id" key not found in getAncestry result')
             ancestors.append((r_id_type, r_id))
 
         return ancestors
