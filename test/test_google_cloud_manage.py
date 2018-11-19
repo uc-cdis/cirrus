@@ -31,6 +31,7 @@ from cirrus.google_cloud.manager import (
 )
 import cirrus.google_cloud.manager
 from cirrus.config import config
+from cirrus.google_cloud.errors import GoogleAuthError
 from cirrus.google_cloud.iam import GooglePolicyMember
 
 from test.conftest import mock_get_group
@@ -1204,9 +1205,6 @@ def test_authed_session(test_cloud_manager):
 
 def test_add_member_backoff_giveup(test_cloud_manager):
     from cirrus.google_cloud.manager import BACKOFF_SETTINGS
-    new_member_email = "test-email@test-domain.com"
-    group_id = "abc"
-    new_member_id = 1
     mock_config = {"members.side_effect": HttpError(MagicMock(), bytes("test"))}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
@@ -1217,7 +1215,7 @@ def test_add_member_backoff_giveup(test_cloud_manager):
         logger_error.side_effect = error
         with pytest.raises(HttpError):
             test_cloud_manager.add_member_to_group(
-                member_email=new_member_email, group_id=group_id
+                member_email="test-email@test-domain.com", group_id="abc"
             )
         assert logger_warn.call_count == BACKOFF_SETTINGS["max_tries"] - 1
         assert logger_error.call_count == 1
