@@ -18,5 +18,4 @@ setup(
     ],
     include_package_data=True,
     packages=["cirrus", "cirrus.google_cloud"],
-    dependency_links=['http://github.com/uc-cdis/cdislogging/tarball/master#egg=cdislogging'],
 )
