@@ -38,7 +38,7 @@ logger = get_logger(__name__)
 
 logger = get_logger(__name__)
 
-
+logger.info('cirrus!\n')
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
