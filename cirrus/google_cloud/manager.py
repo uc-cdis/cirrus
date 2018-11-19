@@ -32,6 +32,9 @@ from cirrus.google_cloud.iam import GooglePolicyRole
 from cirrus.google_cloud.services import GoogleAdminService
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 
+from cdislogging import get_logger
+
+logger = get_logger(__name__)
 
 logger = get_logger(__name__)
 
@@ -49,6 +52,7 @@ GOOGLE_STORAGE_CLASSES = [
     "STANDARD",  # alias for MULTI_REGIONAL/REGIONAL, based on location
 ]
 
+APP_ENGINE_DEFAULT_SERVICE_ACCOUNT = "APP_ENGINE_DEFAULT_SERVICE_ACCOUNT"
 COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT = "COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT"
 GOOGLE_API_SERVICE_ACCOUNT = "GOOGLE_API_SERVICE_ACCOUNT"
 COMPUTE_ENGINE_API_SERVICE_ACCOUNT = "COMPUTE_ENGINE_API_SERVICE_ACCOUNT"
@@ -60,9 +64,10 @@ earlier in the list. For example, `compute-system.iam.gserviceaccount.com`
 should appear before `iam.gserviceaccount.com`
 """
 GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING = [
-    ("appspot.gserviceaccount.com", COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT),
+    ("appspot.gserviceaccount.com", APP_ENGINE_DEFAULT_SERVICE_ACCOUNT),
+    ("compute-system.iam.gserviceaccount.com", COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT),
     ("cloudservices.gserviceaccount.com", GOOGLE_API_SERVICE_ACCOUNT),
-    ("compute-system.iam.gserviceaccount.com", COMPUTE_ENGINE_API_SERVICE_ACCOUNT),
+    ("developer.gserviceaccount.com", COMPUTE_ENGINE_API_SERVICE_ACCOUNT),
     ("iam.gserviceaccount.com", USER_MANAGED_SERVICE_ACCOUNT),
 ]
 
@@ -144,6 +149,9 @@ class GoogleCloudManager(CloudManager):
         )
         creds = creds or config.GOOGLE_APPLICATION_CREDENTIALS
         self.credentials = ServiceAccountCredentials.from_service_account_file(creds)
+        # allows for open()/close() to be called multiple times without calling
+        # start up and shutdown code more than once
+        self._open_count = 0
 
     def __enter__(self):
         """
@@ -203,6 +211,30 @@ class GoogleCloudManager(CloudManager):
             return method(self, *args, **kwargs)
 
         return wrapper
+
+    def open(self):
+        """
+        Run initialization code in __enter__, but do not return self
+        Used for initializing GCM without using `with` block
+        Meant to allow for multiple calls to open/close, with only
+        opening and closing once.
+        """
+        if self._open_count == 0:
+            self.__enter__()
+        self._open_count += 1
+
+    def close(self):
+        """
+        Run cleanup code in __exit__
+        Used for closing GCM without using `with` block
+        """
+        if self._open_count > 0:
+            self._open_count -= 1
+            if self._open_count == 0:
+                self._authed_session.close()
+                self._authed_session = None
+                self._admin_service = None
+                self._storage_client = None
 
     def create_proxy_group_for_user(self, user_id, username, prefix=""):
         """
@@ -576,7 +608,7 @@ class GoogleCloudManager(CloudManager):
             String: type of service account
         """
         service_account = self.get_service_account(account)
-        email_domain = service_account["email"].split("@")[-1]
+        email_domain = service_account.get("email", "").split("@")[-1]
         for (domain, sa_type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
             if domain in email_domain:
                 return sa_type
@@ -1071,7 +1103,7 @@ class GoogleCloudManager(CloudManager):
         Add given member email to given group
 
         Args:
-            member_email (str): email for member to add
+            member_email (str): email for member to add to group
             group_id (str): Group email or unique ID
 
         Returns:
@@ -1129,7 +1161,33 @@ class GoogleCloudManager(CloudManager):
             if err.resp.status == 404:
                 # not found, member isn't in group. This is fine
                 return {}
+            elif err.resp.status == 400:
+                # Google's API erroneously returns 400 sometimes
+                # we check to see if the SA was actually deleted
+                logger.warning(
+                    "When removing {} from group ({}), Google API "
+                    "returned status 400".format(member_email, group_id)
+                )
+                member_emails = [
+                    member.get("email", "")
+                    for member in self.get_group_members(group_id)
+                ]
+                if member_email in member_emails:
+                    logger.warning(
+                        "{} was not removed from group ({})".format(
+                            member_email, group_id
+                        )
+                    )
+                    raise
+                # reaching this point, indicates the member was successfully removed
+                logger.info(
+                    "Group ({}) members were checked and {} was "
+                    "successfully removed".format(group_id, member_email)
+                )
+                response = {}
             raise
+
+        return response
 
     @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     @_require_authed_session
