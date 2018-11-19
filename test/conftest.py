@@ -7,11 +7,9 @@ except ImportError:
     from mock import MagicMock
     from mock import patch
 
-import backoff
 import pytest
 
 from cirrus import GoogleCloudManager
-import cirrus.google_cloud.manager
 from cirrus.google_cloud.manager import _get_proxy_group_name_for_user
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 
