@@ -1,17 +1,20 @@
-import pytest
-import json
-from requests import HTTPError
-from requests import Response
-import datetime
 import copy
+import datetime
+import json
 
 # Python 2 and 3 compatible
 try:
+    from unittest import mock
     from unittest.mock import MagicMock
     from unittest.mock import patch
 except ImportError:
+    import mock
     from mock import MagicMock
     from mock import patch
+
+from googleapiclient.errors import HttpError
+import pytest
+from requests import HTTPError, Response
 
 from cirrus.google_cloud import (
     COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT,
@@ -24,10 +27,11 @@ from cirrus.google_cloud.manager import (
     _get_prefix_from_proxy_group,
     _get_user_name_from_proxy_group,
     _get_user_id_from_proxy_group,
+    get_valid_service_account_id_for_user,
 )
-from cirrus.google_cloud.manager import get_valid_service_account_id_for_user
+import cirrus.google_cloud.manager
 from cirrus.config import config
-from cirrus.google_cloud.errors import GoogleAPIError
+from cirrus.google_cloud.errors import GoogleAuthError
 from cirrus.google_cloud.iam import GooglePolicyMember
 
 from test.conftest import mock_get_group
@@ -1172,6 +1176,49 @@ def test_has_no_parent_organization(test_cloud_manager):
     )
 
     assert not test_cloud_manager.has_parent_organization()
+
+
+def test_authed_session(test_cloud_manager):
+    test_cloud_manager._authed_session = False
+    with pytest.raises(GoogleAuthError):
+        test_cloud_manager.get_all_groups()
+    with pytest.raises(GoogleAuthError):
+        new_member_email = "test-email@test-domain.com"
+        group_id = "abc"
+        new_member_id = 1
+        member = {
+            "kind": "admin#directory#member",
+            "etag": "",
+            "id": new_member_id,
+            "email": new_member_email,
+            "role": "",
+            "type": "",
+        }
+        mock_config = {
+            "members.return_value.insert.return_value.execute.return_value": member
+        }
+        test_cloud_manager._admin_service.configure_mock(**mock_config)
+        test_cloud_manager.add_member_to_group(
+            member_email=new_member_email, group_id=group_id
+        )
+
+
+def test_add_member_backoff_giveup(test_cloud_manager):
+    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    mock_config = {"members.side_effect": HttpError(MagicMock(), bytes("test"))}
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
+    warn = cirrus.google_cloud.manager.logger.warn
+    error = cirrus.google_cloud.manager.logger.error
+    with mock.patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, mock.patch("cirrus.google_cloud.manager.logger.error") as logger_error:
+        # keep the side effect to actually put logs, so you can see the format with `-s`
+        logger_warn.side_effect = warn
+        logger_error.side_effect = error
+        with pytest.raises(HttpError):
+            test_cloud_manager.add_member_to_group(
+                member_email="test-email@test-domain.com", group_id="abc"
+            )
+        assert logger_warn.call_count == BACKOFF_SETTINGS["max_tries"] - 1
+        assert logger_error.call_count == 1
 
 
 if __name__ == "__main__":

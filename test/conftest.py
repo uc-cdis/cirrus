@@ -1,5 +1,4 @@
-import pytest
-
+import time
 # Python 2 and 3 compatible
 try:
     from unittest.mock import MagicMock
@@ -7,6 +6,8 @@ try:
 except ImportError:
     from mock import MagicMock
     from mock import patch
+
+import pytest
 
 from cirrus import GoogleCloudManager
 from cirrus.google_cloud.manager import _get_proxy_group_name_for_user
@@ -55,6 +56,15 @@ def test_cloud_manager_group_and_service_accounts_mocked():
     mock_get_service_account(test_cloud_manager, primary_service_account)
 
     return test_cloud_manager
+
+
+@pytest.fixture(autouse=True)
+def no_backoff_delay(monkeypatch):
+    """
+    The ``backoff`` library uses ``time.sleep`` to implement the wait. Patch this to
+    disable actually waiting at all in the tests.
+    """
+    monkeypatch.setattr(time, "sleep", lambda _: None)
 
 
 def mock_get_group(test_cloud_manager, group_name, group_email):
