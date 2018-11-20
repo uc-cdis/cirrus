@@ -34,7 +34,6 @@ from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 
 from cdislogging import get_logger
 
-logger = get_logger(__name__)
 
 logger = get_logger(__name__)
 
