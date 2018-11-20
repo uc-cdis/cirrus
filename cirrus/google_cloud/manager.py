@@ -1191,7 +1191,7 @@ class GoogleCloudManager(CloudManager):
                     "Group ({}) members were checked and {} was "
                     "successfully removed".format(group_id, member_email)
                 )
-                response = {}
+                return {}
             raise
 
         return response
