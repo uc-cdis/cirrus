@@ -1130,7 +1130,7 @@ class GoogleCloudManager(CloudManager):
         """
         member_to_add = {"email": member_email, "role": "MEMBER"}
         try:
-            response = (
+            return (
                 self._admin_service.members()
                 .insert(groupKey=group_id, body=member_to_add)
                 .execute()
@@ -1140,8 +1140,48 @@ class GoogleCloudManager(CloudManager):
                 # conflict, member already exists in group. This is fine, don't raise an
                 # error, pass back member
                 return member_to_add
-            raise
-        return response
+            else:
+                # Google's API erroneously returns 400 sometimes
+                # we check to see if the SA was actually deleted
+                logger.warning(
+                    "When adding {} to group ({}), Google API "
+                    "returned status {}".format(member_email, group_id, err.resp.status)
+                )
+                if not self._is_member_in_group(member_email, group_id):
+                    raise
+
+                return {}
+        except Exception as exc:
+            # Google's API erroneously returns 400 sometimes
+            # we check to see if the SA was actually deleted
+            logger.warning(
+                "When adding {} to group ({}), Exception was raised: {}".format(
+                    member_email, group_id, exc
+                )
+            )
+            if not self._is_member_in_group(member_email, group_id):
+                raise
+
+            return {}
+
+    def _is_member_in_group(self, member_email, group_id):
+        member_emails = [
+            member.get("email", "") for member in self.get_group_members(group_id)
+        ]
+
+        if member_email not in member_emails:
+            logger.warning(
+                "{} was not added to group ({})".format(member_email, group_id)
+            )
+            return False
+
+        # reaching this point, indicates the member is in the group
+        logger.info(
+            "Group ({}) members were checked and {} is in the group".format(
+                group_id, member_email
+            )
+        )
+        return True
 
     @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     @_require_authed_session
