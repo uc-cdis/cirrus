@@ -1130,7 +1130,7 @@ class GoogleCloudManager(CloudManager):
         """
         member_to_add = {"email": member_email, "role": "MEMBER"}
         try:
-            response = (
+            return (
                 self._admin_service.members()
                 .insert(groupKey=group_id, body=member_to_add)
                 .execute()
@@ -1140,12 +1140,12 @@ class GoogleCloudManager(CloudManager):
                 # conflict, member already exists in group. This is fine, don't raise an
                 # error, pass back member
                 return member_to_add
-            elif err.resp.status == 400:
+            else:
                 # Google's API erroneously returns 400 sometimes
                 # we check to see if the SA was actually deleted
                 logger.warning(
                     "When adding {} to group ({}), Google API "
-                    "returned status 400".format(member_email, group_id)
+                    "returned status {}".format(member_email, group_id, err.resp.status)
                 )
                 self._raise_on_add_member_failure(member_email, group_id)
                 return {}
@@ -1159,8 +1159,6 @@ class GoogleCloudManager(CloudManager):
             )
             self._raise_on_add_member_failure(member_email, group_id)
             return {}
-
-        return response
 
     def _raise_on_add_member_failure(self, member_email, group_id):
         member_emails = [
