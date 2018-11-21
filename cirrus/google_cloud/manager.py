@@ -1140,8 +1140,45 @@ class GoogleCloudManager(CloudManager):
                 # conflict, member already exists in group. This is fine, don't raise an
                 # error, pass back member
                 return member_to_add
-            raise
+            elif err.resp.status == 400:
+                # Google's API erroneously returns 400 sometimes
+                # we check to see if the SA was actually deleted
+                logger.warning(
+                    "When adding {} to group ({}), Google API "
+                    "returned status 400".format(member_email, group_id)
+                )
+                self._raise_on_add_member_failure(member_email, group_id)
+                return {}
+        except Exception as exc:
+            # Google's API erroneously returns 400 sometimes
+            # we check to see if the SA was actually deleted
+            logger.warning(
+                "When adding {} to group ({}), Exception was raised: {}".format(
+                    member_email, group_id, exc
+                )
+            )
+            self._raise_on_add_member_failure(member_email, group_id)
+            return {}
+
         return response
+
+    def _raise_on_add_member_failure(self, member_email, group_id):
+        member_emails = [
+            member.get("email", "") for member in self.get_group_members(group_id)
+        ]
+
+        if member_email not in member_emails:
+            logger.warning(
+                "{} was not added to group ({})".format(member_email, group_id)
+            )
+            raise
+
+        # reaching this point, indicates the member is in the group
+        logger.info(
+            "Group ({}) members were checked and {} is in the group".format(
+                group_id, member_email
+            )
+        )
 
     @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     @_require_authed_session
