@@ -1147,7 +1147,9 @@ class GoogleCloudManager(CloudManager):
                     "When adding {} to group ({}), Google API "
                     "returned status {}".format(member_email, group_id, err.resp.status)
                 )
-                self._raise_on_add_member_failure(member_email, group_id)
+                if not self._is_member_in_group(member_email, group_id):
+                    raise
+
                 return {}
         except Exception as exc:
             # Google's API erroneously returns 400 sometimes
@@ -1157,10 +1159,12 @@ class GoogleCloudManager(CloudManager):
                     member_email, group_id, exc
                 )
             )
-            self._raise_on_add_member_failure(member_email, group_id)
+            if not self._is_member_in_group(member_email, group_id):
+                raise
+
             return {}
 
-    def _raise_on_add_member_failure(self, member_email, group_id):
+    def _is_member_in_group(self, member_email, group_id):
         member_emails = [
             member.get("email", "") for member in self.get_group_members(group_id)
         ]
@@ -1169,7 +1173,7 @@ class GoogleCloudManager(CloudManager):
             logger.warning(
                 "{} was not added to group ({})".format(member_email, group_id)
             )
-            raise
+            return False
 
         # reaching this point, indicates the member is in the group
         logger.info(
@@ -1177,6 +1181,7 @@ class GoogleCloudManager(CloudManager):
                 group_id, member_email
             )
         )
+        return True
 
     @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     @_require_authed_session
