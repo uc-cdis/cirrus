@@ -407,10 +407,6 @@ def test_create_service_account_key_invalid_account(test_cloud_manager):
     # Setup #
     account = "account-that-doesnt-exist"
     fake_response = _fake_response(404, {})
-    # fancy lambda to throw httperror for the bad response
-    fake_response.raise_for_status.side_effect = HTTPError(
-        MagicMock(status=404), "not found"
-    )
     test_cloud_manager._authed_session.post.return_value = fake_response
 
     # Call #
