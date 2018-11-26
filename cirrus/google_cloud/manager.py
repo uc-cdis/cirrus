@@ -419,6 +419,7 @@ class GoogleCloudManager(CloudManager):
 
         return org
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def get_project_info(self):
         """
         GET the info for the given project
@@ -571,6 +572,7 @@ class GoogleCloudManager(CloudManager):
 
         bucket.update()
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def get_service_account(self, account):
         """
         GET a service account within the project with the provided account ID.
@@ -622,6 +624,7 @@ class GoogleCloudManager(CloudManager):
 
         return None
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def get_all_service_accounts(self):
         """
         Return the service accounts for the project
@@ -664,6 +667,7 @@ class GoogleCloudManager(CloudManager):
 
         return all_service_accounts
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def create_service_account(self, account_id):
         """
         Create a service account with the given account_id, which must be unique
@@ -732,6 +736,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def delete_service_account(self, account):
         """
         Delete a service account within the project with the provided account ID.
@@ -753,6 +758,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def create_service_account_key(self, account):
         """
         Create a service account key for the given service account.
@@ -790,6 +796,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def delete_service_account_key(self, account, key_name):
         """
         Delete a service key for a service account.
@@ -818,6 +825,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def get_service_account_key(self, account, key_name):
         """
         Get a service key for a service account.
@@ -855,6 +863,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def get_service_account_keys_info(self, account):
         """
         Get user-managed service account key(s) for the given service account.
@@ -904,6 +913,7 @@ class GoogleCloudManager(CloudManager):
             if _is_key_expired(key, config.SERVICE_KEY_EXPIRATION_IN_DAYS):
                 self.delete_service_account_key(account, key["name"])
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def get_service_account_policy(self, account):
         """
         Return the IAM policy for a given service account on given resource.
@@ -947,6 +957,7 @@ class GoogleCloudManager(CloudManager):
 
         return self._authed_request("POST", api_url)
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def set_iam_policy(self, resource, new_policy):
         """
         Set the policy on a given resource.
@@ -1002,6 +1013,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     @_require_authed_session
     def get_all_groups(self):
         """
@@ -1061,6 +1073,7 @@ class GoogleCloudManager(CloudManager):
 
         return all_groups
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     @_require_authed_session
     def create_group(self, name, email=None):
         """
@@ -1368,13 +1381,18 @@ class GoogleCloudManager(CloudManager):
         """
         method = method.strip().lower()
         if method == "get":
-            return self._authed_session.get(url)
+            response = self._authed_session.get(url)
         elif method == "post":
-            return self._authed_session.post(url, data)
+            response = self._authed_session.post(url, data)
         elif method == "delete":
-            return self._authed_session.delete(url)
-        raise ValueError("Unsupported method: " + str(method) + ".")
+            response = self._authed_session.delete(url)
+        else:
+            raise ValueError("Unsupported method: " + str(method) + ".")
 
+        response.raise_for_status()
+        return response
+
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def get_project_ancestry(self, project_id=None):
         """
         Gets a project's ancestry, represented by a list of
@@ -1427,6 +1445,7 @@ class GoogleCloudManager(CloudManager):
         ancestry = self.get_project_ancestry()
         return "organization" in {r_id_type for r_id_type, _ in ancestry}
 
+    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
     def get_project_membership(self, project_id=None):
         """
         Gets a list of members associated with project
