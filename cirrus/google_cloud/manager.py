@@ -1411,23 +1411,13 @@ class GoogleCloudManager(CloudManager):
             "projects/" + project_id + ":getAncestry", GOOGLE_CLOUD_RESOURCE_URL
         )
         response = self._authed_request("POST", api_url).json()
-        if not response:
-            raise GoogleAPIError("Response body not found in getAncestry result")
         response_ancestors = response.get("ancestor")
-        if not response_ancestors:
-            raise GoogleAPIError('"ancestor" key not found in getAncestry result')
 
         ancestors = []
         for ancestor in response_ancestors:
             resource_id = ancestor.get("resourceId")
-            if not resource_id:
-                raise GoogleAPIError('"resourceId" key not found in getAncestry result')
             r_id_type = resource_id.get("type")
             r_id = resource_id.get("id")
-            if not r_id_type:
-                raise GoogleAPIError('"type" key not found in getAncestry result')
-            if not r_id:
-                raise GoogleAPIError('"id" key not found in getAncestry result')
             ancestors.append((r_id_type, r_id))
 
         return ancestors
@@ -1459,13 +1449,6 @@ class GoogleCloudManager(CloudManager):
             "projects/" + self.project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL
         )
         response = self._authed_request("POST", api_url)
-
-        if response.status_code != 200:
-            raise GoogleAPIError(
-                "Unable to get IAM policy for project {}. The status code is {}".format(
-                    project_id, response.status_code
-                )
-            )
 
         return list(GooglePolicy.from_json(response.json()).members)
 
