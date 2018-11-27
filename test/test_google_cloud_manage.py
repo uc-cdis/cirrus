@@ -14,7 +14,7 @@ except ImportError:
 
 from googleapiclient.errors import HttpError
 import pytest
-from requests import HTTPError, Response
+from requests import Response
 
 from cirrus.google_cloud import (
     COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT,
@@ -31,6 +31,7 @@ from cirrus.google_cloud.manager import (
 )
 import cirrus.google_cloud.manager
 from cirrus.config import config
+from cirrus.errors import CirrusError
 from cirrus.google_cloud.errors import GoogleAuthError
 from cirrus.google_cloud.iam import GooglePolicyMember
 
@@ -1200,6 +1201,10 @@ def test_authed_session(test_cloud_manager):
 
 
 def test_add_member_backoff_giveup(test_cloud_manager):
+    """
+    Test that when we get an HttpError from a Google library, we retry
+    the API call
+    """
     from cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     mock_config = {"members.side_effect": HttpError(MagicMock(), bytes("test"))}
@@ -1217,6 +1222,116 @@ def test_add_member_backoff_giveup(test_cloud_manager):
         with pytest.raises(HttpError):
             test_cloud_manager.add_member_to_group(
                 member_email="test-email@test-domain.com", group_id="abc"
+            )
+        assert logger_warn.call_count >= BACKOFF_SETTINGS["max_tries"] - 1
+        assert logger_error.call_count >= 1
+
+
+def test_authorized_session_retry(test_cloud_manager):
+    """
+    Test that when we raise HttpError because of a <400 status from Google
+    in a call to their REST API (using AuthorizedSession),
+    we retry the API call
+    """
+    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+
+    mock_config = {"get.side_effect": HttpError(MagicMock(), bytes("test"))}
+    test_cloud_manager._authed_session.configure_mock(**mock_config)
+    warn = cirrus.google_cloud.manager.logger.warn
+    error = cirrus.google_cloud.manager.logger.error
+    with mock.patch(
+        "cirrus.google_cloud.manager.logger.warn"
+    ) as logger_warn, mock.patch(
+        "cirrus.google_cloud.manager.logger.error"
+    ) as logger_error:
+        # keep the side effect to actually put logs, so you can see the format with `-s`
+        logger_warn.side_effect = warn
+        logger_error.side_effect = error
+        with pytest.raises(HttpError):
+            test_cloud_manager.get_service_account_type(
+                account="test-email@test-domain.com"
+            )
+        assert logger_warn.call_count >= BACKOFF_SETTINGS["max_tries"] - 1
+        assert logger_error.call_count >= 1
+
+
+def test_handled_exception_no_retry(test_cloud_manager):
+    """
+    Test that when a handled exception is raised (e.g. a cirrus error), we
+    do NOT retry the Google API call
+    """
+    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+
+    mock_config = {"members.side_effect": CirrusError(MagicMock(), bytes("test"))}
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
+    warn = cirrus.google_cloud.manager.logger.warn
+    error = cirrus.google_cloud.manager.logger.error
+    with mock.patch(
+        "cirrus.google_cloud.manager.logger.warn"
+    ) as logger_warn, mock.patch(
+        "cirrus.google_cloud.manager.logger.error"
+    ) as logger_error:
+        # keep the side effect to actually put logs, so you can see the format with `-s`
+        logger_warn.side_effect = warn
+        logger_error.side_effect = error
+        with pytest.raises(CirrusError):
+            test_cloud_manager.add_member_to_group(
+                member_email="test-email@test-domain.com", group_id="abc"
+            )
+        assert logger_warn.call_count <= BACKOFF_SETTINGS["max_tries"] - 1
+        assert logger_error.call_count <= 1
+
+
+def test_unhandled_exception_retry(test_cloud_manager):
+    """
+    Test that when an unhandled exception is raised,
+    we retry the Google API call
+    """
+    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+
+    mock_config = {"members.side_effect": IndexError()}
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
+    warn = cirrus.google_cloud.manager.logger.warn
+    error = cirrus.google_cloud.manager.logger.error
+    with mock.patch(
+        "cirrus.google_cloud.manager.logger.warn"
+    ) as logger_warn, mock.patch(
+        "cirrus.google_cloud.manager.logger.error"
+    ) as logger_error:
+        # keep the side effect to actually put logs, so you can see the format with `-s`
+        logger_warn.side_effect = warn
+        logger_error.side_effect = error
+        with pytest.raises(IndexError):
+            test_cloud_manager.add_member_to_group(
+                member_email="test-email@test-domain.com", group_id="abc"
+            )
+        assert logger_warn.call_count >= BACKOFF_SETTINGS["max_tries"] - 1
+        assert logger_error.call_count >= 1
+
+
+def test_authorized_session_unhandled_exception_retry(test_cloud_manager):
+    """
+    Test that when we raise some unhandled exception from Google
+    in a call to their REST API (using AuthorizedSession),
+    we retry the API call
+    """
+    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+
+    mock_config = {"get.side_effect": Exception(MagicMock(), bytes("test"))}
+    test_cloud_manager._authed_session.configure_mock(**mock_config)
+    warn = cirrus.google_cloud.manager.logger.warn
+    error = cirrus.google_cloud.manager.logger.error
+    with mock.patch(
+        "cirrus.google_cloud.manager.logger.warn"
+    ) as logger_warn, mock.patch(
+        "cirrus.google_cloud.manager.logger.error"
+    ) as logger_error:
+        # keep the side effect to actually put logs, so you can see the format with `-s`
+        logger_warn.side_effect = warn
+        logger_error.side_effect = error
+        with pytest.raises(Exception):
+            test_cloud_manager.get_service_account_type(
+                account="test-email@test-domain.com"
             )
         assert logger_warn.call_count >= BACKOFF_SETTINGS["max_tries"] - 1
         assert logger_error.call_count >= 1

@@ -15,7 +15,6 @@ except ImportError:
 
 import backoff
 from cdislogging import get_logger
-from google.api_core.exceptions import GoogleAPIError
 from google.auth.transport.requests import AuthorizedSession
 from google.cloud import exceptions as google_exceptions
 from google.cloud import storage
@@ -24,15 +23,18 @@ from googleapiclient.errors import HttpError
 
 from cirrus.config import config
 from cirrus.core import CloudManager
-from cirrus.google_cloud.errors import GoogleAuthError, GoogleAPIError
+from cirrus.errors import CirrusError, CirrusAttributeError, CirrusNotFound
+from cirrus.google_cloud.errors import (
+    GoogleAuthError,
+    GoogleAPIError,
+    GoogleNamingError,
+)
 from cirrus.google_cloud.iam import GooglePolicy
 from cirrus.google_cloud.iam import GooglePolicyBinding
 from cirrus.google_cloud.iam import GooglePolicyMember
 from cirrus.google_cloud.iam import GooglePolicyRole
 from cirrus.google_cloud.services import GoogleAdminService
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
-
-from cdislogging import get_logger
 
 
 logger = get_logger(__name__)
@@ -109,11 +111,16 @@ def log_backoff_giveup(details):
     )
 
 
+def _is_handled_exception(e):
+    return isinstance(e, type(CirrusError))
+
+
 # Default settings to control usage of backoff library.
 BACKOFF_SETTINGS = {
     "on_backoff": log_backoff_retry,
     "on_giveup": log_backoff_giveup,
     "max_tries": 5,
+    "giveup": _is_handled_exception,
 }
 
 
@@ -315,7 +322,7 @@ class GoogleCloudManager(CloudManager):
             key_info = self.create_service_account_key(account)
             return _get_service_account_cred_from_key_response(key_info)
         except Exception as e:
-            raise Exception(
+            raise CirrusError(
                 "Unable to get service account key for account {}: {}".format(
                     str(account), str(e)
                 )
@@ -419,7 +426,7 @@ class GoogleCloudManager(CloudManager):
 
         return org
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_project_info(self):
         """
         GET the info for the given project
@@ -476,7 +483,7 @@ class GoogleCloudManager(CloudManager):
             ValueError: Description
         """
         if storage_class and storage_class not in GOOGLE_STORAGE_CLASSES:
-            raise ValueError(
+            raise CirrusAttributeError(
                 "storage_class {} not one of {}. Did not create bucket...".format(
                     storage_class, GOOGLE_STORAGE_CLASSES
                 )
@@ -530,13 +537,13 @@ class GoogleCloudManager(CloudManager):
             bucket_name (str): Bucket to provide access to
 
         Raises:
-            ValueError: No bucket found with given name
+            cirrus.google_cloud.errors.CirrusNotFound: No bucket found with given name
         """
         access = access or ["read"]
         try:
             bucket = self._storage_client.get_bucket(bucket_name)
         except google_exceptions.NotFound:
-            raise ValueError("No bucket with name: {}".format(bucket_name))
+            raise CirrusNotFound("No bucket with name: {}".format(bucket_name))
 
         # update bucket iam policy with group having access
         policy = bucket.get_iam_policy()
@@ -555,7 +562,7 @@ class GoogleCloudManager(CloudManager):
             elif access_level == "write":
                 roles.append(GooglePolicyRole("roles/storage.objectCreator"))
             else:
-                raise Exception(
+                raise CirrusAttributeError(
                     "Unable to grant {access_level} access to {group_email} "
                     "on bucket {bucket_name}. cirrus "
                     "does not support the access level {access_level}.".format(
@@ -572,7 +579,7 @@ class GoogleCloudManager(CloudManager):
 
         bucket.update()
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_service_account(self, account):
         """
         GET a service account within the project with the provided account ID.
@@ -624,7 +631,7 @@ class GoogleCloudManager(CloudManager):
 
         return None
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_all_service_accounts(self):
         """
         Return the service accounts for the project
@@ -667,7 +674,7 @@ class GoogleCloudManager(CloudManager):
 
         return all_service_accounts
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def create_service_account(self, account_id):
         """
         Create a service account with the given account_id, which must be unique
@@ -706,37 +713,28 @@ class GoogleCloudManager(CloudManager):
             "POST", api_url, data=json.dumps(new_service_account)
         )
 
-        try:
-            new_service_account_id = json.loads(response.text)["uniqueId"]
-            new_service_account_resource = (
-                "projects/"
-                + self.project_id
-                + "/serviceAccounts/"
-                + new_service_account_id
-            )
+        new_service_account_id = json.loads(response.text)["uniqueId"]
+        new_service_account_resource = (
+            "projects/" + self.project_id + "/serviceAccounts/" + new_service_account_id
+        )
 
-            # need to give add the admin account permission to create keys for
-            # this new service account
-            role = GooglePolicyRole(name="iam.serviceAccountKeyAdmin")
-            member = GooglePolicyMember(
-                email_id=config.GOOGLE_ADMIN_EMAIL,
-                member_type=GooglePolicyMember.SERVICE_ACCOUNT,
-            )
-            binding = GooglePolicyBinding(role=role, members=[member])
-            new_policy = GooglePolicy(bindings=[binding])
+        # need to give add the admin account permission to create keys for
+        # this new service account
+        role = GooglePolicyRole(name="iam.serviceAccountKeyAdmin")
+        member = GooglePolicyMember(
+            email_id=config.GOOGLE_ADMIN_EMAIL,
+            member_type=GooglePolicyMember.SERVICE_ACCOUNT,
+        )
+        binding = GooglePolicyBinding(role=role, members=[member])
+        new_policy = GooglePolicy(bindings=[binding])
 
-            self.set_iam_policy(
-                resource=new_service_account_resource, new_policy=new_policy
-            )
-        except Exception as exc:
-            raise Exception(
-                "Error setting service account policy."
-                "\nReponse: " + str(response.__dict__) + "\nError: " + str(exc)
-            )
+        self.set_iam_policy(
+            resource=new_service_account_resource, new_policy=new_policy
+        )
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def delete_service_account(self, account):
         """
         Delete a service account within the project with the provided account ID.
@@ -758,7 +756,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def create_service_account_key(self, account):
         """
         Create a service account key for the given service account.
@@ -796,7 +794,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def delete_service_account_key(self, account, key_name):
         """
         Delete a service key for a service account.
@@ -825,7 +823,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_service_account_key(self, account, key_name):
         """
         Get a service key for a service account.
@@ -863,7 +861,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_service_account_keys_info(self, account):
         """
         Get user-managed service account key(s) for the given service account.
@@ -913,7 +911,7 @@ class GoogleCloudManager(CloudManager):
             if _is_key_expired(key, config.SERVICE_KEY_EXPIRATION_IN_DAYS):
                 self.delete_service_account_key(account, key["name"])
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_service_account_policy(self, account):
         """
         Return the IAM policy for a given service account on given resource.
@@ -957,7 +955,7 @@ class GoogleCloudManager(CloudManager):
 
         return self._authed_request("POST", api_url)
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def set_iam_policy(self, resource, new_policy):
         """
         Set the policy on a given resource.
@@ -1013,7 +1011,7 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     @_require_authed_session
     def get_all_groups(self):
         """
@@ -1073,7 +1071,7 @@ class GoogleCloudManager(CloudManager):
 
         return all_groups
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     @_require_authed_session
     def create_group(self, name, email=None):
         """
@@ -1116,7 +1114,7 @@ class GoogleCloudManager(CloudManager):
         response = self._admin_service.groups().insert(body=group).execute()
         return response
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     @_require_authed_session
     def add_member_to_group(self, member_email, group_id):
         """
@@ -1196,7 +1194,7 @@ class GoogleCloudManager(CloudManager):
         )
         return True
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     @_require_authed_session
     def remove_member_from_group(self, member_email, group_id):
         """
@@ -1249,7 +1247,7 @@ class GoogleCloudManager(CloudManager):
 
         return response
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     @_require_authed_session
     def get_group(self, group_id):
         """
@@ -1285,7 +1283,7 @@ class GoogleCloudManager(CloudManager):
         group = groups.get(groupKey=group_id)
         return group.execute()
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     @_require_authed_session
     def delete_group(self, group_id):
         """
@@ -1300,7 +1298,7 @@ class GoogleCloudManager(CloudManager):
         """
         return self._admin_service.groups().delete(groupKey=group_id).execute()
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     @_require_authed_session
     def get_group_members(self, group_id):
         """
@@ -1387,12 +1385,12 @@ class GoogleCloudManager(CloudManager):
         elif method == "delete":
             response = self._authed_session.delete(url)
         else:
-            raise ValueError("Unsupported method: " + str(method) + ".")
+            raise CirrusError("Unsupported method: " + str(method) + ".")
 
         response.raise_for_status()
         return response
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_project_ancestry(self, project_id=None):
         """
         Gets a project's ancestry, represented by a list of
@@ -1445,7 +1443,7 @@ class GoogleCloudManager(CloudManager):
         ancestry = self.get_project_ancestry()
         return "organization" in {r_id_type for r_id_type, _ in ancestry}
 
-    @backoff.on_exception(backoff.expo, HttpError, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_project_membership(self, project_id=None):
         """
         Gets a list of members associated with project
@@ -1588,7 +1586,7 @@ def _get_proxy_group_name_for_user(user_id, username, prefix=""):
         if chars_to_drop <= len(username):
             truncated_username = username[:-chars_to_drop]
         else:
-            raise IndexError(
+            raise GoogleNamingError(
                 "Cannot create name for proxy group for user {} with id {} "
                 "and prefix: {}. Name must include ID and prefix, consider "
                 "shortening the prefix if you continue to get this error. "
