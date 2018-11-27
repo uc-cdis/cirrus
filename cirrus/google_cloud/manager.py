@@ -23,7 +23,7 @@ from googleapiclient.errors import HttpError
 
 from cirrus.config import config
 from cirrus.core import CloudManager
-from cirrus.errors import CirrusError, CirrusAttributeError, CirrusNotFound
+from cirrus.errors import CirrusError, CirrusUserError, CirrusNotFound
 from cirrus.google_cloud.errors import (
     GoogleAuthError,
     GoogleAPIError,
@@ -112,7 +112,7 @@ def log_backoff_giveup(details):
 
 
 def _is_handled_exception(e):
-    return isinstance(e, type(CirrusError))
+    return isinstance(e, CirrusError)
 
 
 # Default settings to control usage of backoff library.
@@ -155,7 +155,7 @@ class GoogleCloudManager(CloudManager):
         elif use_default:
             self.project_id = config.GOOGLE_PROJECT_ID
         else:
-            raise GoogleAuthError("Could not determine Google Project to manage.")
+            raise CirrusUserError("Could not determine Google Project to manage.")
 
         self._authed_session = False
         self._service_account_email_domain = (
@@ -483,7 +483,7 @@ class GoogleCloudManager(CloudManager):
             ValueError: Description
         """
         if storage_class and storage_class not in GOOGLE_STORAGE_CLASSES:
-            raise CirrusAttributeError(
+            raise CirrusUserError(
                 "storage_class {} not one of {}. Did not create bucket...".format(
                     storage_class, GOOGLE_STORAGE_CLASSES
                 )
@@ -562,7 +562,7 @@ class GoogleCloudManager(CloudManager):
             elif access_level == "write":
                 roles.append(GooglePolicyRole("roles/storage.objectCreator"))
             else:
-                raise CirrusAttributeError(
+                raise CirrusUserError(
                     "Unable to grant {access_level} access to {group_email} "
                     "on bucket {bucket_name}. cirrus "
                     "does not support the access level {access_level}.".format(
