@@ -1279,8 +1279,9 @@ def test_handled_exception_no_retry(test_cloud_manager):
             test_cloud_manager.add_member_to_group(
                 member_email="test-email@test-domain.com", group_id="abc"
             )
-        assert logger_warn.call_count <= BACKOFF_SETTINGS["max_tries"] - 1
-        assert logger_error.call_count <= 1
+        assert logger_warn.call_count == 0
+        # two google api calls: get_group_members and add_member_to_group
+        assert logger_error.call_count >= 1
 
 
 def test_handled_exception_403_no_retry(test_cloud_manager):
