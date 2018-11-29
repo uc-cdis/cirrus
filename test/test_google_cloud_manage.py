@@ -15,6 +15,7 @@ except ImportError:
 from googleapiclient.errors import HttpError
 import pytest
 from requests import Response
+import httplib2
 
 from cirrus.google_cloud import (
     COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT,
@@ -1280,6 +1281,35 @@ def test_handled_exception_no_retry(test_cloud_manager):
             )
         assert logger_warn.call_count <= BACKOFF_SETTINGS["max_tries"] - 1
         assert logger_error.call_count <= 1
+
+
+def test_handled_exception_403_no_retry(test_cloud_manager):
+    """
+    Test that when a handled exception is raised (e.g. a cirrus error), we
+    do NOT retry the Google API call
+    """
+    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+
+    response = httplib2.Response({"status": "403", "content-type": "application/json"})
+    http_error = HttpError(resp=response, content="")
+    mock_config = {"get.side_effect": http_error}
+    test_cloud_manager._authed_session.configure_mock(**mock_config)
+    warn = cirrus.google_cloud.manager.logger.warn
+    error = cirrus.google_cloud.manager.logger.error
+    with mock.patch(
+        "cirrus.google_cloud.manager.logger.warn"
+    ) as logger_warn, mock.patch(
+        "cirrus.google_cloud.manager.logger.error"
+    ) as logger_error:
+        # keep the side effect to actually put logs, so you can see the format with `-s`
+        logger_warn.side_effect = warn
+        logger_error.side_effect = error
+        with pytest.raises(HttpError):
+            test_cloud_manager.get_service_account_type(
+                account="test-email@test-domain.com"
+            )
+        assert logger_warn.call_count == 0
+        assert logger_error.call_count == 1
 
 
 def test_unhandled_exception_retry(test_cloud_manager):
