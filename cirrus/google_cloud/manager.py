@@ -1387,6 +1387,8 @@ class GoogleCloudManager(CloudManager):
         else:
             raise CirrusError("Unsupported method: " + str(method) + ".")
 
+        if response.status_code == 403:
+            raise GoogleAPIError("Call to {} was forbidden".format(url))
         response.raise_for_status()
         return response
 
