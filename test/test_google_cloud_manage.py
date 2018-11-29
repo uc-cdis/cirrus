@@ -1308,8 +1308,8 @@ def test_handled_exception_403_no_retry(test_cloud_manager):
             test_cloud_manager.get_service_account_type(
                 account="test-email@test-domain.com"
             )
-        assert logger_warn.call_count <= BACKOFF_SETTINGS["max_tries"] - 1
-        assert logger_error.call_count <= 1
+        assert logger_warn.call_count == 0
+        assert logger_error.call_count == 1
 
 
 def test_unhandled_exception_retry(test_cloud_manager):
