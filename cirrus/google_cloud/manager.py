@@ -116,6 +116,7 @@ def _is_handled_exception(e):
         if e.resp.status == 403:
             return True
         return False
+
     return isinstance(e, CirrusError)
 
 
