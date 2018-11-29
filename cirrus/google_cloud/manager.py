@@ -112,6 +112,10 @@ def log_backoff_giveup(details):
 
 
 def _is_handled_exception(e):
+    if isinstance(e, HttpError):
+        if e.resp.status == 403:
+            return True
+        return False
     return isinstance(e, CirrusError)
 
 
