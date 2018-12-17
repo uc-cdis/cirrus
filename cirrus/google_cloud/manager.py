@@ -1116,7 +1116,16 @@ class GoogleCloudManager(CloudManager):
         if email is None:
             email = name.replace(" ", "-").lower() + "@" + config.GOOGLE_IDENTITY_DOMAIN
         group = {"email": email, "name": name, "description": ""}
-        response = self._admin_service.groups().insert(body=group).execute()
+        try:
+            response = self._admin_service.groups().insert(body=group).execute()
+        except HttpError as err:
+            if err.resp.status == 409:
+                # conflict, group already exists. This is fine, don't raise an
+                # error, pass back group
+                return group
+
+            raise
+
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
@@ -1301,7 +1310,14 @@ class GoogleCloudManager(CloudManager):
             dict: JSON response from API call, which should be empty
             `Google API Reference <https://developers.google.com/admin-sdk/directory/v1/reference/groups/delete>`_
         """
-        return self._admin_service.groups().delete(groupKey=group_id).execute()
+        try:
+            return self._admin_service.groups().delete(groupKey=group_id).execute()
+        except HttpError as err:
+            if err.resp.status == 404:
+                # not found, group doesn't exist. This is fine
+                return {}
+
+            raise
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     @_require_authed_session

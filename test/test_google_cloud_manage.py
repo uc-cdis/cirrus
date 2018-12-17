@@ -554,6 +554,43 @@ def test_create_group(test_cloud_manager):
     )
 
 
+def test_create_group_already_exists(test_cloud_manager):
+    """
+    Test group creation calls google API with provided info and that response is returned
+    even if the group already exists
+    """
+    # Setup #
+    new_group_name = "Test Group!"
+    new_group_email = "test-email@test-domain.com"
+    group = {"email": new_group_email, "name": new_group_name, "description": ""}
+
+    response = httplib2.Response({"status": "409", "content-type": "application/json"})
+    http_error = HttpError(resp=response, content="")
+
+    mock_config = {
+        "groups.return_value.insert.return_value.execute.side_effect": http_error
+    }
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
+
+    # Call #
+    group = test_cloud_manager.create_group(name=new_group_name, email=new_group_email)
+
+    # Test #
+    assert group["email"] == new_group_email
+    assert group["name"] == new_group_name
+
+    # check if new name and email are somewhere in the args to insert
+    args, kwargs = (
+        test_cloud_manager._admin_service.groups.return_value.insert.call_args
+    )
+    assert any(new_group_name in str(arg) for arg in args) or any(
+        new_group_name in str(kwarg) for kwarg in kwargs.values()
+    )
+    assert any(new_group_email in str(arg) for arg in args) or any(
+        new_group_email in str(kwarg) for kwarg in kwargs.values()
+    )
+
+
 def test_get_group_members(test_cloud_manager):
     """
     Test get group members calls google API with provided info and that response is returned
@@ -928,6 +965,32 @@ def test_delete_group(test_cloud_manager):
     # Setup #
     group_id = "123"
     mock_config = {"groups.return_value.delete.return_value.execute.return_value": {}}
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
+
+    # Call #
+    response = test_cloud_manager.delete_group(group_id)
+
+    # Test #
+    assert response == {}
+    args, kwargs = (
+        test_cloud_manager._admin_service.groups.return_value.delete.call_args
+    )
+    assert any((group_id == arg) for arg in args) or any(
+        (group_id == kwarg) for kwarg in kwargs.values()
+    )
+
+
+def test_delete_group_doesnt_exist(test_cloud_manager):
+    """
+    Test that deleting a group that doesn't exist doesn't error out
+    """
+    # Setup #
+    group_id = "123"
+    response = httplib2.Response({"status": "404", "content-type": "application/json"})
+    http_error = HttpError(resp=response, content="")
+    mock_config = {
+        "groups.return_value.delete.return_value.execute.side_effect": http_error
+    }
     test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
