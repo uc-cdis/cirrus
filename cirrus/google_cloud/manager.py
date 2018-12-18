@@ -1175,9 +1175,9 @@ class GoogleCloudManager(CloudManager):
                 if not self._is_member_in_group(member_email, group_id):
                     raise
 
-                return {}
+                return member_to_add
         except Exception as exc:
-            # Google's API erroneously returns 400 sometimes
+            # Google's API erroneously returns error sometimes
             # we check to see if the SA was actually deleted
             logger.warning(
                 "When adding {} to group ({}), Exception was raised: {}".format(
@@ -1187,7 +1187,7 @@ class GoogleCloudManager(CloudManager):
             if not self._is_member_in_group(member_email, group_id):
                 raise
 
-            return {}
+            return member_to_add
 
     def _is_member_in_group(self, member_email, group_id):
         member_emails = [
