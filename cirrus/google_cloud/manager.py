@@ -1167,7 +1167,7 @@ class GoogleCloudManager(CloudManager):
                 return member_to_add
             else:
                 # Google's API erroneously returns 400 sometimes
-                # we check to see if the SA was actually deleted
+                # we check to see if the SA was actually added
                 logger.warning(
                     "When adding {} to group ({}), Google API "
                     "returned status {}".format(member_email, group_id, err.resp.status)
@@ -1178,7 +1178,7 @@ class GoogleCloudManager(CloudManager):
                 return member_to_add
         except Exception as exc:
             # Google's API erroneously returns error sometimes
-            # we check to see if the SA was actually deleted
+            # we check to see if the SA was actually added
             logger.warning(
                 "When adding {} to group ({}), Exception was raised: {}".format(
                     member_email, group_id, exc
