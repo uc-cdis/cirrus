@@ -1122,7 +1122,7 @@ class GoogleCloudManager(CloudManager):
             if err.resp.status == 409:
                 # conflict, group already exists. This is fine, don't raise an
                 # error, pass back group
-                return group
+                return self.get_group(group["email"])
 
             raise
 
