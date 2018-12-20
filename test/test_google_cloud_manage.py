@@ -572,10 +572,25 @@ def test_create_group_already_exists(test_cloud_manager):
     }
     test_cloud_manager._admin_service.configure_mock(**mock_config)
 
+    test_cloud_manager.get_group = MagicMock()
+    test_cloud_manager.get_group.return_value = {
+        "kind": "admin#directory#group",
+        "id": "123456",
+        "etag": "",
+        "email": new_group_email,
+        "name": new_group_name,
+        "directMembersCount": 0,
+        "description": "",
+        "adminCreated": False,
+        "aliases": [""],
+        "nonEditableAliases": [""],
+    }
+
     # Call #
     group = test_cloud_manager.create_group(name=new_group_name, email=new_group_email)
 
     # Test #
+    assert group["id"]
     assert group["email"] == new_group_email
     assert group["name"] == new_group_name
 
