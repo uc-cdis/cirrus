@@ -714,9 +714,17 @@ class GoogleCloudManager(CloudManager):
 
         new_service_account = {"accountId": str(account_id)}
 
-        response = self._authed_request(
-            "POST", api_url, data=json.dumps(new_service_account)
-        )
+        try:
+            response = self._authed_request(
+                "POST", api_url, data=json.dumps(new_service_account)
+            )
+        except HttpError as err:
+            if err.resp.status == 409:
+                # conflict, sa already exists. This is fine, don't raise an
+                # error, pass back sa
+                return self.get_service_account(account_id)
+
+            raise
 
         new_service_account_id = json.loads(response.text)["uniqueId"]
         new_service_account_resource = (
@@ -757,7 +765,14 @@ class GoogleCloudManager(CloudManager):
             GOOGLE_IAM_API_URL,
         )
 
-        response = self._authed_request("DELETE", api_url)
+        try:
+            response = self._authed_request("DELETE", api_url)
+        except HttpError as err:
+            if err.resp.status == 404:
+                # sa doesn't exist so return "success"
+                return {}
+
+            raise
 
         return response.json()
 
@@ -795,7 +810,14 @@ class GoogleCloudManager(CloudManager):
             new_service_account_url + "/keys", GOOGLE_IAM_API_URL
         )
 
-        response = self._authed_request("POST", api_url)
+        try:
+            response = self._authed_request("POST", api_url)
+        except HttpError as err:
+            if err.resp.status == 404:
+                # sa doesn't exist so return "success"
+                return {}
+
+            raise
 
         return response.json()
 
