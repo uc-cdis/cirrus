@@ -261,6 +261,41 @@ def test_create_service_account_valid(test_cloud_manager):
     )
 
 
+def test_create_service_account_already_exists(test_cloud_manager):
+    """
+    Test that creating a service account returns a service account and
+    calls function to modify the policy.
+    """
+    # Setup #
+    service_account_unique_id = "123"
+    test_cloud_manager.set_iam_policy = MagicMock()
+
+    response = httplib2.Response({"status": "409", "content-type": "application/json"})
+    http_error = HttpError(resp=response, content="")
+
+    test_cloud_manager._authed_session.post.side_effect = http_error
+
+    account_id = "some_new_service_account"
+
+    test_cloud_manager.get_service_account = MagicMock()
+    test_cloud_manager.get_service_account.return_value = {
+        "name": "",
+        "projectId": "",
+        "uniqueId": service_account_unique_id,
+        "email": account_id,
+        "displayName": "",
+        "etag": "",
+        "oauth2ClientId": "",
+    }
+
+    # Call #
+    service_account = test_cloud_manager.create_service_account(account_id)
+
+    # Test #
+    assert service_account["uniqueId"] == service_account_unique_id
+    assert test_cloud_manager._authed_session.post.called is True
+
+
 def test_delete_service_account(test_cloud_manager):
     """
     Test that deleting a service account actually calls google API with
@@ -268,6 +303,29 @@ def test_delete_service_account(test_cloud_manager):
     """
     # Setup #
     test_cloud_manager._authed_session.delete.return_value = _fake_response(200)
+
+    account = "some_service_account"
+
+    # Call #
+    test_cloud_manager.delete_service_account(account)
+
+    # Test #
+    assert test_cloud_manager._authed_session.delete.called is True
+
+    # Naive check to see if the new account appears in the call to delete
+    args, kwargs = test_cloud_manager._authed_session.delete.call_args
+    assert any(account in str(arg) for arg in args) or any(
+        account in str(kwarg) for kwarg in kwargs.values()
+    )
+
+
+def test_delete_service_account_doesnt_exist(test_cloud_manager):
+    """
+    Test that deleting a service account actually calls google API with
+    given account and if it DOES NOT exist, this is still successfull
+    """
+    # Setup #
+    test_cloud_manager._authed_session.delete.return_value = _fake_response(404)
 
     account = "some_service_account"
 
