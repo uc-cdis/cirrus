@@ -29,10 +29,13 @@ from cirrus.google_cloud.errors import (
     GoogleAPIError,
     GoogleNamingError,
 )
-from cirrus.google_cloud.iam import GooglePolicy
-from cirrus.google_cloud.iam import GooglePolicyBinding
-from cirrus.google_cloud.iam import GooglePolicyMember
-from cirrus.google_cloud.iam import GooglePolicyRole
+from cirrus.google_cloud.iam import (
+    GooglePolicy,
+    GooglePolicyBinding,
+    GooglePolicyMember,
+    GooglePolicyRole,
+    get_iam_service_account_email,
+)
 from cirrus.google_cloud.services import GoogleAdminService
 from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 
@@ -722,7 +725,10 @@ class GoogleCloudManager(CloudManager):
             if err.resp.status == 409:
                 # conflict, sa already exists. This is fine, don't raise an
                 # error, pass back sa
-                return self.get_service_account(account_id)
+                account_email = get_iam_service_account_email(
+                    self.project_id, account_id
+                )
+                return self.get_service_account(account_email)
 
             raise
 
