@@ -115,12 +115,43 @@ def log_backoff_giveup(details):
 
 
 def _is_handled_exception(e):
+    """
     if isinstance(e, HttpError):
         if e.resp.status == 403:
             return True
         return False
 
     return isinstance(e, CirrusError)
+    #"""
+    #"""
+    if isinstance(e, HttpError):
+        if e.resp.status == 403:
+            # True unless it's a rate limit error.
+            # Note: There is overlap in the reason codes for these APIs
+            # which is not ideal. e.g. userRateLimitExceeded is in both.
+            # Fortunately both cases warrant retrying.
+            # Valid rate limit reasons from CLOUD RESOURCE MANAGER API
+            # cloud.google.com/resource-manager/docs/core_errors#FORBIDDEN
+            # Many limit errors listed; only a few warrant retry.
+            resource_rlreasons = [
+                "concurrentLimitExceeded",
+                "limitExceeded",
+                "rateLimitExceeded",
+                "userRateLimitExceeded"
+            ]
+            # Valid rate limit reasons from DIRECTORY API
+            # developers.google.com/admin-sdk/directory/v1/limits
+            directory_rlreasons = [
+                "userRateLimitExceeded",
+                "quotaExceeded"
+            ]
+            # Valid rate limit reasons from IAM API
+            # IAM API doesn't seem to return rate-limit 403s.
+            return e.resp.reason not in resource_rlreasons and e.resp.reason not in directory_rlreasons
+        return False
+
+    return isinstance(e, CirrusError)
+    #"""
 
 
 # Default settings to control usage of backoff library.
