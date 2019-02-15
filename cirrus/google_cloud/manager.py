@@ -7,6 +7,7 @@ from datetime import datetime
 import functools
 import json
 import sys
+import httplib2
 
 try:
     from urllib.parse import urljoin
@@ -19,7 +20,8 @@ from google.auth.transport.requests import AuthorizedSession
 from google.cloud import exceptions as google_exceptions
 from google.cloud import storage
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
-from googleapiclient.errors import HttpError
+from googleapiclient.errors import HttpError as GoogleHttpError
+from requests.exceptions import HTTPError as requestsHttpError
 
 from cirrus.config import config
 from cirrus.core import CloudManager
@@ -115,7 +117,7 @@ def log_backoff_giveup(details):
 
 
 def _is_handled_exception(e):
-    if isinstance(e, HttpError):
+    if isinstance(e, GoogleHttpError):
         if e.resp.status == 403:
             return True
         return False
@@ -721,7 +723,7 @@ class GoogleCloudManager(CloudManager):
             response = self._authed_request(
                 "POST", api_url, data=json.dumps(new_service_account)
             )
-        except HttpError as err:
+        except GoogleHttpError as err:
             if err.resp.status == 409:
                 # conflict, sa already exists. This is fine, don't raise an
                 # error, pass back sa
@@ -773,7 +775,7 @@ class GoogleCloudManager(CloudManager):
 
         try:
             response = self._authed_request("DELETE", api_url)
-        except HttpError as err:
+        except GoogleHttpError as err:
             if err.resp.status == 404:
                 # sa doesn't exist so return "success"
                 return {}
@@ -818,7 +820,7 @@ class GoogleCloudManager(CloudManager):
 
         try:
             response = self._authed_request("POST", api_url)
-        except HttpError as err:
+        except GoogleHttpError as err:
             if err.resp.status == 404:
                 # sa doesn't exist so return "success"
                 return {}
@@ -1146,7 +1148,7 @@ class GoogleCloudManager(CloudManager):
         group = {"email": email, "name": name, "description": ""}
         try:
             response = self._admin_service.groups().insert(body=group).execute()
-        except HttpError as err:
+        except GoogleHttpError as err:
             if err.resp.status == 409:
                 # conflict, group already exists. This is fine, don't raise an
                 # error, pass back group
@@ -1188,7 +1190,7 @@ class GoogleCloudManager(CloudManager):
                 .insert(groupKey=group_id, body=member_to_add)
                 .execute()
             )
-        except HttpError as err:
+        except GoogleHttpError as err:
             if err.resp.status == 409:
                 # conflict, member already exists in group. This is fine, don't raise an
                 # error, pass back member
@@ -1257,7 +1259,7 @@ class GoogleCloudManager(CloudManager):
             )
             # Google's api returns empty string on success
             return {} if response == "" else response
-        except HttpError as err:
+        except GoogleHttpError as err:
             if err.resp.status == 404:
                 # not found, member isn't in group. This is fine
                 return {}
@@ -1340,7 +1342,7 @@ class GoogleCloudManager(CloudManager):
         """
         try:
             return self._admin_service.groups().delete(groupKey=group_id).execute()
-        except HttpError as err:
+        except GoogleHttpError as err:
             if err.resp.status == 404:
                 # not found, group doesn't exist. This is fine
                 return {}
@@ -1438,7 +1440,21 @@ class GoogleCloudManager(CloudManager):
 
         if response.status_code == 403:
             raise GoogleAPIError("Call to {} was forbidden".format(url))
-        response.raise_for_status()
+
+        # Google's libraries use a different error of the same name as requests lib...
+        # So convert from request's HTTPError to Google's HttpError... why Google? why?
+        try:
+            response.raise_for_status()
+        except requestsHttpError as err:
+            response = httplib2.Response(
+                {
+                    "status": err.response.status_code,
+                    "reason": err.response.reason,
+                    "content-type": "application/json",
+                }
+            )
+            raise GoogleHttpError(resp=response, content=err.response.content)
+
         return response
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
