@@ -114,16 +114,13 @@ def log_backoff_giveup(details):
     )
 
 
-def _is_handled_exception(e):
+def exception_do_not_retry(e):
     """
-    if isinstance(e, HttpError):
-        if e.resp.status == 403:
-            return True
-        return False
-
-    return isinstance(e, CirrusError)
-    #"""
-    # """
+    True if we should not retry.
+    - We should not retry for errors that we raise (CirrusErrors)
+    - We should not retry for Google errors that are not temporary
+      and not recoverable by retry
+    """
     if isinstance(e, HttpError):
         if e.resp.status == 403:
             # True unless it's a rate limit error.
@@ -151,7 +148,6 @@ def _is_handled_exception(e):
         return False
 
     return isinstance(e, CirrusError)
-    # """
 
 
 # Default settings to control usage of backoff library.
@@ -159,7 +155,7 @@ BACKOFF_SETTINGS = {
     "on_backoff": log_backoff_retry,
     "on_giveup": log_backoff_giveup,
     "max_tries": 5,
-    "giveup": _is_handled_exception,
+    "giveup": exception_do_not_retry,
 }
 
 
