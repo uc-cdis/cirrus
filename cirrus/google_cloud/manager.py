@@ -124,13 +124,10 @@ def get_reason(http_error):
       data = json.loads(http_error.content.decode('utf-8'))
       if isinstance(data, dict):
         reason = data['error'].get('reason')
+        if 'errors' in data['error'] and len(data['error']['errors'] > 0):
+            reason = data['error']['errors']['reason']
         if 'error_details' in data['error']:
             http_error.error_error_details = data['error']['error_details']
-      elif isinstance(data, list) and len(data) > 0:
-        first_error = data[0]
-        reason = first_error['error']('reason')
-        if 'error_details' in first_error['error']:
-            http_error.error_error_details = first_error['error']['error_details']
     except (ValueError, KeyError, TypeError):
       pass
     if reason is None:
