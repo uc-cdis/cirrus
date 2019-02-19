@@ -113,6 +113,23 @@ def log_backoff_giveup(details):
         )
     )
 
+def get_reason(http_error):
+    """
+    temporary solution to work around googleapiclient bug that doesn't
+    parse reason from server response
+    """
+    reason = http_error.resp.reason
+    try:
+        data = json.loads(http_error.content.decode("utf-8"))
+        if isinstance(data, dict):
+            reason = data["error"].get("reason")
+            if "errors" in data["error"] and len(data["error"]["errors"]) > 0:
+                reason = data["error"]["errors"][0]["reason"]
+    except (ValueError, KeyError, TypeError):
+        pass
+    if reason is None:
+        reason = ""
+    return reason
 
 def exception_do_not_retry(e):
     """
@@ -139,11 +156,13 @@ def exception_do_not_retry(e):
             # Valid rate limit reasons from DIRECTORY API
             # developers.google.com/admin-sdk/directory/v1/limits
             directory_rlreasons = ["userRateLimitExceeded", "quotaExceeded"]
+            reason = get_reason(e) or e.resp.reason
+            logger.info("Get 403 from google with reason {}".format(reason))
             # Valid rate limit reasons from IAM API
             # IAM API doesn't seem to return rate-limit 403s.
             return (
-                e.resp.reason not in resource_rlreasons
-                and e.resp.reason not in directory_rlreasons
+                reason not in resource_rlreasons
+                and reason not in directory_rlreasons
             )
         return False
 
