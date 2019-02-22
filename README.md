@@ -70,8 +70,10 @@ You'll need a service account with what permissions you want to allow `cirrus` t
 For service account management you will probably need the following pre-defined Google roles:
 - `Service Account Admin` -to manage service accounts
 - `Service Account Token Creator` -to manage service account keys
+- `Service Account Key Admin` -to delete service account keys
 - `Viewer` -to see project information
 - `Storage Admin` -to manage Google Storage buckets
+- `Security Reviewer` -to view IAM policies
 
 NOTE: It's possible you may need more or less roles/permissions (since Google may change these roles in the future). Just pay attention to any unauthorized errors you get when using `cirrus` and see what permission Google is expecting.
 
