@@ -1389,6 +1389,7 @@ class GoogleCloudManager(CloudManager):
         """
         try:
             r = self._admin_service.groups().delete(groupKey=group_id).execute()
+            # Directory API's notion of empty response body is "", differing from other APIs' {}
             return {} if r == "" else r
         except GoogleHttpError as err:
             if err.resp.status == 404:
