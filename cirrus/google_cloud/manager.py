@@ -134,7 +134,7 @@ def get_reason(http_error):
         reason = ""
     return reason
 
-  
+
 def exception_do_not_retry(e):
     """
     True if we should not retry.
@@ -165,8 +165,7 @@ def exception_do_not_retry(e):
             # Valid rate limit reasons from IAM API
             # IAM API doesn't seem to return rate-limit 403s.
             return (
-                reason not in resource_rlreasons
-                and reason not in directory_rlreasons
+                reason not in resource_rlreasons and reason not in directory_rlreasons
             )
         return False
 

@@ -1030,10 +1030,7 @@ def test_get_all_groups_pagination(test_cloud_manager):
     assert kwargs["pageToken"] == next_page_token
 
 
-@pytest.mark.parametrize(
-    "google_return_value",
-    [ {}, "" ]
-)
+@pytest.mark.parametrize("google_return_value", [{}, ""])
 def test_delete_group(test_cloud_manager, google_return_value):
     """
     Test that deleting a group return the ID from the API response and that
@@ -1041,7 +1038,9 @@ def test_delete_group(test_cloud_manager, google_return_value):
     """
     # Setup #
     group_id = "123"
-    mock_config = {"groups.return_value.delete.return_value.execute.return_value": google_return_value}
+    mock_config = {
+        "groups.return_value.delete.return_value.execute.return_value": google_return_value
+    }
     test_cloud_manager._admin_service.configure_mock(**mock_config)
 
     # Call #
