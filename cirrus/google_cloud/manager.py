@@ -1101,8 +1101,8 @@ class GoogleCloudManager(CloudManager):
         Return a list of all groups in the domain
 
         Returns:
-            dict: JSON response from API call, which should contain a list
-                  of groups
+            list(dict): groups field of JSON response from API call,
+            which should contain a list of groups
             `Google API Reference <https://developers.google.com/admin-sdk/directory/v1/reference/groups/list>`_
 
             .. code-block:: python
