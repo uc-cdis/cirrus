@@ -1389,7 +1389,8 @@ class GoogleCloudManager(CloudManager):
             `Google API Reference <https://developers.google.com/admin-sdk/directory/v1/reference/groups/delete>`_
         """
         try:
-            return self._admin_service.groups().delete(groupKey=group_id).execute()
+            r = self._admin_service.groups().delete(groupKey=group_id).execute()
+            return {} if r == "" else r
         except GoogleHttpError as err:
             if err.resp.status == 404:
                 # not found, group doesn't exist. This is fine
