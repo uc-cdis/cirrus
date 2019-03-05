@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="cirrus",
+    name="gen3cirrus",
     version="0.0.6",
     install_requires=[
         "backoff>=1.6.0,<2.0.0",
@@ -14,7 +14,7 @@ setup(
         "cdislogging",
     ],
     dependency_links=[
-        "git+https://git@github.com/uc-cdis/cdislogging.git@master#egg=cdislogging",
+        "git+https://git@github.com/uc-cdis/cdislogging.git@master#egg=cdislogging"
     ],
     include_package_data=True,
     packages=["cirrus", "cirrus.google_cloud"],
