@@ -14,7 +14,7 @@ setup(
         "cdislogging",
     ],
     dependency_links=[
-        "git+https://git@github.com/uc-cdis/cdislogging.git@master#egg=cdislogging",
+        "git+https://git@github.com/uc-cdis/cdislogging.git@master#egg=cdislogging"
     ],
     include_package_data=True,
     packages=["cirrus", "cirrus.google_cloud"],
