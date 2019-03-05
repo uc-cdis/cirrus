@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="cirrus",
+    name="gen3cirrus",
     version="0.0.6",
     install_requires=[
         "backoff>=1.6.0,<2.0.0",
