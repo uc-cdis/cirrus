@@ -182,12 +182,14 @@ cirrus_config.update(**settings)
 *Still uses Google libraries for auth*
 
 ## Building the Documentation
-- `pip install -r dev-requirements.txt`
-- `python docs/create_docs.py`
+- `pipenv install --dev`
+- `pipenv run python docs/create_docs.py`
 - HTML is generated in the `docs/build` folder
 
-## Python 3 Compatibility Notes
-`psutil` doesn't install correctly when doing `pip install -r requirements.txt`
-in a Python 3 venv.
-See [this](https://github.com/giampaolo/psutil/issues/1143) for fix.
+## Release New Versions
 
+Create a new release from https://github.com/uc-cdis/cirrus/releases/new, tag version
+must be a proper Python package version, and must be ascending. Then Travis will
+automatically build a new package and upload to PyPI, and update the GitHub release with
+proper release notes. So you just need to provide a proper release title, leaving the
+description empty and the automation tool will fill it for you.

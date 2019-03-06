@@ -1,5 +1,7 @@
 language: python
 
+dist: xenial
+
 python:
    - "2.7"
    - "3.6"
@@ -9,16 +11,37 @@ matrix:
    - python: "3.6"
 
 env:
-  - REPOSITORY="uc-cdis/cirrus" PR_NUMBER="$TRAVIS_PULL_REQUEST"
+  matrix:
+    - REPOSITORY="uc-cdis/cirrus" PR_NUMBER="$TRAVIS_PULL_REQUEST"
+  global:
+    secure: h7UxO6c+y15KjY+qbX2Ws0a9sF8vnuK1Y3arxgQV8VcVc0qF5iCHkGVfwTFgA00S69qvsGfU34kVjcpMABPqLR//J3e5WyJAhMP/NVJohDDzMvAw8DkbxsZmxuGIjqNG0Mo6cpwUG99bdDuo9yjZrVzK7cFSKr6F2EQWmAXMxezlLxck4VdavD/F5CHI/KXxzMmS6RIHUq/bTd37KVgqkPAIqkMnxWM0ciqwnz1SXK8XJSnDX/jVv2sEv5yWgAx4x/o3qBTKErY+J3yMr8ZD2FsXgsC79SwbjfwFIWWO02L1Fk6iHa3uWwrS+nr+O9aqZHaQz7Dr1TiPQnBe3y2mWtJ4Tzw5qDpBfIbobyLfAqx8Ur+h6OKf32Q2byloHc0jk9qXjSlEk9Z0D/hmUtjjejOhWClCNuh/5GHQ+oz2qjrOp+lo1CMfKwvaL5AvHkvtRIQzsMVTUzVSAYeSSB23vP3Z60B9ytjmcDeEuG9dkVoWd2O+57vHDXf94tF2TCBwITOlaa9mJ4VwvMjxA7EOjPAQpgyw+begrQzbnrE0ieF/nnI3dHEC3pcNFKKaE5ce+iisx4hA2eJpYaEiydc34wKnuT3z+J72lhop55SZNc49jYIAKTL8Weqel96t9DCkFpLLPhjN1XWe7YOkZ9pKLYJUvHg3ufyhgpENvlmd6IQ=
 
 install:
-   - python setup.py install
-   - pip install -r dev-requirements.txt
+   - pip install pipenv
+   - pipenv install --dev --deploy
    - if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]]; then pip install -e git+https://git@github.com/uc-cdis/wool.git#egg=wool; fi
 
 script:
-  - py.test -vv --cov=cirrus --cov-report xml ./test
+  - pipenv run py.test -vv --cov=cirrus --cov-report xml ./test
 
 after_script:
   - python-codacy-coverage -r coverage.xml
   - if [[ $TRAVIS_PYTHON_VERSION == 3.6 && $PR_NUMBER != false ]]; then wool; fi
+
+before_deploy:
+  - sed -i.bak "s/=get_version()/='$TRAVIS_TAG'/g" setup.py
+  - cat setup.py
+  - if [ $(python setup.py --version) == '0.0.0' ]; then travis_terminate 1; fi
+
+deploy:
+  provider: pypi
+  user: uc-ctds
+  skip_existing: true
+  skip_cleanup: true
+  on:
+    tags: true
+  password:
+    secure: OmFLXX6b+AiqPH195KUyndz8HPxQ2rridbVH3y8cDPSaceZWKkR7H6filyuG+CczUQyqXJLxLyfIbI0LDwhxYm6SpSAA7z6mg7thuv1QD+r2dS5yC9/gJAsxqyyJNwdIvviLc8cSAXcTSlL6L1zHoZ3bx7qv8WJ2tMJsSsBLxEg/XFi4nxJ1PAHdrhusPAhx9SAGoocV+ooEQqYVRG+xKfsI5le+sEC9r48eob3oq1SLZ7rJMGOjyNmLpLZiY6Mk6tOQZgDGBSyGhJnER9OzbM1RnJaUuHL23prfePZrqdaoGoorxUJX8gaewkp79c9Mj+utQXfu0+NrJFhsh5y1sXGQAiT2ypJkz3rS+wLVIIuCuIC40WcBxoMcgYpNduTOi10Bnc1tpIC+bQDGt1jEgofb2QxdqJRBNreyYTC+TJFSvWjLZSoETTdPtSJakEspoKTDsKeZvcm/9DXOTMGNphjbYbQm9d0ZZ7eg3EtMtCLtTWwSeUM3hYeKVLrMg2uBp6K54HDJgPH8qGJXDiQHdiP49BiAYkGOVlX3vhqkhXz4xeRk6a6iAzdqy5vT0QrtVaWki2XTcj/upCkEY0uyXTDV9y4OC//mZ8GyeBIRS3blC66E6WF8Y3wtPphkfbwzANELVCl4YPGFGraZiJBpC6zzsfY+gNBthcLDjsAvR6o=
+
+after_deploy:
+  - "./release_notes.sh"

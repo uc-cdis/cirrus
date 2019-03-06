@@ -1,0 +1,6 @@
+include LICENSE
+include NOTICE
+include Pipfile
+include Pipfile.lock
+recursive-include docs *
+recursive-include test *
