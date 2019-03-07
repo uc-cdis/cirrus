@@ -630,7 +630,9 @@ class GoogleCloudManager(CloudManager):
                 )
 
         for role in roles:
-            policy[str(role)] = [str(member)]
+            members = policy.get(str(role), set()) or set()
+            members.add(str(member))
+            policy[str(role)] = members
 
         bucket.set_iam_policy(policy)
 
