@@ -1,5 +1,3 @@
-import pytest
-
 # Python 2 and 3 compatible
 try:
     from unittest.mock import MagicMock
@@ -10,50 +8,21 @@ except ImportError:
 
 from cirrus.google_cloud.utils import _get_string_to_sign
 from cirrus.google_cloud.utils import (
+    get_signed_url,
     get_valid_service_account_id_for_client,
-    get_valid_service_account_id_for_user,
 )
 
 
-@pytest.mark.parametrize(
-    "username",
-    [
-        "123456789abcdefgh",
-        "abcdefgh123456789",
-        "thisiswaytomanycharacterstofitingooglesrequirements",
-        "()*@6)$(*!1)@(&*&$1",
-    ],
-)
-@pytest.mark.parametrize("prefix", ["", "testenv"])
-def test_get_valid_service_account_id_for_user_prefix(username, prefix):
-    """
-    """
-    user_id = 54
-    prefix = "testenv"
-    result = get_valid_service_account_id_for_user(user_id, username, prefix=prefix)
-    assert prefix in result
-    assert str(user_id) in result
-
-
-@pytest.mark.parametrize(
-    "client_id",
-    [
-        "123456789abcdefgh",
-        "abcdefgh123456789",
-        "thisiswaytomanycharacterstofitingooglesrequirements",
-        "()*@6)$(*!1)@(&*&$1",
-    ],
-)
-@pytest.mark.parametrize("prefix", ["", "testenv"])
-def test_get_valid_service_account_id_for_client(client_id, prefix):
+def test_get_valid_service_account_id_for_client():
     """
     Test that even when client id starts with a number, we can
     get a valid name
     """
+    client_id = "123456789abcdefgh"
     user_id = 54
-    result = get_valid_service_account_id_for_client(client_id, user_id, prefix=prefix)
-    assert prefix in result
-    assert str(user_id) in result
+    result = get_valid_service_account_id_for_client(client_id, user_id)
+    assert client_id in result
+    assert "54" in result
 
 
 def test_get_string_to_sign():
