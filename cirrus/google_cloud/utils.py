@@ -49,7 +49,7 @@ def get_valid_service_account_id_for_user(user_id, username, prefix=""):
     # double check it meets Google's requirements
     google_regex = re.compile(GOOGLE_SERVICE_ACCOUNT_REGEX)
     match = google_regex.match(account_id)
-    if not match or str(user_id) not in account_id or prefix not in account_id:
+    if not match or user_id not in account_id or prefix not in account_id:
         raise GoogleNamingError(
             "Could not get a valid service account id. "
             "Currently Google enforces the following: "
