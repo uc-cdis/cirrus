@@ -10,7 +10,7 @@ from cirrus.google_cloud.errors import GoogleNamingError
 GOOGLE_SERVICE_ACCOUNT_REGEX = "[a-z][a-z\d\-]*[a-z\d]"
 
 
-def get_valid_service_account_id_for_user(user_id, username):
+def get_valid_service_account_id_for_user(user_id, username, prefix=""):
     """
     Return a valid service account id based on user_id and username
     Currently Google enforces the following:
@@ -25,16 +25,23 @@ def get_valid_service_account_id_for_user(user_id, username):
     username = "".join(
         [item for item in str(username).lower() if item.isalnum() or item == "-"]
     )
+
+    # Google requires it starts with alpha, not numeric
+    if username and not username[0].isalpha():
+        username = "user-" + username
+
     user_id = str(user_id).lower()
 
     # Truncate username so full account ID is at most 30 characters.
-    full_account_id_length = len(username) + len(user_id) + 1
+    full_account_id_length = len(prefix) + len(username) + len(user_id) + 1
     chars_to_drop = full_account_id_length - 30
     if chars_to_drop > 0:
         truncated_username = username[:-chars_to_drop]
     else:
         truncated_username = username
-    account_id = truncated_username + "-" + user_id
+    account_id = "-".join(
+        [item for item in [prefix, truncated_username, user_id] if item]
+    )
 
     # Pad account ID to at least 6 chars long.
     account_id += (6 - len(account_id)) * "-"
@@ -42,18 +49,20 @@ def get_valid_service_account_id_for_user(user_id, username):
     # double check it meets Google's requirements
     google_regex = re.compile(GOOGLE_SERVICE_ACCOUNT_REGEX)
     match = google_regex.match(account_id)
-    if not match:
+    if not match or user_id not in account_id or prefix not in account_id:
         raise GoogleNamingError(
             "Could not get a valid service account id. "
             "Currently Google enforces the following: "
             "[a-z][a-z\d\-]*[a-z\d]. Could not use user_id and username to "
-            "meet those requirements."
+            "meet those requirements. We additionally enforce that the user_id {} and "
+            "provided prefix {} is present in the final result: {}. Perhaps your prefix "
+            "is too big?".format(user_id, prefix, account_id)
         )
 
     return account_id
 
 
-def get_valid_service_account_id_for_client(client_id, user_id):
+def get_valid_service_account_id_for_client(client_id, user_id, prefix=""):
     """
     Return a valid service account id based on client_id and user_id
     Currently Google enforces the following:
@@ -74,30 +83,42 @@ def get_valid_service_account_id_for_client(client_id, user_id):
         # if we couldn't match, try starting with alphanumeric
         client_id = "client-" + client_id
         match = google_regex.match(client_id)
-
-    if match:
-        # this matching ensures client_id starts with alphabetical character
-        client_id = match.group(0)
-
-        # Truncate client_id so full account ID is at most 30 characters.
-        full_account_id_length = len(client_id) + len(user_id) + 1
-        chars_to_drop = full_account_id_length - 30
-        if chars_to_drop > 0:
-            truncated_client_id = client_id[:-chars_to_drop]
-        else:
-            truncated_client_id = client_id
-        account_id = truncated_client_id + "-" + user_id
-
-        # Pad account ID to at least 6 chars long.
-        account_id += (6 - len(account_id)) * "-"
-    else:
-        raise GoogleNamingError(
-            "Could not get a valid service account id from client id: {}".format(
-                client_id
+        if not match:
+            raise GoogleNamingError(
+                "Could not get a valid service account id from client id: {}".format(
+                    client_id
+                )
+                + "\nCurrently Google enforces the following: "
+                "[a-z][a-z\d\-]*[a-z\d]. Could not use client_id to "
+                "meet those requirements."
             )
-            + "\nCurrently Google enforces the following: "
-            "[a-z][a-z\d\-]*[a-z\d]. Could not use client_id to "
-            "meet those requirements."
+
+    # this matching ensures client_id starts with alphabetical character
+    client_id = match.group(0)
+
+    # Truncate client_id so full account ID is at most 30 characters.
+    full_account_id_length = len(client_id) + len(user_id) + 1
+    chars_to_drop = full_account_id_length - 30
+    if chars_to_drop > 0:
+        truncated_client_id = client_id[:-chars_to_drop]
+    else:
+        truncated_client_id = client_id
+    account_id = "-".join(
+        [item for item in [prefix, truncated_client_id, user_id] if item]
+    )
+
+    # Pad account ID to at least 6 chars long.
+    account_id += (6 - len(account_id)) * "-"
+
+    match = google_regex.match(account_id)
+    if not match or prefix not in account_id:
+        raise GoogleNamingError(
+            "Could not get a valid service account id. "
+            "Currently Google enforces the following: "
+            "[a-z][a-z\d\-]*[a-z\d]. Could not use client_id {} and user_id {} to "
+            "meet those requirements. We additionally enforce that the "
+            "provided prefix {} is present in the final result: {}. Perhaps your prefix "
+            "is too big?".format(truncated_client_id, user_id, prefix, account_id)
         )
 
     return account_id
