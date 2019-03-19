@@ -10,7 +10,7 @@ from cirrus.google_cloud.errors import GoogleNamingError
 GOOGLE_SERVICE_ACCOUNT_REGEX = "[a-z][a-z\d\-]*[a-z\d]"
 
 
-def get_valid_service_account_id_for_user(user_id, username):
+def get_valid_service_account_id_for_user(user_id, username, prefix=""):
     """
     Return a valid service account id based on user_id and username
     Currently Google enforces the following:
@@ -28,7 +28,8 @@ def get_valid_service_account_id_for_user(user_id, username):
     user_id = str(user_id).lower()
 
     # Truncate username so full account ID is at most 30 characters.
-    full_account_id_length = len(username) + len(user_id) + 1
+    # 2 is to account for dashes
+    full_account_id_length = len(prefix) + len(username) + len(user_id) + 2
     chars_to_drop = full_account_id_length - 30
     if chars_to_drop > 0:
         truncated_username = username[:-chars_to_drop]
@@ -53,7 +54,7 @@ def get_valid_service_account_id_for_user(user_id, username):
     return account_id
 
 
-def get_valid_service_account_id_for_client(client_id, user_id):
+def get_valid_service_account_id_for_client(client_id, user_id, prefix=""):
     """
     Return a valid service account id based on client_id and user_id
     Currently Google enforces the following:
@@ -75,21 +76,15 @@ def get_valid_service_account_id_for_client(client_id, user_id):
         client_id = "client-" + client_id
         match = google_regex.match(client_id)
 
-    if match:
-        # this matching ensures client_id starts with alphabetical character
-        client_id = match.group(0)
+    # this matching ensures client_id starts with alphabetical character
+    client_id = match.group(0)
 
-        # Truncate client_id so full account ID is at most 30 characters.
-        full_account_id_length = len(client_id) + len(user_id) + 1
-        chars_to_drop = full_account_id_length - 30
-        if chars_to_drop > 0:
-            truncated_client_id = client_id[:-chars_to_drop]
-        else:
-            truncated_client_id = client_id
-        account_id = truncated_client_id + "-" + user_id
-
-        # Pad account ID to at least 6 chars long.
-        account_id += (6 - len(account_id)) * "-"
+    # Truncate client_id so full account ID is at most 30 characters.
+    # 2 is to account for dashes
+    full_account_id_length = len(prefix) + len(client_id) + len(user_id) + 2
+    chars_to_drop = full_account_id_length - 30
+    if chars_to_drop > 0:
+        truncated_client_id = client_id[:-chars_to_drop]
     else:
         raise GoogleNamingError(
             "Could not get a valid service account id from client id: {}".format(
