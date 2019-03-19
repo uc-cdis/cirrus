@@ -1,3 +1,5 @@
+import pytest
+
 # Python 2 and 3 compatible
 try:
     from unittest.mock import MagicMock
