@@ -10,7 +10,6 @@ except ImportError:
 
 from cirrus.google_cloud.utils import _get_string_to_sign
 from cirrus.google_cloud.utils import (
-    get_signed_url,
     get_valid_service_account_id_for_client,
     get_valid_service_account_id_for_user,
 )
@@ -54,7 +53,6 @@ def test_get_valid_service_account_id_for_client(client_id, prefix):
     Test that even when client id starts with a number, we can
     get a valid name
     """
-    client_id = "123456789abcdefgh"
     user_id = 54
     result = get_valid_service_account_id_for_client(client_id, user_id, prefix=prefix)
     assert prefix in result

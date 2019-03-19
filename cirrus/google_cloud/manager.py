@@ -903,7 +903,14 @@ class GoogleCloudManager(CloudManager):
             GOOGLE_IAM_API_URL,
         )
 
-        response = self._authed_request("DELETE", api_url)
+        try:
+            response = self._authed_request("DELETE", api_url)
+        except GoogleHttpError as err:
+            if err.resp.status == 404:
+                # key doesn't exist so return "success"
+                return {}
+
+            raise
 
         return response.json()
 
