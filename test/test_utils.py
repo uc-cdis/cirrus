@@ -18,6 +18,7 @@ from cirrus.google_cloud.utils import (
 @pytest.mark.parametrize(
     "username",
     [
+        "1",
         "123456789abcdefgh",
         "abcdefgh123456789",
         "thisiswaytomanycharacterstofitingooglesrequirements",
@@ -32,11 +33,14 @@ def test_get_valid_service_account_id_for_user_prefix(username, prefix):
     result = get_valid_service_account_id_for_user(user_id, username, prefix=prefix)
     assert prefix in result
     assert str(user_id) in result
+    assert len(result) > 6
+    assert len(result) <= 30
 
 
 @pytest.mark.parametrize(
     "client_id",
     [
+        "1",
         "123456789abcdefgh",
         "abcdefgh123456789",
         "thisiswaytomanycharacterstofitingooglesrequirements",
@@ -53,6 +57,8 @@ def test_get_valid_service_account_id_for_client(client_id, prefix):
     result = get_valid_service_account_id_for_client(client_id, user_id, prefix=prefix)
     assert prefix in result
     assert str(user_id) in result
+    assert len(result) > 6
+    assert len(result) <= 30
 
 
 def test_get_string_to_sign():

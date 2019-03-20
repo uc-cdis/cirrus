@@ -33,7 +33,8 @@ def get_valid_service_account_id_for_user(user_id, username, prefix=""):
     user_id = str(user_id).lower()
 
     # Truncate username so full account ID is at most 30 characters.
-    full_account_id_length = len(prefix) + len(username) + len(user_id) + 1
+    # 2 is for dashes
+    full_account_id_length = len(prefix) + len(username) + len(user_id) + 2
     chars_to_drop = full_account_id_length - 30
     if chars_to_drop > 0:
         truncated_username = username[:-chars_to_drop]
@@ -97,7 +98,8 @@ def get_valid_service_account_id_for_client(client_id, user_id, prefix=""):
     client_id = match.group(0)
 
     # Truncate client_id so full account ID is at most 30 characters.
-    full_account_id_length = len(client_id) + len(user_id) + 1
+    # 2 is for dashes
+    full_account_id_length = len(prefix) + len(client_id) + len(user_id) + 2
     chars_to_drop = full_account_id_length - 30
     if chars_to_drop > 0:
         truncated_client_id = client_id[:-chars_to_drop]
