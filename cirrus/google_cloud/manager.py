@@ -583,6 +583,7 @@ class GoogleCloudManager(CloudManager):
 
         bucket.update()
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def give_group_access_to_bucket(self, group_email, bucket_name, access=None):
         """
         Give a group access to a bucket.
