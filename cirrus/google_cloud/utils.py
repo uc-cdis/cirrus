@@ -160,7 +160,7 @@ def get_signed_url(
         str: Completed signed URL
     """
     path_to_resource = path_to_resource.strip("/")
-    string_to_sign = _get_string_to_sign(
+    string_to_sign = get_string_to_sign(
         path_to_resource, http_verb, expires, extension_headers, content_type, md5_value
     )
 
@@ -191,7 +191,7 @@ def get_signed_url(
     return final_url
 
 
-def _get_string_to_sign(
+def get_string_to_sign(
     path_to_resource,
     http_verb,
     expires,
@@ -218,3 +218,125 @@ def _get_string_to_sign(
     string_to_sign += "/" + str(path_to_resource)
 
     return string_to_sign
+
+
+def get_service_account_cred_from_key_response(key_response):
+    """
+    Return the decoded private key given the response from
+    `create_service_account_key()`. This return from this function is the
+    JSON key file contents e.g. response can be placed directly in file
+    and be used as a private key for the service account.
+
+    Args:
+        key_response (dict): response from create_service_account_key()
+
+    Returns:
+        dict: JSON Key File contents for Service account
+    """
+    return json.loads(base64.b64decode(key_response["privateKeyData"]))
+
+
+def get_proxy_group_name_for_user(user_id, username, prefix=""):
+    """
+    Return a valid proxy group name based on user_id and username
+
+    See:
+        https://support.google.com/a/answer/33386
+    for Google's naming restrictions
+
+    Args:
+        user_id (str): User's uuid
+        username (str): user's name
+
+    Returns:
+        str: proxy group name
+    """
+    # allow alphanumeric and some special chars
+    user_id = str(user_id)
+
+    prefix = prefix.replace("-", "_").replace(" ", "_")
+    username = username.replace("-", "_").replace(" ", "_")
+
+    username = "".join(
+        [
+            item
+            for item in str(username)
+            if item.isalnum() or item in ["-", "_", ".", "'"]
+        ]
+    )
+
+    username = username.replace("..", ".")
+    if username[0] == ".":
+        username = username[1:]
+
+    # Truncate username so full name is at most 60 characters.
+    full_name_length = len(username) + len("-") + len(user_id)
+    if prefix:
+        full_name_length += len(prefix) + len("-")
+
+    chars_to_drop = full_name_length - 60
+    if chars_to_drop > 0:
+        if chars_to_drop <= len(username):
+            truncated_username = username[:-chars_to_drop]
+        else:
+            raise GoogleNamingError(
+                "Cannot create name for proxy group for user {} with id {} "
+                "and prefix: {}. Name must include ID and prefix, consider "
+                "shortening the prefix if you continue to get this error. "
+                "Google has specific length requirements on names.".format(
+                    username, user_id, prefix
+                )
+            )
+    else:
+        truncated_username = username
+    name = truncated_username + "-" + user_id
+
+    if prefix:
+        name = prefix + "-" + name
+
+    return name
+
+
+def get_prefix_from_proxy_group(proxy_group):
+    """
+    Return prefix by analyzing proxy_group name
+
+    Args:
+        proxy_group (str): proxy group name
+
+    Returns:
+        str: prefix if exists, empty string if not
+    """
+    split_name = proxy_group.split("@")[0].split("-")
+
+    # if there's only two sections, there's no prefix
+    if len(split_name) <= 2:
+        return ""
+
+    return proxy_group.split("@")[0].split("-")[-3].strip()
+
+
+def get_user_name_from_proxy_group(proxy_group):
+    """
+    Return username by analyzing proxy_group name
+
+    Args:
+        proxy_group (str): proxy group name
+
+    Returns:
+        str: Username
+    """
+    return proxy_group.split("@")[0].split("-")[-2].strip()
+
+
+def get_user_id_from_proxy_group(proxy_group):
+    """
+    Return user id by analyzing proxy_group name
+
+    Args:
+        proxy_group (str): proxy group name
+
+    Returns:
+        str: User id
+    """
+    return proxy_group.split("@")[0].split("-")[-1].strip()

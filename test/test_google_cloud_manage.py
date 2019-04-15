@@ -23,11 +23,11 @@ from cirrus.google_cloud import (
     COMPUTE_ENGINE_API_SERVICE_ACCOUNT,
     USER_MANAGED_SERVICE_ACCOUNT,
 )
-from cirrus.google_cloud.manager import (
-    _get_proxy_group_name_for_user,
-    _get_prefix_from_proxy_group,
-    _get_user_name_from_proxy_group,
-    _get_user_id_from_proxy_group,
+from cirrus.google_cloud.utils import (
+    get_proxy_group_name_for_user,
+    get_prefix_from_proxy_group,
+    get_user_name_from_proxy_group,
+    get_user_id_from_proxy_group,
     get_valid_service_account_id_for_user,
 )
 import cirrus.google_cloud.manager
@@ -61,7 +61,7 @@ def test_get_proxy_group_name_for_user():
     """
     user_id = "12345678912345678901234567890"
     username = ".a-bcd..efg@hijkl<@$*)%amn.net"
-    valid_name = _get_proxy_group_name_for_user(user_id, username)
+    valid_name = get_proxy_group_name_for_user(user_id, username)
 
     assert valid_name == "a_bcd.efghijklamn.net-12345678912345678901234567890"
 
@@ -77,7 +77,7 @@ def test_get_proxy_group_name_for_user_with_prefix():
     user_id = "12345678912345678901234567890"
     username = ".a-bcd..efg@hijkl<@$*)%amn.net"
     prefix = "Some App Name"
-    valid_name = _get_proxy_group_name_for_user(user_id, username, prefix=prefix)
+    valid_name = get_proxy_group_name_for_user(user_id, username, prefix=prefix)
 
     assert valid_name == "Some_App_Name-a_bcd.efghijklam-12345678912345678901234567890"
 
@@ -93,16 +93,16 @@ def test_get_proxy_group_name_for_user_prefix_with_dashes():
     user_id = "12345678912345678901234567890"
     username = ".a-bcd..efg@hijkl<@$*)%amn.net"
     prefix = "Some-App-Name"
-    valid_name = _get_proxy_group_name_for_user(user_id, username, prefix=prefix)
+    valid_name = get_proxy_group_name_for_user(user_id, username, prefix=prefix)
 
     assert valid_name == "Some_App_Name-a_bcd.efghijklam-12345678912345678901234567890"
 
 
 def test_get_items_from_proxy_group_name():
     valid_name = "Some_App_Name-a_bcd.efghijklam-12345678912345678901234567890"
-    prefix = _get_prefix_from_proxy_group(valid_name)
-    username = _get_user_name_from_proxy_group(valid_name)
-    user_id = _get_user_id_from_proxy_group(valid_name)
+    prefix = get_prefix_from_proxy_group(valid_name)
+    username = get_user_name_from_proxy_group(valid_name)
+    user_id = get_user_id_from_proxy_group(valid_name)
 
     assert prefix == "Some_App_Name"
     assert username == "a_bcd.efghijklam"
@@ -111,9 +111,9 @@ def test_get_items_from_proxy_group_name():
 
 def test_get_items_from_proxy_group_name_no_prefix():
     valid_name = "a_bcd.efghijklam-12345678912345678901234567890"
-    prefix = _get_prefix_from_proxy_group(valid_name)
-    username = _get_user_name_from_proxy_group(valid_name)
-    user_id = _get_user_id_from_proxy_group(valid_name)
+    prefix = get_prefix_from_proxy_group(valid_name)
+    username = get_user_name_from_proxy_group(valid_name)
+    user_id = get_user_id_from_proxy_group(valid_name)
 
     assert prefix == ""
     assert username == "a_bcd.efghijklam"
@@ -869,7 +869,7 @@ def test_get_primary_service_account(test_cloud_manager):
         + test_domain
     )
 
-    group_name = _get_proxy_group_name_for_user(new_member_1_id, new_member_1_username)
+    group_name = get_proxy_group_name_for_user(new_member_1_id, new_member_1_username)
     group_email = group_name + "@" + test_domain
     mock_get_group(test_cloud_manager, group_name, group_email)
 
@@ -910,7 +910,7 @@ def test_get_service_account_from_group_mult_accounts(test_cloud_manager):
         + test_domain
     )
 
-    group_name = _get_proxy_group_name_for_user(new_member_1_id, new_member_1_username)
+    group_name = get_proxy_group_name_for_user(new_member_1_id, new_member_1_username)
     group_email = group_name + "@" + test_domain
     mock_get_group(test_cloud_manager, group_name, group_email)
 
