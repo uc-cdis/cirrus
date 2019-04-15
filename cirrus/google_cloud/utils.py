@@ -160,7 +160,7 @@ def get_signed_url(
         str: Completed signed URL
     """
     path_to_resource = path_to_resource.strip("/")
-    string_to_sign = get_string_to_sign(
+    string_to_sign = _get_string_to_sign(
         path_to_resource, http_verb, expires, extension_headers, content_type, md5_value
     )
 
@@ -191,7 +191,7 @@ def get_signed_url(
     return final_url
 
 
-def get_string_to_sign(
+def _get_string_to_sign(
     path_to_resource,
     http_verb,
     expires,

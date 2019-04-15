@@ -9,7 +9,7 @@ except ImportError:
     from mock import patch
 
 from cirrus.google_cloud.utils import (
-    get_string_to_sign,
+    _get_string_to_sign,
     get_valid_service_account_id_for_client,
     get_valid_service_account_id_for_user,
 )
@@ -69,7 +69,7 @@ def test_get_string_to_sign():
     ext_headers = ["x-goog-encryption-algorithm:AES256", "x-goog-meta-foo:bar,baz"]
     resource_path = "/bucket/objectname"
 
-    result = get_string_to_sign(
+    result = _get_string_to_sign(
         path_to_resource=resource_path,
         http_verb=http_verb,
         expires=expires,
@@ -94,7 +94,7 @@ def test_get_string_to_sign_no_optional_params():
     expires = "1388534400"
     resource_path = "/bucket/objectname"
 
-    result = get_string_to_sign(
+    result = _get_string_to_sign(
         path_to_resource=resource_path, http_verb=http_verb, expires=expires
     )
 
