@@ -8,8 +8,8 @@ except ImportError:
     from mock import MagicMock
     from mock import patch
 
-from cirrus.google_cloud.utils import _get_string_to_sign
 from cirrus.google_cloud.utils import (
+    _get_string_to_sign,
     get_valid_service_account_id_for_client,
     get_valid_service_account_id_for_user,
 )

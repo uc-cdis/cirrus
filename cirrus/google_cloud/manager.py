@@ -39,7 +39,13 @@ from cirrus.google_cloud.iam import (
     get_iam_service_account_email,
 )
 from cirrus.google_cloud.services import GoogleAdminService
-from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
+from cirrus.google_cloud.utils import (
+    get_valid_service_account_id_for_user,
+    get_service_account_cred_from_key_response,
+    get_proxy_group_name_for_user,
+    get_user_name_from_proxy_group,
+    get_user_id_from_proxy_group,
+)
 
 
 logger = get_logger(__name__)
@@ -339,7 +345,7 @@ class GoogleCloudManager(CloudManager):
             }
 
         """
-        group_name = _get_proxy_group_name_for_user(user_id, username, prefix)
+        group_name = get_proxy_group_name_for_user(user_id, username, prefix)
         # Create group
         new_group_response = self.create_group(name=group_name)
         return new_group_response
@@ -377,7 +383,7 @@ class GoogleCloudManager(CloudManager):
         """
         try:
             key_info = self.create_service_account_key(account)
-            return _get_service_account_cred_from_key_response(key_info)
+            return get_service_account_cred_from_key_response(key_info)
         except Exception as e:
             raise CirrusError(
                 "Unable to get service account key for account {}: {}".format(
@@ -446,8 +452,8 @@ class GoogleCloudManager(CloudManager):
 
         proxy_group = self.get_group(proxy_group_id)
 
-        user_id = _get_user_id_from_proxy_group(proxy_group["email"])
-        username = _get_user_name_from_proxy_group(proxy_group["email"])
+        user_id = get_user_id_from_proxy_group(proxy_group["email"])
+        username = get_user_name_from_proxy_group(proxy_group["email"])
         all_service_accounts = self.get_service_accounts_from_group(proxy_group_id)
 
         # create dict with first part of email as key and whole email as value
@@ -1634,125 +1640,3 @@ def _is_key_expired(key, expiration_in_days):
         expired = True
 
     return expired
-
-
-def _get_service_account_cred_from_key_response(key_response):
-    """
-    Return the decoded private key given the response from
-    `create_service_account_key()`. This return from this function is the
-    JSON key file contents e.g. response can be placed directly in file
-    and be used as a private key for the service account.
-
-    Args:
-        key_response (dict): response from create_service_account_key()
-
-    Returns:
-        dict: JSON Key File contents for Service account
-    """
-    return json.loads(base64.b64decode(key_response["privateKeyData"]))
-
-
-def _get_proxy_group_name_for_user(user_id, username, prefix=""):
-    """
-    Return a valid proxy group name based on user_id and username
-
-    See:
-        https://support.google.com/a/answer/33386
-    for Google's naming restrictions
-
-    Args:
-        user_id (str): User's uuid
-        username (str): user's name
-
-    Returns:
-        str: proxy group name
-    """
-    # allow alphanumeric and some special chars
-    user_id = str(user_id)
-
-    prefix = prefix.replace("-", "_").replace(" ", "_")
-    username = username.replace("-", "_").replace(" ", "_")
-
-    username = "".join(
-        [
-            item
-            for item in str(username)
-            if item.isalnum() or item in ["-", "_", ".", "'"]
-        ]
-    )
-
-    username = username.replace("..", ".")
-    if username[0] == ".":
-        username = username[1:]
-
-    # Truncate username so full name is at most 60 characters.
-    full_name_length = len(username) + len("-") + len(user_id)
-    if prefix:
-        full_name_length += len(prefix) + len("-")
-
-    chars_to_drop = full_name_length - 60
-    if chars_to_drop > 0:
-        if chars_to_drop <= len(username):
-            truncated_username = username[:-chars_to_drop]
-        else:
-            raise GoogleNamingError(
-                "Cannot create name for proxy group for user {} with id {} "
-                "and prefix: {}. Name must include ID and prefix, consider "
-                "shortening the prefix if you continue to get this error. "
-                "Google has specific length requirements on names.".format(
-                    username, user_id, prefix
-                )
-            )
-    else:
-        truncated_username = username
-    name = truncated_username + "-" + user_id
-
-    if prefix:
-        name = prefix + "-" + name
-
-    return name
-
-
-def _get_prefix_from_proxy_group(proxy_group):
-    """
-    Return prefix by analyzing proxy_group name
-
-    Args:
-        proxy_group (str): proxy group name
-
-    Returns:
-        str: prefix if exists, empty string if not
-    """
-    split_name = proxy_group.split("@")[0].split("-")
-
-    # if there's only two sections, there's no prefix
-    if len(split_name) <= 2:
-        return ""
-
-    return proxy_group.split("@")[0].split("-")[-3].strip()
-
-
-def _get_user_name_from_proxy_group(proxy_group):
-    """
-    Return username by analyzing proxy_group name
-
-    Args:
-        proxy_group (str): proxy group name
-
-    Returns:
-        str: Username
-    """
-    return proxy_group.split("@")[0].split("-")[-2].strip()
-
-
-def _get_user_id_from_proxy_group(proxy_group):
-    """
-    Return user id by analyzing proxy_group name
-
-    Args:
-        proxy_group (str): proxy group name
-
-    Returns:
-        str: User id
-    """
-    return proxy_group.split("@")[0].split("-")[-1].strip()
