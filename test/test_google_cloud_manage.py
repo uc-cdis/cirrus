@@ -17,12 +17,6 @@ import pytest
 from requests import Response
 import httplib2
 
-from cirrus.google_cloud import (
-    COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT,
-    GOOGLE_API_SERVICE_ACCOUNT,
-    COMPUTE_ENGINE_API_SERVICE_ACCOUNT,
-    USER_MANAGED_SERVICE_ACCOUNT,
-)
 from cirrus.google_cloud.utils import (
     get_proxy_group_name_for_user,
     get_prefix_from_proxy_group,
@@ -1188,7 +1182,7 @@ def test_get_service_account_type_compute_engine_default(test_cloud_manager):
     )
     assert (
         test_cloud_manager.get_service_account_type(service_account)
-        == COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT
+        == "compute-system.iam.gserviceaccount.com"
     )
 
 
@@ -1200,7 +1194,7 @@ def test_get_service_account_type_google_api(test_cloud_manager):
     )
     assert (
         test_cloud_manager.get_service_account_type(service_account)
-        == GOOGLE_API_SERVICE_ACCOUNT
+        == "cloudservices.gserviceaccount.com"
     )
 
 
@@ -1212,7 +1206,7 @@ def test_get_service_account_type_compute_engine_api(test_cloud_manager):
     )
     assert (
         test_cloud_manager.get_service_account_type(service_account)
-        == COMPUTE_ENGINE_API_SERVICE_ACCOUNT
+        == "developer.gserviceaccount.com"
     )
 
 
@@ -1224,7 +1218,7 @@ def test_get_service_account_type_user_managed(test_cloud_manager):
     )
     assert (
         test_cloud_manager.get_service_account_type(service_account)
-        == USER_MANAGED_SERVICE_ACCOUNT
+        == "iam.gserviceaccount.com"
     )
 
 
