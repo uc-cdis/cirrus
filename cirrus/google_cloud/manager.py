@@ -144,11 +144,12 @@ def exception_do_not_retry(e):
     """
     if isinstance(e, GoogleHttpError):
         if e.resp.status == 403:
-            # True unless it's a rate limit error.
+            # Then we should return True unless it's a rate limit error.
             # Note: There is overlap in the reason codes for these APIs
-            # which is not ideal. e.g. userRateLimitExceeded is in both.
+            # which is not ideal. e.g. userRateLimitExceeded is in both
+            # resource manager API and directory API.
             # Fortunately both cases warrant retrying.
-            # Valid rate limit reasons from CLOUD RESOURCE MANAGER API
+            # Valid rate limit reasons from CLOUD RESOURCE MANAGER API:
             # cloud.google.com/resource-manager/docs/core_errors#FORBIDDEN
             # Many limit errors listed; only a few warrant retry.
             resource_rlreasons = [
@@ -157,13 +158,14 @@ def exception_do_not_retry(e):
                 "rateLimitExceeded",
                 "userRateLimitExceeded",
             ]
-            # Valid rate limit reasons from DIRECTORY API
+            # Valid rate limit reasons from DIRECTORY API:
             # developers.google.com/admin-sdk/directory/v1/limits
             directory_rlreasons = ["userRateLimitExceeded", "quotaExceeded"]
-            reason = get_reason(e) or e.resp.reason
-            logger.info("Get 403 from google with reason {}".format(reason))
-            # Valid rate limit reasons from IAM API
+            # Valid rate limit reasons from IAM API:
             # IAM API doesn't seem to return rate-limit 403s.
+
+            reason = get_reason(e) or e.resp.reason
+            logger.info("Got 403 from google with reason {}".format(reason))
             return (
                 reason not in resource_rlreasons and reason not in directory_rlreasons
             )
