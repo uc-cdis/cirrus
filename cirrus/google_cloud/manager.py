@@ -64,23 +64,17 @@ GOOGLE_STORAGE_CLASSES = [
     "STANDARD",  # alias for MULTI_REGIONAL/REGIONAL, based on location
 ]
 
-APP_ENGINE_DEFAULT_SERVICE_ACCOUNT = "APP_ENGINE_DEFAULT_SERVICE_ACCOUNT"
-COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT = "COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT"
-GOOGLE_API_SERVICE_ACCOUNT = "GOOGLE_API_SERVICE_ACCOUNT"
-COMPUTE_ENGINE_API_SERVICE_ACCOUNT = "COMPUTE_ENGINE_API_SERVICE_ACCOUNT"
-USER_MANAGED_SERVICE_ACCOUNT = "USER_MANAGED_SERVICE_ACCOUNT"
-
 """
-This mapping is order-specific. More specific domains should appear
+This is order-specific. More specific domains should appear
 earlier in the list. For example, `compute-system.iam.gserviceaccount.com`
 should appear before `iam.gserviceaccount.com`
 """
-GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING = [
-    ("appspot.gserviceaccount.com", APP_ENGINE_DEFAULT_SERVICE_ACCOUNT),
-    ("compute-system.iam.gserviceaccount.com", COMPUTE_ENGINE_DEFAULT_SERVICE_ACCOUNT),
-    ("cloudservices.gserviceaccount.com", GOOGLE_API_SERVICE_ACCOUNT),
-    ("developer.gserviceaccount.com", COMPUTE_ENGINE_API_SERVICE_ACCOUNT),
-    ("iam.gserviceaccount.com", USER_MANAGED_SERVICE_ACCOUNT),
+GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPES = [
+    "appspot.gserviceaccount.com",
+    "compute-system.iam.gserviceaccount.com",
+    "cloudservices.gserviceaccount.com",
+    "developer.gserviceaccount.com",
+    "iam.gserviceaccount.com",
 ]
 
 
@@ -693,9 +687,9 @@ class GoogleCloudManager(CloudManager):
         """
         service_account = self.get_service_account(account)
         email_domain = service_account.get("email", "").split("@")[-1]
-        for (domain, sa_type) in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPE_MAPPING:
+        for domain in GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPES:
             if domain in email_domain:
-                return sa_type
+                return domain
 
         return None
 
