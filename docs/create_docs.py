@@ -87,7 +87,7 @@ def _manually_append_source_path_to_sphinx_config():
             SOURCE_CODE_DIR, sphinx_config_abs_location
         )
         command_to_add_path = (
-            u'sys.path.insert(0, os.path.abspath("'
+            'sys.path.insert(0, os.path.abspath("'
             + source_relative_to_sphinx_config
             + '"))'
         )
@@ -102,16 +102,16 @@ def _create_custom_cfg_section_in_sphinx_conf():
     with open(
         DOCUMENTATION_DIR + "/source/conf.py", "a+", encoding="UTF-8"
     ) as sphinx_config:
-        sphinx_config.write(u"\n# CUSTOM CONFIG FROM DOCS CREATION SCRIPT #\n")
-        sphinx_config.write(u"import os\n")
-        sphinx_config.write(u"import sys\n")
+        sphinx_config.write("\n# CUSTOM CONFIG FROM DOCS CREATION SCRIPT #\n")
+        sphinx_config.write("import os\n")
+        sphinx_config.write("import sys\n")
 
 
 def _make_version_and_release_equal():
     with open(
         DOCUMENTATION_DIR + "/source/conf.py", "a", encoding="UTF-8"
     ) as sphinx_config:
-        sphinx_config.write(u"\nrelease = version\n")
+        sphinx_config.write("\nrelease = version\n")
 
 
 if __name__ == "__main__":
