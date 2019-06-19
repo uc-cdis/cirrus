@@ -175,7 +175,9 @@ def get_signed_url(
 
     # needs to be url safe so percent-encode + and /
     encoded_signature = (
-        base64.b64encode(bytes(signature, "utf-8")).replace("+", "%2B").replace("/", "%2F")
+        base64.b64encode(bytes(signature, "utf-8"))
+        .replace("+", "%2B")
+        .replace("/", "%2F")
     )
 
     final_url = (
