@@ -1428,6 +1428,7 @@ def test_handled_exception_403_no_retry(test_cloud_manager):
     response = httplib2.Response(
         {"status": "403", "reason": "forbidden", "content-type": "application/json"}
     )
+    response.reason = response["reason"]
     http_error = HttpError(resp=response, content=b"")
     mock_config = {"get.side_effect": http_error}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
@@ -1460,6 +1461,7 @@ def test_unhandled_exception_403_ratelimit_retry(test_cloud_manager):
     response = httplib2.Response(
         {"status": "403", "reason": "quotaExceeded", "content-type": "application/json"}
     )
+    response.reason = response["reason"]
     http_error = HttpError(resp=response, content=b"")
     mock_config = {"get.side_effect": http_error}
     test_cloud_manager._authed_session.configure_mock(**mock_config)

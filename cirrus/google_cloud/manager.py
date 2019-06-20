@@ -1514,6 +1514,10 @@ class GoogleCloudManager(CloudManager):
                     "content-type": "application/json",
                 }
             )
+            # httplib2 breaking change in python 3: response.reason is not set
+            # as an attribute but as a dict key, which is not handled correctly
+            # by googleapiclient HttpError
+            response.reason = response.get("reason", err.response.reason)
             raise GoogleHttpError(resp=response, content=err.response.content)
 
         return response
