@@ -186,7 +186,7 @@ def get_signed_url(
         + "&Expires="
         + str(expires)
         + "&Signature="
-        + encoded_signature
+        + encoded_signature.decode("utf-8")
     )
 
     return final_url
