@@ -29,7 +29,6 @@ setup(
         "google-api-python-client~=1.6",
         "google-auth~=1.4",
         "google-auth-httplib2>=0.0.3",
-        "cdislogging",
     ],
     dependency_links=[
         "git+https://git@github.com/uc-cdis/cdislogging.git@master#egg=cdislogging"
