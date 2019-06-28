@@ -6,22 +6,18 @@ python:
    - "3.6"
 
 env:
-  matrix:
-    - REPOSITORY="uc-cdis/cirrus" PR_NUMBER="$TRAVIS_PULL_REQUEST"
   global:
     secure: h7UxO6c+y15KjY+qbX2Ws0a9sF8vnuK1Y3arxgQV8VcVc0qF5iCHkGVfwTFgA00S69qvsGfU34kVjcpMABPqLR//J3e5WyJAhMP/NVJohDDzMvAw8DkbxsZmxuGIjqNG0Mo6cpwUG99bdDuo9yjZrVzK7cFSKr6F2EQWmAXMxezlLxck4VdavD/F5CHI/KXxzMmS6RIHUq/bTd37KVgqkPAIqkMnxWM0ciqwnz1SXK8XJSnDX/jVv2sEv5yWgAx4x/o3qBTKErY+J3yMr8ZD2FsXgsC79SwbjfwFIWWO02L1Fk6iHa3uWwrS+nr+O9aqZHaQz7Dr1TiPQnBe3y2mWtJ4Tzw5qDpBfIbobyLfAqx8Ur+h6OKf32Q2byloHc0jk9qXjSlEk9Z0D/hmUtjjejOhWClCNuh/5GHQ+oz2qjrOp+lo1CMfKwvaL5AvHkvtRIQzsMVTUzVSAYeSSB23vP3Z60B9ytjmcDeEuG9dkVoWd2O+57vHDXf94tF2TCBwITOlaa9mJ4VwvMjxA7EOjPAQpgyw+begrQzbnrE0ieF/nnI3dHEC3pcNFKKaE5ce+iisx4hA2eJpYaEiydc34wKnuT3z+J72lhop55SZNc49jYIAKTL8Weqel96t9DCkFpLLPhjN1XWe7YOkZ9pKLYJUvHg3ufyhgpENvlmd6IQ=
 
 install:
    - pip install pipenv
    - pipenv install --dev --deploy
-   - pip install -e git+https://git@github.com/uc-cdis/wool.git#egg=wool
 
 script:
   - pipenv run py.test -vv --cov=cirrus --cov-report xml ./test
 
 after_script:
   - python-codacy-coverage -r coverage.xml
-  - if [[ $PR_NUMBER != false ]]; then wool; fi
 
 before_deploy:
   - sed -i.bak "s/=get_version()/='$TRAVIS_TAG'/g" setup.py
