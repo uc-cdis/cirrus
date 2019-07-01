@@ -175,7 +175,7 @@ def get_signed_url(
 
     # needs to be url safe so percent-encode + and /
     encoded_signature = (
-        base64.b64encode(signature).replace("+", "%2B").replace("/", "%2F")
+        base64.b64encode(signature).replace(b"+", b"%2B").replace(b"/", b"%2F")
     )
 
     final_url = (
@@ -186,7 +186,7 @@ def get_signed_url(
         + "&Expires="
         + str(expires)
         + "&Signature="
-        + encoded_signature
+        + encoded_signature.decode("utf-8")
     )
 
     return final_url

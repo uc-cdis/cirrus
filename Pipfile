@@ -14,4 +14,4 @@ Sphinx = "~=1.6"
 gen3cirrus = {editable = true,path = "."}
 
 [requires]
-python_version = "2.7"
+python_version = "3.6"

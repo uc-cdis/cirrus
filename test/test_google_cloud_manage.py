@@ -265,7 +265,7 @@ def test_create_service_account_already_exists(test_cloud_manager):
     test_cloud_manager.set_iam_policy = MagicMock()
 
     response = httplib2.Response({"status": "409", "content-type": "application/json"})
-    http_error = HttpError(resp=response, content="")
+    http_error = HttpError(resp=response, content=b"")
 
     test_cloud_manager._authed_session.post.side_effect = http_error
 
@@ -617,7 +617,7 @@ def test_create_group_already_exists(test_cloud_manager):
     group = {"email": new_group_email, "name": new_group_name, "description": ""}
 
     response = httplib2.Response({"status": "409", "content-type": "application/json"})
-    http_error = HttpError(resp=response, content="")
+    http_error = HttpError(resp=response, content=b"")
 
     mock_config = {
         "groups.return_value.insert.return_value.execute.side_effect": http_error
@@ -1057,7 +1057,7 @@ def test_delete_group_doesnt_exist(test_cloud_manager):
     # Setup #
     group_id = "123"
     response = httplib2.Response({"status": "404", "content-type": "application/json"})
-    http_error = HttpError(resp=response, content="")
+    http_error = HttpError(resp=response, content=b"")
     mock_config = {
         "groups.return_value.delete.return_value.execute.side_effect": http_error
     }
@@ -1341,7 +1341,7 @@ def test_add_member_backoff_giveup(test_cloud_manager):
     """
     from cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
-    mock_config = {"members.side_effect": HttpError(MagicMock(), bytes("test"))}
+    mock_config = {"members.side_effect": HttpError(MagicMock(), b"test")}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
     error = cirrus.google_cloud.manager.logger.error
@@ -1369,7 +1369,7 @@ def test_authorized_session_retry(test_cloud_manager):
     """
     from cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
-    mock_config = {"get.side_effect": HttpError(MagicMock(), bytes("test"))}
+    mock_config = {"get.side_effect": HttpError(MagicMock(), b"test")}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
     error = cirrus.google_cloud.manager.logger.error
@@ -1396,7 +1396,7 @@ def test_handled_exception_no_retry(test_cloud_manager):
     """
     from cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
-    mock_config = {"members.side_effect": CirrusError(MagicMock(), bytes("test"))}
+    mock_config = {"members.side_effect": CirrusError(MagicMock(), b"test")}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
     error = cirrus.google_cloud.manager.logger.error
@@ -1428,7 +1428,8 @@ def test_handled_exception_403_no_retry(test_cloud_manager):
     response = httplib2.Response(
         {"status": "403", "reason": "forbidden", "content-type": "application/json"}
     )
-    http_error = HttpError(resp=response, content="")
+    response.reason = response["reason"]
+    http_error = HttpError(resp=response, content=b"")
     mock_config = {"get.side_effect": http_error}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
@@ -1460,7 +1461,8 @@ def test_unhandled_exception_403_ratelimit_retry(test_cloud_manager):
     response = httplib2.Response(
         {"status": "403", "reason": "quotaExceeded", "content-type": "application/json"}
     )
-    http_error = HttpError(resp=response, content="")
+    response.reason = response["reason"]
+    http_error = HttpError(resp=response, content=b"")
     mock_config = {"get.side_effect": http_error}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
@@ -1516,7 +1518,7 @@ def test_authorized_session_unhandled_exception_retry(test_cloud_manager):
     """
     from cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
-    mock_config = {"get.side_effect": Exception(MagicMock(), bytes("test"))}
+    mock_config = {"get.side_effect": Exception(MagicMock(), b"test")}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
     error = cirrus.google_cloud.manager.logger.error

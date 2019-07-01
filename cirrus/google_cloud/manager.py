@@ -12,7 +12,7 @@ import httplib2
 try:
     from urllib.parse import urljoin
 except ImportError:
-    from urlparse import urljoin
+    from urllib.parse import urljoin
 
 import backoff
 from cdislogging import get_logger
@@ -83,7 +83,7 @@ def _print_func_name(function):
 
 
 def _print_kwargs(kwargs):
-    return ", ".join("{}={}".format(k, repr(v)) for k, v in kwargs.items())
+    return ", ".join("{}={}".format(k, repr(v)) for k, v in list(kwargs.items()))
 
 
 def log_backoff_retry(details):
@@ -1514,6 +1514,10 @@ class GoogleCloudManager(CloudManager):
                     "content-type": "application/json",
                 }
             )
+            # httplib2 breaking change in python 3: response.reason is not set
+            # as an attribute but as a dict key, which is not handled correctly
+            # by googleapiclient HttpError
+            response.reason = response.get("reason", err.response.reason)
             raise GoogleHttpError(resp=response, content=err.response.content)
 
         return response
