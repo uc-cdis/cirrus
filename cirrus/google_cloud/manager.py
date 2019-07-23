@@ -957,7 +957,6 @@ class GoogleCloudManager(CloudManager):
 
         # get project IAM policy and see if the sa already has the necessary access
         policy = self._get_project_iam_policy(project_id)
-        role = GooglePolicyRole(name=full_billing_role_resource)
         for role in policy.roles:
             if role.name == full_billing_role_resource:
                 if account_id in [member.email_id for member in role.members]:

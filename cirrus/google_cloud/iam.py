@@ -214,7 +214,8 @@ class GooglePolicyRole(object):
         # NOTE: Custom roles have a different prefix, and we will transparently
         #       have that as the name since the prefix is dynamic (e.g. it changes
         #       based on the project/org the custom role was defined in)
-        if name.strip().startswith(GooglePolicyRole.ROLE_PREFIX):
+        name = name.strip()
+        if name.startswith(GooglePolicyRole.ROLE_PREFIX):
             self.name = name[len(GooglePolicyRole.ROLE_PREFIX) :]
         else:
             self.name = name
