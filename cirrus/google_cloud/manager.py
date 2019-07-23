@@ -1744,7 +1744,7 @@ class GoogleCloudManager(CloudManager):
         """
         project_id = project_id or self.project_id
         api_url = _get_google_api_url(
-            "projects/" + self.project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL
+            "projects/" + project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL
         )
         response = self._authed_request("POST", api_url)
 
