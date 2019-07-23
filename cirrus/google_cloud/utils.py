@@ -141,6 +141,7 @@ def get_signed_url(
     content_type="",
     md5_value="",
     service_account_creds=None,
+    requester_pays_user_project=None,
 ):
     """
 
@@ -188,6 +189,9 @@ def get_signed_url(
         + "&Signature="
         + encoded_signature.decode("utf-8")
     )
+
+    if requester_pays_user_project:
+        final_url += "&userProject={}".format(requester_pays_user_project)
 
     return final_url
 

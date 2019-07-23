@@ -28,6 +28,11 @@ class GooglePolicy(object):
         self.etag = etag
         self.version = version
 
+    def add_binding(self, binding):
+        self.bindings.append(binding)
+        self.members.update(binding.members)
+        self.roles.add(binding.role)
+
     @classmethod
     def from_json(cls, json):
         """
@@ -62,6 +67,23 @@ class GooglePolicy(object):
         output_dict["policy"]["version"] = self.version
 
         return str(output_dict)
+
+    def get_dict(self):
+        """
+        Return representation of object
+
+        Returns:
+            str: Representation of the Policy which can be POSTed to Google's API
+        """
+        output_dict = dict()
+        output_dict["policy"] = dict()
+        output_dict["policy"]["bindings"] = [
+            binding.get_dict() for binding in self.bindings
+        ]
+        output_dict["policy"]["etag"] = self.etag
+        output_dict["policy"]["version"] = self.version
+
+        return output_dict
 
 
 class GooglePolicyBinding(object):
@@ -196,13 +218,6 @@ class GooglePolicyRole(object):
         Args:
             name (str): The name of the Google role
         """
-        # If the name provided already starts with the prefix, remove it
-        if (
-            name.strip()[: len(GooglePolicyRole.ROLE_PREFIX)]
-            == GooglePolicyRole.ROLE_PREFIX
-        ):
-            name = name.strip()[len(GooglePolicyRole.ROLE_PREFIX) :]
-
         self.name = name
         self.members = set()
 
@@ -213,7 +228,13 @@ class GooglePolicyRole(object):
         Returns:
             str: Representation of the Role for Google's API
         """
-        return "{}{}".format(GooglePolicyRole.ROLE_PREFIX, self.name)
+        # / means the role already has a prefix in the name
+        if "/" in self.name:
+            output = self.name
+        else:
+            output = "{}{}".format(GooglePolicyRole.ROLE_PREFIX, self.name)
+
+        return output
 
     def __eq__(self, other):
         if not isinstance(other, type(self)):
