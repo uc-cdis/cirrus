@@ -58,15 +58,7 @@ class GooglePolicy(object):
         Returns:
             str: Representation of the Policy which can be POSTed to Google's API
         """
-        output_dict = dict()
-        output_dict["policy"] = dict()
-        output_dict["policy"]["bindings"] = [
-            binding.get_dict() for binding in self.bindings
-        ]
-        output_dict["policy"]["etag"] = self.etag
-        output_dict["policy"]["version"] = self.version
-
-        return str(output_dict)
+        return str(self.get_dict())
 
     def get_dict(self):
         """
