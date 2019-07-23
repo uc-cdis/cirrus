@@ -944,6 +944,8 @@ class GoogleCloudManager(CloudManager):
         Args:
             account_id (str): email address or the uniqueId of the service account
             project_id (str): Google project identifier
+            billing_role_name (str, optional): role name for the custom billing role.
+                will default to something reasonable if not provided.
         """
         # default to setting billing rights to the current project
         project_id = project_id or self.project_id
@@ -956,16 +958,15 @@ class GoogleCloudManager(CloudManager):
         # get project IAM policy and see if the sa already has the necessary access
         policy = self._get_project_iam_policy(project_id)
         role = GooglePolicyRole(name=full_billing_role_resource)
-        roles = {role.name: role for role in policy.roles}
-        if full_billing_role_resource in roles.keys():
-            role = roles[full_billing_role_resource]
-            if account_id in [member.email_id for member in role.members]:
-                logger.info(
-                    "Custom role {} already exists on project {} for service account {}".format(
-                        billing_role_id, project_id, account_id
+        for role in policy.roles:
+            if role.name == full_billing_role_resource:
+                if account_id in [member.email_id for member in role.members]:
+                    logger.info(
+                        "Custom role {} already exists on project {} for service account {}".format(
+                            billing_role_id, project_id, account_id
+                        )
                     )
-                )
-                return
+                    return
 
         # create new role with just billing access if doesn't exist already
         # https://cloud.google.com/iam/docs/creating-custom-roles#iam-custom-roles-create-rest

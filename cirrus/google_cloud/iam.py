@@ -218,7 +218,15 @@ class GooglePolicyRole(object):
         Args:
             name (str): The name of the Google role
         """
-        self.name = name
+        # if using a traditional role, remove the prefix for the name
+        # NOTE: Custom roles have a different prefix, and we will transparently
+        #       have that as the name since the prefix is dynamic (e.g. it changes
+        #       based on the project/org the custom role was defined in)
+        if name.strip().startswith(GooglePolicyRole.ROLE_PREFIX):
+            self.name = name[len(GooglePolicyRole.ROLE_PREFIX) :]
+        else:
+            self.name = name
+
         self.members = set()
 
     def __str__(self):
@@ -228,7 +236,7 @@ class GooglePolicyRole(object):
         Returns:
             str: Representation of the Role for Google's API
         """
-        # / means the role already has a prefix in the name
+        # / means the role already has a prefix in the name, e.g. it's a custom role
         if "/" in self.name:
             output = self.name
         else:
