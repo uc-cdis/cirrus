@@ -74,6 +74,10 @@ For service account management you will probably need the following pre-defined 
 - `Viewer` -to see project information
 - `Storage Admin` -to manage Google Storage buckets
 - `Security Reviewer` -to view IAM policies
+- `Role Administrator` -for creating a custom roles in a project
+    - used only for providing an SA a custom role for billing permission as of now
+- `Project IAM Admin` -to update the project's policy
+    - used only for providing an SA a custom role for billing permission as of now
 
 NOTE: It's possible you may need more or less roles/permissions (since Google may change these roles in the future). Just pay attention to any unauthorized errors you get when using `cirrus` and see what permission Google is expecting.
 
