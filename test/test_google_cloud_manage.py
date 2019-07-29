@@ -1309,6 +1309,41 @@ def test_has_no_parent_organization(test_cloud_manager):
     assert not test_cloud_manager.has_parent_organization()
 
 
+def test_get_parent_organization_with_org(test_cloud_manager):
+    """
+    Check that get_project_organization correctly returns parent organization
+    when the project is nested within folders
+    """
+    faked_response_body = {
+        "ancestor": [
+            {"resourceId": {"type": "project", "id": "1"}},
+            {"resourceId": {"type": "folder", "id": "2"}},
+            {"resourceId": {"type": "organization", "id": "3"}},
+        ]
+    }
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, faked_response_body
+    )
+    assert test_cloud_manager.get_project_organization() == "3"
+
+
+def test_get_parent_organization_without_org(test_cloud_manager):
+    """
+    Check that get_project_organization correctly returns None
+    when the project has no parent organization
+    """
+    faked_response_body = {
+        "ancestor": [
+            {"resourceId": {"type": "project", "id": "1"}},
+            {"resourceId": {"type": "folder", "id": "2"}},
+        ]
+    }
+    test_cloud_manager._authed_session.post.return_value = _fake_response(
+        200, faked_response_body
+    )
+    assert test_cloud_manager.get_project_organization() == None
+
+
 def test_authed_session(test_cloud_manager):
     test_cloud_manager._authed_session = False
     with pytest.raises(GoogleAuthError):

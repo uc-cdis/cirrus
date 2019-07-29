@@ -485,20 +485,23 @@ class GoogleCloudManager(CloudManager):
 
     def get_project_organization(self):
         """
-        Return the organiation name for a project if it exists, otherwise
-        with return None.
+        Return the organization name for a project if it exists, otherwise
+        return None.
 
         Returns:
-            str: Organiztion name or None
+            str: Organization name or None
         """
-        info = self.get_project_info()
-
-        if "error" in info:
-            raise GoogleAPIError(str(info))
-
+        ancestors = self.get_project_ancestry()
         org = None
-        if info.get("parent", {}).get("type") == "organization":
-            org = info["parent"]["id"]
+        logger.debug("The ancestor chain is {}".format(ancestors))
+        if ancestors:
+            # Per google API, ancestors ordered from bottom of hierarchy to top
+            top_ancestor = ancestors.pop()
+            org = top_ancestor[1] if top_ancestor[0] == "organization" else None
+
+        logger.debug(
+            "Got parent organization {} for project {}".format(org, self.project_id)
+        )
 
         return org
 
