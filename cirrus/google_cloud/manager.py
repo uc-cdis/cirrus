@@ -38,7 +38,7 @@ from cirrus.google_cloud.iam import (
     GooglePolicyRole,
     get_iam_service_account_email,
 )
-from cirrus.google_cloud.services import GoogleAdminService
+from cirrus.google_cloud.services import GoogleAdminService, GoogleService
 from cirrus.google_cloud.utils import (
     get_valid_service_account_id_for_user,
     get_service_account_cred_from_key_response,
@@ -246,12 +246,29 @@ class GoogleCloudManager(CloudManager):
             self.project_id, credentials=self.credentials
         )
 
-        # Finally set up a generic authorized session where arbitrary
+        # Set up a generic authorized session where arbitrary
         # requests can be made to Google API(s)
         scopes = ["https://www.googleapis.com/auth/cloud-platform"]
         scopes.extend(admin_service.SCOPES)
 
         self._authed_session = AuthorizedSession(self.credentials.with_scopes(scopes))
+
+        # Setup IAM service
+        iam_service = GoogleService(
+            service_name="iam", version="v1", scopes=scopes, creds=self.credentials
+        )
+        self._iam_service = iam_service.build_service()
+
+        # Setup Cloud Resource Manager service
+        cloud_resource_manager_service = GoogleService(
+            service_name="cloudresourcemanager",
+            version="v1",
+            scopes=scopes,
+            creds=self.credentials,
+        )
+        self._cloud_resource_manager_service = (
+            cloud_resource_manager_service.build_service()
+        )
 
         return self
 
@@ -920,6 +937,94 @@ class GoogleCloudManager(CloudManager):
 
         return response.json()
 
+    def give_service_account_billing_access(
+        self, account_id, project_id=None, billing_role_name=None
+    ):
+        """
+        Give the specified service account id permissions to bill to the provided project
+        id. Project id will default to the current project.
+
+        Args:
+            account_id (str): email address or the uniqueId of the service account
+            project_id (str): Google project identifier
+            billing_role_name (str, optional): role name for the custom billing role.
+                will default to something reasonable if not provided.
+        """
+        # default to setting billing rights to the current project
+        project_id = project_id or self.project_id
+        project_resource = "projects/" + project_id
+        billing_role_id = billing_role_name or "custom.ProjectBillingUser"
+        full_billing_role_resource = "projects/{}/roles/{}".format(
+            project_id, billing_role_id
+        )
+
+        # get project IAM policy and see if the sa already has the necessary access
+        policy = self._get_project_iam_policy(project_id)
+        for role in policy.roles:
+            if role.name == full_billing_role_resource:
+                if account_id in [member.email_id for member in role.members]:
+                    logger.info(
+                        "Custom role {} already exists on project {} for service account {}".format(
+                            billing_role_id, project_id, account_id
+                        )
+                    )
+                    return
+
+        # create new role with just billing access if doesn't exist already
+        # https://cloud.google.com/iam/docs/creating-custom-roles#iam-custom-roles-create-rest
+        new_role = {
+            "role_id": billing_role_id,
+            "role": {
+                "name": "",
+                "title": "Project Billing User",
+                "description": "This role grants a user access to use billing for the given resource.",
+                "included_permissions": "serviceusage.services.use",
+            },
+        }
+
+        try:
+            request = (
+                self._iam_service.projects()
+                .roles()
+                .create(parent=project_resource, body=new_role)
+            )
+            response = request.execute()
+            logger.info(
+                "Successfully created custom role for billing: {}. Response: {}".format(
+                    billing_role_id, response
+                )
+            )
+        except GoogleHttpError as err:
+            if err.resp.status != 409:
+                logger.error(
+                    "Could not create custom role for billing: {}. Error: {}".format(
+                        billing_role_id, err
+                    )
+                )
+                raise
+
+            logger.info(
+                "Custom role for billing: {} already exists. Conflict: {}".format(
+                    billing_role_id, err
+                )
+            )
+
+        # give new role to SA provided and update project policy
+        role = GooglePolicyRole(name=full_billing_role_resource)
+        member = GooglePolicyMember(
+            email_id=account_id, member_type=GooglePolicyMember.SERVICE_ACCOUNT
+        )
+        binding = GooglePolicyBinding(role=role, members=[member])
+        policy.add_binding(binding)
+
+        self.set_project_iam_policy(project_id=project_id, new_policy=policy)
+
+        logger.info(
+            "Role {} successfully given to {} on Google Project {}".format(
+                billing_role_id, account_id, project_id
+            )
+        )
+
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_service_account_key(self, account, key_name):
         """
@@ -1107,6 +1212,53 @@ class GoogleCloudManager(CloudManager):
         response = self._authed_request("POST", api_url, data=(str(new_policy)))
 
         return response.json()
+
+    def set_project_iam_policy(self, new_policy, project_id=None):
+        """
+        Set the projects IAM policy to the policy provided.
+
+        Args:
+            new_policy (cirrus.google_cloud.iam.GooglePolicy): The policy to set on the
+                project. NOTE: this will NOT append to the current policy, it will
+                OVERWRITE whatever policy is already there.
+            project_id (str, optional): The google project id to set the policy for, will
+                default to the current project.
+
+        Returns:
+            dict: JSON response from API call, which should contain the newly
+            created and set IAM policy
+            `Google API Reference <https://cloud.google.com/resource-manager/reference/rest/v1/projects/setIamPolicy>`_
+
+            .. code-block:: python
+
+                {
+                    "bindings": [
+                        {
+                            "role": "roles/owner",
+                            "members": [
+                                "user:mike@example.com",
+                                "group:admins@example.com",
+                                "domain:google.com",
+                                "serviceAccount:my-other-app@appspot.gserviceaccount.com",
+                            ]
+                        },
+                        {
+                            "role": "roles/viewer",
+                            "members": ["user:sean@example.com"]
+                        }
+                    ]
+                }
+        """
+        project_id = project_id or self.project_id
+        project_resource = "projects/" + project_id
+
+        body = new_policy.get_dict()
+
+        request = self._cloud_resource_manager_service.projects().setIamPolicy(
+            resource=project_id, body=body
+        )
+        response = request.execute()
+        return response
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     @_require_authed_session
@@ -1579,13 +1731,27 @@ class GoogleCloudManager(CloudManager):
         Returns:
             list<GooglePolicyMember>: list of members in project
         """
+        policy = self._get_project_iam_policy(project_id)
+        return list(policy.members)
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    def _get_project_iam_policy(self, project_id=None):
+        """
+        Gets a list of members associated with project
+
+        Args:
+            project_id(str): unique id of project, if None project's own ID is used
+
+        Returns:
+            list<GooglePolicyMember>: list of members in project
+        """
         project_id = project_id or self.project_id
         api_url = _get_google_api_url(
-            "projects/" + self.project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL
+            "projects/" + project_id + ":getIamPolicy", GOOGLE_CLOUD_RESOURCE_URL
         )
         response = self._authed_request("POST", api_url)
 
-        return list(GooglePolicy.from_json(response.json()).members)
+        return GooglePolicy.from_json(response.json())
 
 
 def _get_google_api_url(relative_path, root_api_url):
