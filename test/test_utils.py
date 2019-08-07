@@ -1,6 +1,7 @@
 import pytest
 
 from unittest.mock import MagicMock, patch
+from urllib.parse import quote
 
 from cirrus.google_cloud.utils import (
     _get_string_to_sign,
@@ -80,6 +81,34 @@ def test_get_string_to_sign():
         "x-goog-encryption-algorithm:AES256\n"
         "x-goog-meta-foo:bar,baz\n"
         "/bucket/objectname"
+    )
+
+
+def test_get_string_to_sign_escaped():
+    http_verb = "GET"
+    md5_hash = "rmYdCNHKFXam78uCt7xQLw=="
+    content_type = "text/plain"
+    expires = "1388534400"
+    ext_headers = ["x-goog-encryption-algorithm:AES256", "x-goog-meta-foo:bar,baz"]
+    # get_signed_url() quotes the path before calling _get_string_to_sign()
+    resource_path = quote("/bucket/P0001_T1/[test] ;.tar.gz")
+
+    result = _get_string_to_sign(
+        path_to_resource=resource_path,
+        http_verb=http_verb,
+        expires=expires,
+        extension_headers=ext_headers,
+        content_type=content_type,
+        md5_value=md5_hash,
+    )
+
+    assert result == (
+        "GET\n"
+        "rmYdCNHKFXam78uCt7xQLw==\n"
+        "text/plain\n"
+        "1388534400\n"
+        "x-goog-encryption-algorithm:AES256\n"
+        "x-goog-meta-foo:bar,baz\n" + quote("/bucket/P0001_T1/[test] ;.tar.gz")
     )
 
 
