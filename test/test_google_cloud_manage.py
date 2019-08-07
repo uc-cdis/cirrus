@@ -2,15 +2,7 @@ import copy
 import datetime
 import json
 
-# Python 2 and 3 compatible
-try:
-    from unittest import mock
-    from unittest.mock import MagicMock
-    from unittest.mock import patch
-except ImportError:
-    import mock
-    from mock import MagicMock
-    from mock import patch
+from unittest.mock import MagicMock, patch
 
 from googleapiclient.errors import HttpError
 import pytest
@@ -1380,9 +1372,9 @@ def test_add_member_backoff_giveup(test_cloud_manager):
     test_cloud_manager._admin_service.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
     error = cirrus.google_cloud.manager.logger.error
-    with mock.patch(
+    with patch(
         "cirrus.google_cloud.manager.logger.warn"
-    ) as logger_warn, mock.patch(
+    ) as logger_warn, patch(
         "cirrus.google_cloud.manager.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
@@ -1408,9 +1400,9 @@ def test_authorized_session_retry(test_cloud_manager):
     test_cloud_manager._authed_session.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
     error = cirrus.google_cloud.manager.logger.error
-    with mock.patch(
+    with patch(
         "cirrus.google_cloud.manager.logger.warn"
-    ) as logger_warn, mock.patch(
+    ) as logger_warn, patch(
         "cirrus.google_cloud.manager.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
@@ -1435,9 +1427,9 @@ def test_handled_exception_no_retry(test_cloud_manager):
     test_cloud_manager._admin_service.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
     error = cirrus.google_cloud.manager.logger.error
-    with mock.patch(
+    with patch(
         "cirrus.google_cloud.manager.logger.warn"
-    ) as logger_warn, mock.patch(
+    ) as logger_warn, patch(
         "cirrus.google_cloud.manager.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
@@ -1469,9 +1461,9 @@ def test_handled_exception_403_no_retry(test_cloud_manager):
     test_cloud_manager._authed_session.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
     error = cirrus.google_cloud.manager.logger.error
-    with mock.patch(
+    with patch(
         "cirrus.google_cloud.manager.logger.warn"
-    ) as logger_warn, mock.patch(
+    ) as logger_warn, patch(
         "cirrus.google_cloud.manager.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
@@ -1502,9 +1494,9 @@ def test_unhandled_exception_403_ratelimit_retry(test_cloud_manager):
     test_cloud_manager._authed_session.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
     error = cirrus.google_cloud.manager.logger.error
-    with mock.patch(
+    with patch(
         "cirrus.google_cloud.manager.logger.warn"
-    ) as logger_warn, mock.patch(
+    ) as logger_warn, patch(
         "cirrus.google_cloud.manager.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
@@ -1529,9 +1521,9 @@ def test_unhandled_exception_retry(test_cloud_manager):
     test_cloud_manager._admin_service.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
     error = cirrus.google_cloud.manager.logger.error
-    with mock.patch(
+    with patch(
         "cirrus.google_cloud.manager.logger.warn"
-    ) as logger_warn, mock.patch(
+    ) as logger_warn, patch(
         "cirrus.google_cloud.manager.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
@@ -1557,9 +1549,9 @@ def test_authorized_session_unhandled_exception_retry(test_cloud_manager):
     test_cloud_manager._authed_session.configure_mock(**mock_config)
     warn = cirrus.google_cloud.manager.logger.warn
     error = cirrus.google_cloud.manager.logger.error
-    with mock.patch(
+    with patch(
         "cirrus.google_cloud.manager.logger.warn"
-    ) as logger_warn, mock.patch(
+    ) as logger_warn, patch(
         "cirrus.google_cloud.manager.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
