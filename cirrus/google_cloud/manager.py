@@ -747,7 +747,7 @@ class GoogleCloudManager(CloudManager):
         response = self._authed_request("GET", api_url).json()
         all_service_accounts.extend(response["accounts"])
 
-        while "nextPageToken" in response and response["nextPageToken"]:
+        while response.get("nextPageToken"):
             response = self._authed_request(
                 "GET", api_url + "&pageToken=" + response["nextPageToken"]
             ).json()
@@ -1305,7 +1305,7 @@ class GoogleCloudManager(CloudManager):
         )
         all_groups.extend(response["groups"])
 
-        while "nextPageToken" in response and response["nextPageToken"]:
+        while response.get("nextPageToken"):
             response = (
                 self._admin_service.groups()
                 .list(
@@ -1594,7 +1594,7 @@ class GoogleCloudManager(CloudManager):
         response = self._admin_service.members().list(groupKey=group_id).execute()
         all_members.extend(response.get("members", []))
 
-        while "nextPageToken" in response and response["nextPageToken"]:
+        while response.get("nextPageToken"):
             response = (
                 self._admin_service.members()
                 .list(pageToken=response["nextPageToken"], groupKey=group_id)
