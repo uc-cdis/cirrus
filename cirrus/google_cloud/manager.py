@@ -747,12 +747,11 @@ class GoogleCloudManager(CloudManager):
         response = self._authed_request("GET", api_url).json()
         all_service_accounts.extend(response["accounts"])
 
-        if "nextPageToken" in response:
-            while "nextPageToken" in response:
-                response = self._authed_request(
-                    "GET", api_url + "&pageToken=" + response["nextPageToken"]
-                ).json()
-                all_service_accounts.extend(response["accounts"])
+        while "nextPageToken" in response and response["nextPageToken"]:
+            response = self._authed_request(
+                "GET", api_url + "&pageToken=" + response["nextPageToken"]
+            ).json()
+            all_service_accounts.extend(response["accounts"])
 
         return all_service_accounts
 
@@ -1306,17 +1305,16 @@ class GoogleCloudManager(CloudManager):
         )
         all_groups.extend(response["groups"])
 
-        if "nextPageToken" in response:
-            while "nextPageToken" in response:
-                response = (
-                    self._admin_service.groups()
-                    .list(
-                        pageToken=response["nextPageToken"],
-                        domain=config.GOOGLE_IDENTITY_DOMAIN,
-                    )
-                    .execute()
+        while "nextPageToken" in response and response["nextPageToken"]:
+            response = (
+                self._admin_service.groups()
+                .list(
+                    pageToken=response["nextPageToken"],
+                    domain=config.GOOGLE_IDENTITY_DOMAIN,
                 )
-                all_groups.extend(response["groups"])
+                .execute()
+            )
+            all_groups.extend(response["groups"])
 
         return all_groups
 
@@ -1596,14 +1594,13 @@ class GoogleCloudManager(CloudManager):
         response = self._admin_service.members().list(groupKey=group_id).execute()
         all_members.extend(response.get("members", []))
 
-        if "nextPageToken" in response:
-            while "nextPageToken" in response:
-                response = (
-                    self._admin_service.members()
-                    .list(pageToken=response["nextPageToken"], groupKey=group_id)
-                    .execute()
-                )
-                all_members.extend(response.get("members", []))
+        while "nextPageToken" in response and response["nextPageToken"]:
+            response = (
+                self._admin_service.members()
+                .list(pageToken=response["nextPageToken"], groupKey=group_id)
+                .execute()
+            )
+            all_members.extend(response.get("members", []))
 
         return all_members
 

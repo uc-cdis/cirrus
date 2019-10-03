@@ -742,7 +742,7 @@ def test_get_group_members_pagination(test_cloud_manager):
     response_2 = copy.deepcopy(full_response)
     response_2["members"][0]["id"] = member_3_id
     response_2["members"][1]["id"] = member_4_id
-    response_2["nextPageToken"] = ""
+    del response_2["nextPageToken"]
 
     two_pages = [full_response, response_2]
 
