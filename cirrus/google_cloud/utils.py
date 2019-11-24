@@ -1,6 +1,7 @@
 import re
 import base64
 import json
+from urllib.parse import quote
 
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -162,6 +163,10 @@ def get_signed_url(
         str: Completed signed URL
     """
     path_to_resource = path_to_resource.strip("/")
+
+    # escape special characters
+    path_to_resource = quote(path_to_resource)
+
     string_to_sign = _get_string_to_sign(
         path_to_resource, http_verb, expires, extension_headers, content_type, md5_value
     )
