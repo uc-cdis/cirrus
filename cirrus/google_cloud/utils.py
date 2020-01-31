@@ -1,6 +1,7 @@
-import re
 import base64
+import datetime
 import json
+import re
 from urllib.parse import quote
 
 from oauth2client.service_account import ServiceAccountCredentials
@@ -199,6 +200,62 @@ def get_signed_url(
         final_url += "&userProject={}".format(requester_pays_user_project)
 
     return final_url
+
+def _get_canonical_request(
+    http_verb,
+    path_to_resource,
+    canonical_query_string=None,
+    header=None,
+    payload,
+    expires,
+):
+    path_to_resource = path_to_resource.strip("/")
+
+    datetime_now = datetime.datetime.now()
+    request_timestamp = datetime_now.strftime('%Y%m%dT%H%M%SZ')
+
+    canonical_headers = ''
+    ordered_headers = collections.OrderedDict(sorted(headers.items()))
+    for k, v in ordered_headers.items():
+            lk = str(k).lower()
+            lv = str(v).lower()
+            canonical_headers += '{}:{}\n'.format(lk, lv)
+
+    signed_headers = ''
+    for k, _ in ordered_headers.itmes():
+        lk = str(k).lower()
+        signed_headers += '{};'.format(lk)
+    signed_headers = signed_headers[-1] #remove trailing ';'
+
+    if canonical_query_string is None:
+        canonical_query_string = dict()
+    canonical_query_string["X-Goog-Algorithm"] = 'GOOG4-RSA-SHA256'
+    canonical_query_string["X-Goog-Credential"] = ''
+    canonical_query_string["X-Goog-Date"] = request_timestamp
+    canonical_query_string["X-Goog-Expires"] = expires
+    canonical_query_string["X-Goog-SignedHeaders"] = signed_headers
+    # canonical_query_string["X-Goog-Signature"] = ''
+        
+
+    extension_headers = extension_headers or []
+    string_to_sign = (
+        str(http_verb)
+        + "\n"
+        + str(md5_value)
+        + "\n"
+        + str(content_type)
+        + "\n"
+        + str(expires)
+        + "\n"
+    )
+
+    for ext_header in extension_headers:
+        string_to_sign += str(ext_header) + "\n"
+
+    string_to_sign += "/" + str(path_to_resource)
+
+    return string_to_sign
+
 
 
 def _get_string_to_sign(
