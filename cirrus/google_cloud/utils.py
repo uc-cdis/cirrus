@@ -1,6 +1,9 @@
 import base64
+import binascii
+import collections
 import datetime
 import json
+import hashlib
 import re
 from urllib.parse import quote
 
@@ -135,7 +138,7 @@ def get_default_service_account_credentials():
     )
 
 
-def get_signed_url(
+def get_signed_url_V2(
     path_to_resource,
     http_verb,
     expires,
@@ -201,63 +204,6 @@ def get_signed_url(
 
     return final_url
 
-def _get_canonical_request(
-    http_verb,
-    path_to_resource,
-    canonical_query_string=None,
-    header=None,
-    payload,
-    expires,
-):
-    path_to_resource = path_to_resource.strip("/")
-
-    datetime_now = datetime.datetime.now()
-    request_timestamp = datetime_now.strftime('%Y%m%dT%H%M%SZ')
-
-    canonical_headers = ''
-    ordered_headers = collections.OrderedDict(sorted(headers.items()))
-    for k, v in ordered_headers.items():
-            lk = str(k).lower()
-            lv = str(v).lower()
-            canonical_headers += '{}:{}\n'.format(lk, lv)
-
-    signed_headers = ''
-    for k, _ in ordered_headers.itmes():
-        lk = str(k).lower()
-        signed_headers += '{};'.format(lk)
-    signed_headers = signed_headers[-1] #remove trailing ';'
-
-    if canonical_query_string is None:
-        canonical_query_string = dict()
-    canonical_query_string["X-Goog-Algorithm"] = 'GOOG4-RSA-SHA256'
-    canonical_query_string["X-Goog-Credential"] = ''
-    canonical_query_string["X-Goog-Date"] = request_timestamp
-    canonical_query_string["X-Goog-Expires"] = expires
-    canonical_query_string["X-Goog-SignedHeaders"] = signed_headers
-    # canonical_query_string["X-Goog-Signature"] = ''
-        
-
-    extension_headers = extension_headers or []
-    string_to_sign = (
-        str(http_verb)
-        + "\n"
-        + str(md5_value)
-        + "\n"
-        + str(content_type)
-        + "\n"
-        + str(expires)
-        + "\n"
-    )
-
-    for ext_header in extension_headers:
-        string_to_sign += str(ext_header) + "\n"
-
-    string_to_sign += "/" + str(path_to_resource)
-
-    return string_to_sign
-
-
-
 def _get_string_to_sign(
     path_to_resource,
     http_verb,
@@ -286,6 +232,96 @@ def _get_string_to_sign(
 
     return string_to_sign
 
+def get_signed_url(
+    http_verb,
+    path_to_resource,
+    expires,
+    service_account_creds=None,
+    canonical_query_params=None,
+    header=None
+):
+
+    if service_account_creds:
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(service_account_creds)
+    else:
+        creds = get_default_service_account_credentials()
+
+    client_id = creds.service_account_email
+
+    path_to_resource = path_to_resource.strip("/")
+
+    datetime_now = datetime.datetime.now()
+    request_timestamp = datetime_now.strftime('%Y%m%dT%H%M%SZ')
+    datestamp = datetime_now.strftime('%Y%m%d')
+
+    cred_scope = '{}/auto/storage/goog4_request'.format(datestamp)
+    credentials = '{}/{}'.format(client_id,cred_scope)
+
+    if canonical_query_params is None:
+        canonical_query_params = dict()
+    canonical_query_params["X-Goog-Algorithm"] = 'GOOG4-RSA-SHA256'
+    canonical_query_params["X-Goog-Credential"] = credentials
+    canonical_query_params["X-Goog-Date"] = request_timestamp
+    canonical_query_params["X-Goog-Expires"] = expires
+    canonical_query_params["X-Goog-SignedHeaders"] = signed_headers
+    # canonical_query_params["X-Goog-Signature"] = ''
+
+    canonical_query_string = ''
+    ordered_query_parameters = collections.OrderedDict(
+        sorted(canonical_query_params.items()))
+    for k, v in ordered_query_parameters.items():
+        encoded_k = quote(str(k), safe='')
+        encoded_v = quote(str(v), safe='')
+        canonical_query_string += '{}={}&'.format(encoded_k, encoded_v)
+    canonical_query_string = canonical_query_string[:-1]  # remove trailing '&'
+
+    if headers is None:
+        headers = dict()
+    host = 'storage.googleapis.com'
+    headers['host'] = host
+
+    canonical_headers = ''
+    ordered_headers = collections.OrderedDict(sorted(headers.items()))
+    for k, v in ordered_headers.items():
+            lk = str(k).lower()
+            lv = str(v).lower()
+            canonical_headers += '{}:{}\n'.format(lk, lv)
+
+    signed_headers = ''
+    for k, _ in ordered_headers.itmes():
+        lk = str(k).lower()
+        signed_headers += '{};'.format(lk)
+    signed_headers = signed_headers[-1] #remove trailing ';'
+
+    canonical_request = '\n'.join([
+        http_verb,
+        path_to_resource,
+        canonical_query_string,
+        canonical_headers,
+        signed_headers,
+        'UNSIGNED-PAYLOAD'
+    ])
+
+    canonical_request_hash = hashlib.sha256(
+        canonical_request.encode()
+    ).hexdigest()
+
+    string_to_sign = '\n'.join([
+        'GOOG4-RSA-SHA256',
+        request_timestamp,
+        cred_scope,
+        canonical_request_hash
+    ])
+
+    signature = binascii.hexlify(
+        creds.signer.sign(string_to_sign)
+    ).decode()
+
+    scheme_and_host = '{}://{}'.format('https', host)
+    signed_url = '{}{}?{}&x-goog-signature={}'.format(
+        scheme_and_host, path_to_resource, canonical_query_string, signature)
+
+    return signed_url
 
 def get_service_account_cred_from_key_response(key_response):
     """
