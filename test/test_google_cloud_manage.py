@@ -587,9 +587,10 @@ def test_create_group(test_cloud_manager):
     assert group["name"] == new_group_name
 
     # check if new name and email are somewhere in the args to insert
-    args, kwargs = (
-        test_cloud_manager._admin_service.groups.return_value.insert.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.groups.return_value.insert.call_args
     assert any(new_group_name in str(arg) for arg in args) or any(
         new_group_name in str(kwarg) for kwarg in kwargs.values()
     )
@@ -639,9 +640,10 @@ def test_create_group_already_exists(test_cloud_manager):
     assert group["name"] == new_group_name
 
     # check if new name and email are somewhere in the args to insert
-    args, kwargs = (
-        test_cloud_manager._admin_service.groups.return_value.insert.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.groups.return_value.insert.call_args
     assert any(new_group_name in str(arg) for arg in args) or any(
         new_group_name in str(kwarg) for kwarg in kwargs.values()
     )
@@ -800,9 +802,10 @@ def test_add_member_to_group(test_cloud_manager):
     assert group["id"] == new_member_id
 
     # check if ngroup id and email are somewhere in the args to insert
-    args, kwargs = (
-        test_cloud_manager._admin_service.members.return_value.insert.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.members.return_value.insert.call_args
     assert any(new_member_email in str(arg) for arg in args) or any(
         new_member_email in str(kwarg) for kwarg in kwargs.values()
     )
@@ -831,9 +834,10 @@ def test_remove_member_from_group(test_cloud_manager):
     assert not response
 
     # check if group id and email are somewhere in the args to delete
-    args, kwargs = (
-        test_cloud_manager._admin_service.members.return_value.delete.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.members.return_value.delete.call_args
     assert any(new_member_email in str(arg) for arg in args) or any(
         new_member_email in str(kwarg) for kwarg in kwargs.values()
     )
@@ -1034,9 +1038,10 @@ def test_delete_group(test_cloud_manager, google_return_value):
 
     # Test #
     assert response == {}
-    args, kwargs = (
-        test_cloud_manager._admin_service.groups.return_value.delete.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.groups.return_value.delete.call_args
     assert any((group_id == arg) for arg in args) or any(
         (group_id == kwarg) for kwarg in kwargs.values()
     )
@@ -1060,9 +1065,10 @@ def test_delete_group_doesnt_exist(test_cloud_manager):
 
     # Test #
     assert response == {}
-    args, kwargs = (
-        test_cloud_manager._admin_service.groups.return_value.delete.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.groups.return_value.delete.call_args
     assert any((group_id == arg) for arg in args) or any(
         (group_id == kwarg) for kwarg in kwargs.values()
     )
