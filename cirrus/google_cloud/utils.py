@@ -277,6 +277,12 @@ def get_signed_url(
     cred_scope = "{}/auto/storage/goog4_request".format(datestamp)
     credentials = "{}/{}".format(client_id, cred_scope)
 
+    signed_headers = ""
+    for k, _ in ordered_headers.itmes():
+        lk = str(k).lower()
+        signed_headers += "{};".format(lk)
+    signed_headers = signed_headers[-1]  # remove trailing ';'
+
     if canonical_query_params is None:
         canonical_query_params = dict()
     canonical_query_params["X-Goog-Algorithm"] = "GOOG4-RSA-SHA256"
@@ -310,12 +316,6 @@ def get_signed_url(
         lk = str(k).lower()
         lv = str(v).lower()
         canonical_headers += "{}:{}\n".format(lk, lv)
-
-    signed_headers = ""
-    for k, _ in ordered_headers.itmes():
-        lk = str(k).lower()
-        signed_headers += "{};".format(lk)
-    signed_headers = signed_headers[-1]  # remove trailing ';'
 
     canonical_request = "\n".join(
         [
