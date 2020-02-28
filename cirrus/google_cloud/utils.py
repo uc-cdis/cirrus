@@ -235,12 +235,13 @@ def _get_string_to_sign(
 
 
 def get_signed_url(
-    http_verb,
     path_to_resource,
+    http_verb,
     expires,
-    service_account_creds=None,
-    canonical_query_params=None,
     header=None,
+    canonical_query_params=None,
+    service_account_creds=None,
+    requester_pays_user_project=None,
 ):
 
     if service_account_creds:
@@ -277,6 +278,9 @@ def get_signed_url(
         encoded_v = quote(str(v), safe="")
         canonical_query_string += "{}={}&".format(encoded_k, encoded_v)
     canonical_query_string = canonical_query_string[:-1]  # remove trailing '&'
+
+    if requester_pays_user_project:
+        canonical_query_string += "&userProject={}".format(requester_pays_user_project)
 
     if headers is None:
         headers = dict()
