@@ -243,6 +243,23 @@ def get_signed_url(
     service_account_creds=None,
     requester_pays_user_project=None,
 ):
+    """
+
+    Requirements/process:
+        https://cloud.google.com/storage/docs/access-control/signing-urls-manually
+
+    Args:
+        path_to_resource (str): Description
+        http_verb (str): Description
+        expires (int): Description
+        extension_headers (None, optional): Description
+        canonical_query_params(None, optional)=None,
+        service_account_creds (dict, optional): JSON keyfile dict for Google
+            Service Account (can be obtained by calling `get_access_key`)
+
+    Returns:
+        str: Completed signed URL
+    """
 
     if service_account_creds:
         creds = ServiceAccountCredentials.from_json_keyfile_dict(service_account_creds)
