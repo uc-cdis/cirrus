@@ -289,7 +289,7 @@ def get_signed_url(
         canonical_headers += "{}:{}\n".format(lk, lv)
 
     signed_headers = ""
-    for k, _ in ordered_headers.itmes():
+    for k, _ in ordered_headers.items():
         lk = str(k).lower()
         signed_headers += "{};".format(lk)
     signed_headers = signed_headers[-1]  # remove trailing ';'
