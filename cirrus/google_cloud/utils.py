@@ -238,7 +238,7 @@ def get_signed_url(
     path_to_resource,
     http_verb,
     expires,
-    header=None,
+    extension_headers=None,
     canonical_query_params=None,
     service_account_creds=None,
     requester_pays_user_project=None,
@@ -282,13 +282,13 @@ def get_signed_url(
     if requester_pays_user_project:
         canonical_query_string += "&userProject={}".format(requester_pays_user_project)
 
-    if headers is None:
-        headers = dict()
+    if extension_headers is None:
+        extension_headers = dict()
     host = "storage.googleapis.com"
-    headers["host"] = host
+    extension_headers["host"] = host
 
     canonical_headers = ""
-    ordered_headers = collections.OrderedDict(sorted(headers.items()))
+    ordered_headers = collections.OrderedDict(sorted(extension_headers.items()))
     for k, v in ordered_headers.items():
         lk = str(k).lower()
         lv = str(v).lower()
