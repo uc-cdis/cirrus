@@ -249,13 +249,13 @@ def get_signed_url(
         https://cloud.google.com/storage/docs/access-control/signing-urls-manually
 
     Args:
-        path_to_resource (str): The path/url to the resouces/google bucket. This is 
+        path_to_resource (str): The path/url to the resouces/google bucket. This is
             everything that follows the host name but precedes any query strings.
-        http_verb (str): The HTTP verb. Includes DELETE, GET, HEAD, POST*, PUT. 
+        http_verb (str): The HTTP verb. Includes DELETE, GET, HEAD, POST*, PUT.
             Signed URLs do not support POST requests, except when working with
             resumable uploads.
         expires (int): The amount of time (in seconds) before the signed url will expire.
-        extension_headers (dict, optional): Optional request headers. 
+        extension_headers (dict, optional): Optional request headers.
         canonical_query_params(dict, optional)= Optional query strings to add to the request
         service_account_creds (dict, optional): JSON keyfile dict for Google
             Service Account (can be obtained by calling `get_access_key`)
