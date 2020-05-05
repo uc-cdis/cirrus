@@ -1824,8 +1824,7 @@ def delete_data_file(self, bucket_name, file_name):
         `Google API Reference <https://cloud.google.com/storage/docs/deleting-objects#rest-delete-object>`_
     """
     api_url = _get_google_api_url(
-        "b/" + bucket_name + "/o/" + object_name,
-        GOOGLE_STORAGE_API_URL,
+        "b/" + bucket_name + "/o/" + object_name, GOOGLE_STORAGE_API_URL
     )
 
     try:

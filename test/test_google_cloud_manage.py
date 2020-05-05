@@ -1551,7 +1551,6 @@ def test_authorized_session_unhandled_exception_retry(test_cloud_manager):
         assert logger_error.call_count >= 1
 
 
-
 def test_delete_data_file(test_cloud_manager):
     """
     Test that deleting an object actually calls the google API with
