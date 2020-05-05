@@ -661,7 +661,6 @@ class GoogleCloudManager(CloudManager):
         bucket.set_iam_policy(policy)
 
         bucket.update()
-    
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def delete_data_file(self, bucket_name, object_name):
@@ -691,7 +690,6 @@ class GoogleCloudManager(CloudManager):
             raise
 
         return response.json()
-
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_service_account(self, account):
