@@ -53,6 +53,7 @@ logger = get_logger(__name__)
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
+GOOGLE_STORAGE_API_URL = "https://storage.googleapis.com/storage/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
 GOOGLE_LOGGING_EMAIL = "cloud-storage-analytics@google.com"
 
@@ -1806,3 +1807,34 @@ def _is_key_expired(key, expiration_in_days):
         expired = True
 
     return expired
+
+
+@backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+def delete_data_file(self, bucket_name, file_name):
+    """
+    Delete a file within the provided bucket with the provided file ID.
+
+    Args:
+        bucket_name (str): name of Google Cloud Storage bucket containing file to delete
+        file_name (str): name of file to delete
+
+    Returns:
+        dict: JSON response from API call, which should be empty if
+                it successfully deleted the file
+        `Google API Reference <https://cloud.google.com/storage/docs/deleting-objects#rest-delete-object>`_
+    """
+    api_url = _get_google_api_url(
+        "b/" + bucket_name + "/o/" + object_name,
+        GOOGLE_STORAGE_API_URL,
+    )
+
+    try:
+        response = self._authed_request("DELETE", api_url)
+    except GoogleHttpError as err:
+        if err.resp.status == 404:
+            # object doesn't exist so return "success"
+            return {}
+
+        raise
+
+    return response.json()
