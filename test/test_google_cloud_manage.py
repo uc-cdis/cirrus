@@ -1551,5 +1551,60 @@ def test_authorized_session_unhandled_exception_retry(test_cloud_manager):
         assert logger_error.call_count >= 1
 
 
+
+def test_delete_data_file(test_cloud_manager):
+    """
+    Test that deleting an object actually calls the google API with
+    given bucket and object name
+    """
+    # Setup #
+    test_cloud_manager._authed_session.delete.return_value = _fake_response(200)
+
+    bucket = "some_bucket"
+    object_name = "some_object"
+
+    # Call #
+    test_cloud_manager.delete_data_file(bucket, object_name)
+
+    # Test #
+    assert test_cloud_manager._authed_session.delete.called is True
+
+    # Naive check to see if the object appears in the call to delete
+    args, kwargs = test_cloud_manager._authed_session.delete.call_args
+    assert any(bucket in str(arg) for arg in args) or any(
+        bucket in str(kwarg) for kwarg in kwargs.values()
+    )
+    assert any(object_name in str(arg) for arg in args) or any(
+        object_name in str(kwarg) for kwarg in kwargs.values()
+    )
+
+
+def test_delete_data_file_doesnt_exist(test_cloud_manager):
+    """
+    Test that deleting an object actually calls the google API with
+    given bucket and object_name and if it DOES NOT exist, this is still successful
+    """
+    # Setup #
+    test_cloud_manager._authed_session.delete.return_value = _fake_response(404)
+
+    bucket = "some_bucket"
+    object_name = "some_object"
+
+    # Call #
+    test_cloud_manager.delete_data_file(bucket, object_name)
+
+    # Test #
+    assert test_cloud_manager._authed_session.delete.called is True
+
+    # Naive check to see if the object appears in the call to delete
+    args, kwargs = test_cloud_manager._authed_session.delete.call_args
+    assert any(bucket in str(arg) for arg in args) or any(
+        bucket in str(kwarg) for kwarg in kwargs.values()
+    )
+    assert any(object_name in str(arg) for arg in args) or any(
+        object_name in str(kwarg) for kwarg in kwargs.values()
+    )
+
+
 if __name__ == "__main__":
     pytest.main(["-x", "-v", "."])
