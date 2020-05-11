@@ -672,9 +672,13 @@ class GoogleCloudManager(CloudManager):
             file_name (str): name of file to delete
 
         Returns:
-            dict: JSON response from API call, which should be empty if
+            A tuple, (dict, status)
+
+            dict: is JSON response from API call, which should be empty if
                     it successfully deleted the file
             `Google API Reference <https://cloud.google.com/storage/docs/deleting-objects#rest-delete-object>`_
+
+            status: status code of response
         """
         api_url = _get_google_api_url(
             "b/" + bucket_name + "/o/" + object_name, GOOGLE_STORAGE_API_URL
@@ -687,8 +691,8 @@ class GoogleCloudManager(CloudManager):
             if err.resp.status == 404:
                 # object doesn't exist so return "success"
                 return {}
-
-        return response.json()
+        
+        return response.json(), response.status
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_service_account(self, account):
