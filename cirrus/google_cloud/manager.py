@@ -691,6 +691,8 @@ class GoogleCloudManager(CloudManager):
             if err.resp.status == 404:
                 # object doesn't exist so return "success"
                 return {}
+            
+            raise
         
         return response.json(), response.status
 
