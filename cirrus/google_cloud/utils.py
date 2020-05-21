@@ -149,6 +149,7 @@ def get_signed_url_V2(
     requester_pays_user_project=None,
 ):
     """
+    Deprecated in favor of "get_signed_url()" (V4 signing).
 
     Requirements/process:
         https://cloud.google.com/storage/docs/access-control/create-signed-urls-program
@@ -244,19 +245,20 @@ def get_signed_url(
     requester_pays_user_project=None,
 ):
     """
+    V4 signing.
 
     Requirements/process:
         https://cloud.google.com/storage/docs/access-control/signing-urls-manually
 
     Args:
-        path_to_resource (str): The path/url to the resouces/google bucket. This is
+        path_to_resource (str): The path/url to the resources/google bucket. This is
             everything that follows the host name but precedes any query strings.
         http_verb (str): The HTTP verb. Includes DELETE, GET, HEAD, POST*, PUT.
             Signed URLs do not support POST requests, except when working with
             resumable uploads.
         expires (int): The amount of time (in seconds) before the signed url will expire.
         extension_headers (dict, optional): Optional request headers.
-        canonical_query_params(dict, optional)= Optional query strings to add to the request
+        canonical_query_params(dict, optional): Optional query strings to add to the request
         service_account_creds (dict, optional): JSON keyfile dict for Google
             Service Account (can be obtained by calling `get_access_key`)
         requester_pays_user_project (optional): User's Google project for billing
@@ -264,6 +266,8 @@ def get_signed_url(
     Returns:
         str: Completed signed URL
     """
+    print("DEBUG: in get_signed_url (V4 signing)")
+    print("DEBUG: requester_pays_user_project:", requester_pays_user_project)
 
     if service_account_creds:
         creds = ServiceAccountCredentials.from_json_keyfile_dict(service_account_creds)
