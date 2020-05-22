@@ -285,6 +285,11 @@ def get_signed_url(
     cred_scope = "{}/auto/storage/goog4_request".format(datestamp)
     credentials = "{}/{}".format(client_id, cred_scope)
 
+    if extension_headers is None:
+        extension_headers = dict()
+    host = "storage.googleapis.com"
+    extension_headers["host"] = host
+
     canonical_headers = ""
     ordered_headers = collections.OrderedDict(sorted(extension_headers.items()))
     for k, v in ordered_headers.items():
@@ -305,7 +310,6 @@ def get_signed_url(
     canonical_query_params["X-Goog-Date"] = request_timestamp
     canonical_query_params["X-Goog-Expires"] = expires
     canonical_query_params["X-Goog-SignedHeaders"] = signed_headers
-    # canonical_query_params["X-Goog-Signature"] = ''
 
     canonical_query_string = ""
     ordered_query_parameters = collections.OrderedDict(
@@ -319,11 +323,6 @@ def get_signed_url(
 
     if requester_pays_user_project:
         canonical_query_string += "&userProject={}".format(requester_pays_user_project)
-
-    if extension_headers is None:
-        extension_headers = dict()
-    host = "storage.googleapis.com"
-    extension_headers["host"] = host
 
     canonical_request = "\n".join(
         [
