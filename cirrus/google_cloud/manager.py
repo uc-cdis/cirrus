@@ -693,7 +693,7 @@ class GoogleCloudManager(CloudManager):
 
             raise
 
-        return response.json(), response.status
+        return response.json(), response.status_code
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_service_account(self, account):
