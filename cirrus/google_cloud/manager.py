@@ -690,9 +690,9 @@ class GoogleCloudManager(CloudManager):
             if err.resp.status_code == 404:
                 # object doesn't exist so return "success"
                 return {}
-            
+
             raise
-        
+
         return response.json(), response.status
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
