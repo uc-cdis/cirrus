@@ -341,7 +341,8 @@ def get_signed_url(
         ["GOOG4-RSA-SHA256", request_timestamp, cred_scope, canonical_request_hash]
     )
 
-    signature = binascii.hexlify(creds.signer.sign(string_to_sign)).decode()
+    # signature = binascii.hexlify(creds.signer.sign(string_to_sign)).decode()
+    signature = binascii.hexlify(creds.sign_blob(string_to_sign)).decode()
 
     scheme_and_host = "{}://{}".format("https", host)
     signed_url = "{}{}?{}&x-goog-signature={}".format(
