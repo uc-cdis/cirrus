@@ -684,13 +684,10 @@ class GoogleCloudManager(CloudManager):
             "b/" + bucket_name + "/o/" + object_name, GOOGLE_STORAGE_API_URL
         )
 
-        print("~~~ ZAKIR CUSTOM BRANCH ~~~")
-
         try:
             response = self._authed_request("DELETE", api_url)
         except GoogleHttpError as err:
-            print("686", err)
-            if err.resp.status == 404:
+            if err.resp.status_code == 404:
                 # object doesn't exist so return "success"
                 return {}
             
