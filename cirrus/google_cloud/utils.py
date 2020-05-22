@@ -138,7 +138,7 @@ def get_default_service_account_credentials():
     )
 
 
-def get_signed_url_V2(
+def get_signed_url_v2(
     path_to_resource,
     http_verb,
     expires,
