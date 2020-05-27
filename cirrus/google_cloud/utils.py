@@ -239,7 +239,7 @@ def get_signed_url(
     path_to_resource,
     http_verb,
     expires,
-    # extension_headers=None,
+    extension_headers=None,
     canonical_query_params=None,
     service_account_creds=None,
     requester_pays_user_project=None,
