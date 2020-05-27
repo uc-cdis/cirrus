@@ -285,17 +285,17 @@ def get_signed_url(
     cred_scope = "{}/auto/storage/goog4_request".format(datestamp)
     credentials = "{}/{}".format(client_id, cred_scope)
 
-    # if extension_headers is None:
-    #     extension_headers = dict()
-    # host = "storage.googleapis.com"
-    # extension_headers["host"] = host
+    if extension_headers is None:
+        extension_headers = dict()
+    host = "storage.googleapis.com"
+    extension_headers["host"] = host
 
-    # canonical_headers = ""
-    # ordered_headers = collections.OrderedDict(sorted(extension_headers.items()))
-    # for k, v in ordered_headers.items():
-    #     lk = str(k).lower()
-    #     lv = str(v).lower()
-    #     canonical_headers += "{}:{}\n".format(lk, lv)
+    canonical_headers = ""
+    ordered_headers = collections.OrderedDict(sorted(extension_headers.items()))
+    for k, v in ordered_headers.items():
+        lk = str(k).lower()
+        lv = str(v).lower()
+        canonical_headers += "{}:{}\n".format(lk, lv)
 
     signed_headers = ""
     for k, _ in ordered_headers.items():
@@ -329,7 +329,7 @@ def get_signed_url(
             http_verb,
             path_to_resource,
             canonical_query_string,
-            # canonical_headers,
+            canonical_headers,
             signed_headers,
             "UNSIGNED-PAYLOAD",
         ]
