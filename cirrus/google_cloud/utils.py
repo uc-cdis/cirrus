@@ -1,6 +1,5 @@
 import base64
-
-# import binascii
+import binascii
 import collections
 import datetime
 import json
@@ -343,7 +342,7 @@ def get_signed_url(
     )
 
     # signature = binascii.hexlify(creds.signer.sign(string_to_sign)).decode()
-    signature = creds.sign_blob(string_to_sign)
+    signature = binascii.hexlify(creds.sign_blob(string_to_sign)).decode()
 
     scheme_and_host = "{}://{}".format("https", host)
     signed_url = "{}{}?{}&x-goog-signature={}".format(
