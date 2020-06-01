@@ -1687,14 +1687,9 @@ class GoogleCloudManager(CloudManager):
             raise CirrusError("Unsupported method: " + str(method) + ".")
 
         if response.status_code == 403:
-            print(response)
-            print(dict(response))
+            print(response.__dict__)
             logger.info(response)
-            logger.info(dict(response))
-            logger.info(response.get("reason",""))
-            logger.info(response.get("data",""))
-            logger.info(response.get("message",""))
-
+            logger.info(response.__dict__)
             raise GoogleAPIError("Call to {} was forbidden".format(url))
 
         # Google's libraries use a different error of the same name as requests lib...
