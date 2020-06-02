@@ -687,7 +687,6 @@ class GoogleCloudManager(CloudManager):
         try:
             response = self._authed_request("DELETE", api_url)
         except GoogleHttpError as err:
-            print(dict(resp))
             if err.resp.status_code == 404:
                 # object doesn't exist so return "success"
                 return {}
@@ -1687,8 +1686,6 @@ class GoogleCloudManager(CloudManager):
             raise CirrusError("Unsupported method: " + str(method) + ".")
 
         if response.status_code == 403:
-            print(response.__dict__)
-            logger.info(response)
             logger.info(response.__dict__)
             raise GoogleAPIError("Call to {} was forbidden".format(url))
 
