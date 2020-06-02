@@ -687,13 +687,13 @@ class GoogleCloudManager(CloudManager):
         try:
             response = self._authed_request("DELETE", api_url)
         except GoogleHttpError as err:
-            if err.resp.status_code == 404:
+            if err.resp.status == 404:
                 # object doesn't exist so return "success"
                 return {}
 
             raise
 
-        return response.json(), response.status_code
+        return response.json(), response.status
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_service_account(self, account):
