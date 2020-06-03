@@ -687,6 +687,7 @@ class GoogleCloudManager(CloudManager):
         try:
             response = self._authed_request("DELETE", api_url)
         except GoogleHttpError as err:
+            logger.info(err.resp.__dict__)
             if err.resp.status == 404:
                 # object doesn't exist so return "success"
                 return {}
