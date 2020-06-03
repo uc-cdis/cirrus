@@ -221,8 +221,10 @@ class GoogleCloudManager(CloudManager):
         self._service_account_email_domain = (
             self.project_id + ".iam.gserviceaccount.com"
         )
+        print('224: ', creds)
         creds = creds or config.GOOGLE_APPLICATION_CREDENTIALS
         self.credentials = ServiceAccountCredentials.from_service_account_file(creds)
+        print('227: ', self.credentials)
         # allows for open()/close() to be called multiple times without calling
         # start up and shutdown code more than once
         self._open_count = 0
