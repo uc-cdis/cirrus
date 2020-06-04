@@ -222,6 +222,7 @@ class GoogleCloudManager(CloudManager):
             self.project_id + ".iam.gserviceaccount.com"
         )
         print('224: ', creds)
+        print('225 ***: ', config.GOOGLE_APPLICATION_CREDENTIALS)
         creds = creds or config.GOOGLE_APPLICATION_CREDENTIALS
         self.credentials = ServiceAccountCredentials.from_service_account_file(creds)
         print('227: ', self.credentials)
