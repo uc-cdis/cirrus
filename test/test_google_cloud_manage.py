@@ -21,7 +21,6 @@ from cirrus.config import config
 from cirrus.errors import CirrusError
 from cirrus.google_cloud.errors import GoogleAuthError
 from cirrus.google_cloud.iam import GooglePolicyMember
-from googleapiclient.errors import HttpError as GoogleHttpError
 
 from test.conftest import mock_get_group
 from test.conftest import mock_get_service_accounts_from_group
@@ -1630,7 +1629,7 @@ def test_delete_data_file_error_handling(test_cloud_manager):
     # Call #
     with patch(
         "cirrus.google_cloud.manager.GoogleCloudManager._authed_request",
-        side_effect=GoogleHttpError(
+        side_effect=HttpError(
             resp=FakeResponseWithStatusNotStatusCode(500),
             content=bytes("Failed to delete for unknown reason", "utf-8"),
         ),
