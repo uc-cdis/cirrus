@@ -1623,7 +1623,7 @@ def test_delete_data_file_error_handling(test_cloud_manager):
     object_name = "some_object"
 
     class FakeResponseWithStatusNotStatusCode:
-        def __init__(status_numeral):
+        def __init__(self, status_numeral):
             self.status = status_numeral
 
     # Call #
