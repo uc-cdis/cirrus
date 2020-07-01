@@ -221,12 +221,8 @@ class GoogleCloudManager(CloudManager):
         self._service_account_email_domain = (
             self.project_id + ".iam.gserviceaccount.com"
         )
-        print('224: ', creds)
-        print('225 ***: ', config.GOOGLE_APPLICATION_CREDENTIALS)
         creds = creds or config.GOOGLE_APPLICATION_CREDENTIALS
         self.credentials = ServiceAccountCredentials.from_service_account_file(creds)
-        print('227: ', self.credentials)
-        print('228: ', self.credentials.__dict__)
         # allows for open()/close() to be called multiple times without calling
         # start up and shutdown code more than once
         self._open_count = 0
@@ -691,7 +687,6 @@ class GoogleCloudManager(CloudManager):
         try:
             response = self._authed_request("DELETE", api_url)
         except GoogleHttpError as err:
-            print('692:', err.resp.__dict__)
             if err.resp.status == 404:
                 # object doesn't exist so return "success"
                 return {}

@@ -1610,6 +1610,35 @@ def test_delete_data_file_doesnt_exist(test_cloud_manager):
         object_name in str(kwarg) for kwarg in kwargs.values()
     )
 
+def test_delete_data_file_error_handling(test_cloud_manager):
+    """
+    Test that errors are thrown by cirrus appropriately if Google returns with
+    uncaught status code.
+    """
+    # Setup #
+    test_cloud_manager._authed_session.delete.return_value = _fake_response(500)
+
+    bucket = "some_bucket"
+    object_name = "some_object"
+
+    # Call #
+    with pytest.raises(Exception) as execinfo:   
+        test_cloud_manager.delete_data_file(bucket, object_name)
+        assert str(execinfo.value) == 'some info'
+    
+
+    # Test #
+    assert test_cloud_manager._authed_session.delete.called is True
+
+    # Naive check to see if the object appears in the call to delete
+    args, kwargs = test_cloud_manager._authed_session.delete.call_args
+    assert any(bucket in str(arg) for arg in args) or any(
+        bucket in str(kwarg) for kwarg in kwargs.values()
+    )
+    assert any(object_name in str(arg) for arg in args) or any(
+        object_name in str(kwarg) for kwarg in kwargs.values()
+    )
+
 
 if __name__ == "__main__":
     pytest.main(["-x", "-v", "."])
