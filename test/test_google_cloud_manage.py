@@ -1618,7 +1618,7 @@ def test_delete_data_file_error_handling(test_cloud_manager):
     uncaught status code.
     """
     # Setup #
-    test_cloud_manager._authed_request.return_value = _fake_response(500)
+    # test_cloud_manager._authed_request.return_value = _fake_response(500)
 
     bucket = "some_bucket"
     object_name = "some_object"
