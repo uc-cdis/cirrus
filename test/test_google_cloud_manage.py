@@ -1632,7 +1632,7 @@ def test_delete_data_file_error_handling(test_cloud_manager):
         with pytest.raises(Exception) as execinfo:
             test_cloud_manager.delete_data_file(bucket, object_name)
     
-    assert str(execinfo.value) == "some info"
+    assert str(execinfo.value) == '<HttpError 500 "reason goes here">'
 
 
 if __name__ == "__main__":
