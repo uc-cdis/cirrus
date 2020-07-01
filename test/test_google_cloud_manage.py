@@ -1624,7 +1624,6 @@ def test_delete_data_file_error_handling(test_cloud_manager):
     object_name = "some_object"
 
     # Call #
-    from googleapiclient.errors import HttpError as GoogleHttpError:
     with patch('test_cloud_manager._authed_request', side_effect=GoogleHttpError('Failed to delete for unknown reason')):
         with pytest.raises(Exception) as execinfo:
             test_cloud_manager.delete_data_file(bucket, object_name)
