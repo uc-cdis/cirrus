@@ -1618,13 +1618,12 @@ def test_delete_data_file_error_handling(test_cloud_manager):
     uncaught status code.
     """
     # Setup #
-    # test_cloud_manager._authed_request.return_value = _fake_response(500)
 
     bucket = "some_bucket"
     object_name = "some_object"
 
     # Call #
-    with patch('test_cloud_manager._authed_request', side_effect=GoogleHttpError(resp=_fake_response(500), content=bytes('Failed to delete for unknown reason', 'utf-8'))):
+    with patch('cirrus.google_cloud.manager._authed_request', side_effect=GoogleHttpError(resp=_fake_response(500), content=bytes('Failed to delete for unknown reason', 'utf-8'))):
         with pytest.raises(Exception) as execinfo:
             test_cloud_manager.delete_data_file(bucket, object_name)
     
