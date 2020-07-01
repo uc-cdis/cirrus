@@ -1610,6 +1610,7 @@ def test_delete_data_file_doesnt_exist(test_cloud_manager):
         object_name in str(kwarg) for kwarg in kwargs.values()
     )
 
+
 def test_delete_data_file_error_handling(test_cloud_manager):
     """
     Test that errors are thrown by cirrus appropriately if Google returns with
@@ -1622,10 +1623,9 @@ def test_delete_data_file_error_handling(test_cloud_manager):
     object_name = "some_object"
 
     # Call #
-    with pytest.raises(Exception) as execinfo:   
+    with pytest.raises(Exception) as execinfo:
         test_cloud_manager.delete_data_file(bucket, object_name)
-        assert str(execinfo.value) == 'some info'
-    
+        assert str(execinfo.value) == "some info"
 
     # Test #
     assert test_cloud_manager._authed_session.delete.called is True

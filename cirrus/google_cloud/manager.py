@@ -1684,10 +1684,10 @@ class GoogleCloudManager(CloudManager):
             response = self._authed_session.delete(url)
         else:
             raise CirrusError("Unsupported method: " + str(method) + ".")
-        
+
         print(response.__dict__)
         logger.info(response.__dict__)
-        
+
         if response.status_code == 403:
             raise GoogleAPIError("Call to {} was forbidden".format(url))
 
