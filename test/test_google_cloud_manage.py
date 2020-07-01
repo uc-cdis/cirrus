@@ -1622,8 +1622,12 @@ def test_delete_data_file_error_handling(test_cloud_manager):
     bucket = "some_bucket"
     object_name = "some_object"
 
+    class FakeResponseWithStatusNotStatusCode:
+        def __init__(status_numeral):
+            self.status = status_numeral
+
     # Call #
-    with patch('cirrus.google_cloud.manager.GoogleCloudManager._authed_request', side_effect=GoogleHttpError(resp=_fake_response(500), content=bytes('Failed to delete for unknown reason', 'utf-8'))):
+    with patch('cirrus.google_cloud.manager.GoogleCloudManager._authed_request', side_effect=GoogleHttpError(resp=FakeResponseWithStatusNotStatusCode(500), content=bytes('Failed to delete for unknown reason', 'utf-8'))):
         with pytest.raises(Exception) as execinfo:
             test_cloud_manager.delete_data_file(bucket, object_name)
     
