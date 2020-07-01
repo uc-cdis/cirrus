@@ -21,6 +21,7 @@ from cirrus.config import config
 from cirrus.errors import CirrusError
 from cirrus.google_cloud.errors import GoogleAuthError
 from cirrus.google_cloud.iam import GooglePolicyMember
+from googleapiclient.errors import HttpError as GoogleHttpError
 
 from test.conftest import mock_get_group
 from test.conftest import mock_get_service_accounts_from_group
@@ -1617,14 +1618,16 @@ def test_delete_data_file_error_handling(test_cloud_manager):
     uncaught status code.
     """
     # Setup #
-    test_cloud_manager._authed_session.delete.return_value = _fake_response(500)
+    test_cloud_manager._authed_request.return_value = _fake_response(500)
 
     bucket = "some_bucket"
     object_name = "some_object"
 
     # Call #
-    with pytest.raises(Exception) as execinfo:
-        test_cloud_manager.delete_data_file(bucket, object_name)
+    from googleapiclient.errors import HttpError as GoogleHttpError:
+    with patch('test_cloud_manager._authed_request', side_effect=GoogleHttpError('Failed to delete for unknown reason')):
+        with pytest.raises(Exception) as execinfo:
+            test_cloud_manager.delete_data_file(bucket, object_name)
     
     assert str(execinfo.value) == "some info"
 
