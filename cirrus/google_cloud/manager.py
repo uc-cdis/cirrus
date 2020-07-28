@@ -681,8 +681,18 @@ class GoogleCloudManager(CloudManager):
             status: status code of response
         """
         api_url = _get_google_api_url(
-            "b/" + bucket_name + "/o/" + object_name, GOOGLE_STORAGE_API_URL, add_api_key=False
+            "b/" + bucket_name + "/o/" + object_name, GOOGLE_STORAGE_API_URL
         )
+
+        ## debugging... delete this block later
+        api_url_test =  _get_google_api_url(
+            "b/" + bucket_name + "/o", GOOGLE_STORAGE_API_URL
+        )
+        try:
+            response = self._authed_request("GET", api_url_test)
+        except GoogleHttpError as err:
+            logger.error(err)
+        #### <debugging end>
 
         try:
             response = self._authed_request("DELETE", api_url)
@@ -1785,7 +1795,7 @@ class GoogleCloudManager(CloudManager):
         return GooglePolicy.from_json(response.json())
 
 
-def _get_google_api_url(relative_path, root_api_url, add_api_key=True):
+def _get_google_api_url(relative_path, root_api_url):
     """
     Return the url for a Google API given the root url, relative path.
     Add the config.GOOGLE_API_KEY from the environment to the request.
@@ -1798,8 +1808,7 @@ def _get_google_api_url(relative_path, root_api_url, add_api_key=True):
         str: url with API key
     """
     api_url = urljoin(root_api_url, relative_path.strip("/"))
-    if add_api_key:
-        api_url += "?key=" + config.GOOGLE_API_KEY
+    api_url += "?key=" + config.GOOGLE_API_KEY
     return api_url
 
 
