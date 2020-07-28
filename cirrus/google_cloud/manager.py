@@ -681,7 +681,7 @@ class GoogleCloudManager(CloudManager):
             status: status code of response
         """
         api_url = _get_google_api_url(
-            "b/" + bucket_name + "/o/" + object_name, GOOGLE_STORAGE_API_URL
+            "b/" + bucket_name + "/o/" + object_name, GOOGLE_STORAGE_API_URL, add_api_key=False
         )
 
         try:
@@ -1785,9 +1785,9 @@ class GoogleCloudManager(CloudManager):
         return GooglePolicy.from_json(response.json())
 
 
-def _get_google_api_url(relative_path, root_api_url):
+def _get_google_api_url(relative_path, root_api_url, add_api_key=True):
     """
-    Return the url for a Gooel API given the root url, relative path.
+    Return the url for a Google API given the root url, relative path.
     Add the config.GOOGLE_API_KEY from the environment to the request.
 
     Args:
@@ -1798,7 +1798,8 @@ def _get_google_api_url(relative_path, root_api_url):
         str: url with API key
     """
     api_url = urljoin(root_api_url, relative_path.strip("/"))
-    api_url += "?key=" + config.GOOGLE_API_KEY
+    if add_api_key:
+        api_url += "?key=" + config.GOOGLE_API_KEY
     return api_url
 
 
