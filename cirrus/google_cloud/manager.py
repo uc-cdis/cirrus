@@ -688,6 +688,8 @@ class GoogleCloudManager(CloudManager):
         api_url_test =  _get_google_api_url(
             "b/" + bucket_name + "/o", GOOGLE_STORAGE_API_URL
         )
+        logger.info('before try block')
+        print('before try block')
         try:
             response = self._authed_request("GET", api_url_test)
             logger.info('cirrus listing files in bucket')
@@ -696,6 +698,7 @@ class GoogleCloudManager(CloudManager):
             
         except GoogleHttpError as err:
             logger.error(err)
+            logger.info('debug failed to list files in bucket')
         #### <debugging end>
 
         try:
