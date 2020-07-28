@@ -690,6 +690,10 @@ class GoogleCloudManager(CloudManager):
         )
         try:
             response = self._authed_request("GET", api_url_test)
+            logger.info('cirrus listing files in bucket')
+            logger.info(response)
+            logger.info(response.json(), response.status_code)
+            
         except GoogleHttpError as err:
             logger.error(err)
         #### <debugging end>
