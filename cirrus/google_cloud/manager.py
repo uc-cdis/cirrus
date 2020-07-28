@@ -695,7 +695,6 @@ class GoogleCloudManager(CloudManager):
             logger.info('cirrus listing files in bucket')
             logger.info(response)
             logger.info(response.json(), response.status_code)
-            
         except GoogleHttpError as err:
             logger.error(err)
             logger.info('debug failed to list files in bucket')
