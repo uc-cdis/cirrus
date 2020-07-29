@@ -704,14 +704,21 @@ class GoogleCloudManager(CloudManager):
             print('debug failed to list files in bucket')
         #### <debugging end>
 
+        response = None
         try:
             response = self._authed_request("DELETE", api_url)
         except GoogleHttpError as err:
             # if err.resp.status == 404:
             #     # object doesn't exist so return "success"
             #     return {}
-
             raise
+        
+        print('made it')
+        print(response)
+        print('---')
+        print(response.status_code)
+        print(response.json())
+
 
         return response.json(), response.status_code
 
