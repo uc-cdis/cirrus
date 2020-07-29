@@ -662,7 +662,7 @@ class GoogleCloudManager(CloudManager):
 
         bucket.update()
 
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    # @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def delete_data_file(self, bucket_name, object_name):
         """
         Delete a file within the provided bucket with the provided file ID.
@@ -692,12 +692,16 @@ class GoogleCloudManager(CloudManager):
         print('before try block')
         try:
             response = self._authed_request("GET", api_url_test)
+            print(response)
             logger.info('cirrus listing files in bucket')
+            print('cirrus listing files in bucket')
             logger.info(response)
             logger.info(response.json(), response.status_code)
+            print(response.json(), response.status_code)
         except GoogleHttpError as err:
             logger.error(err)
             logger.info('debug failed to list files in bucket')
+            print('debug failed to list files in bucket')
         #### <debugging end>
 
         try:
