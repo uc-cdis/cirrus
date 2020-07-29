@@ -662,7 +662,7 @@ class GoogleCloudManager(CloudManager):
 
         bucket.update()
 
-    # @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def delete_data_file(self, bucket_name, object_name):
         """
         Delete a file within the provided bucket with the provided file ID.
