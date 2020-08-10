@@ -22,6 +22,7 @@ from google.cloud import storage
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 from googleapiclient.errors import HttpError as GoogleHttpError
 from requests.exceptions import HTTPError as requestsHttpError
+from urllib.parse import quote as urlquote
 
 from cirrus.config import config
 from cirrus.core import CloudManager
@@ -680,8 +681,9 @@ class GoogleCloudManager(CloudManager):
 
             status: status code of response
         """
+        encoded_object_name = urlquote(object_name, safe="")
         api_url = _get_google_api_url(
-            "b/" + bucket_name + "/o/" + object_name, GOOGLE_STORAGE_API_URL
+            "b/" + bucket_name + "/o/" + encoded_object_name, GOOGLE_STORAGE_API_URL
         )
 
         try:
