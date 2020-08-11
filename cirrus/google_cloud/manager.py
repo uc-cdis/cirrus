@@ -673,13 +673,7 @@ class GoogleCloudManager(CloudManager):
             file_name (str): name of file to delete
 
         Returns:
-            A tuple, (dict, status)
-
-            dict: is JSON response from API call, which should be empty if
-                    it successfully deleted the file
-            `Google API Reference <https://cloud.google.com/storage/docs/deleting-objects#rest-delete-object>`_
-
-            status: status code of response
+            status (int): the status code of the response returned by the Google Storage API
         """
         encoded_object_name = urlquote(object_name, safe="")
         api_url = _get_google_api_url(
@@ -691,8 +685,12 @@ class GoogleCloudManager(CloudManager):
         except GoogleHttpError as err:
             logger.error(err)
             raise
-        
-        print('DELETE method to {} returned status {}'.format(api_url, response.status_code))
+
+        print(
+            "DELETE method to {} returned status {}".format(
+                api_url, response.status_code
+            )
+        )
 
         return response.status_code
 
