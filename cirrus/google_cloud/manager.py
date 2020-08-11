@@ -670,7 +670,7 @@ class GoogleCloudManager(CloudManager):
 
         Args:
             bucket_name (str): name of Google Cloud Storage bucket containing file to delete
-            file_name (str): name of file to delete
+            object_name (str): name of file to delete
 
         Returns:
             A tuple, (dict, status)
