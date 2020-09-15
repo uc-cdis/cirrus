@@ -26,7 +26,7 @@ setup(
         "cdislogging",
         "oauth2client<4.0dev,>=2.0.0",
         "google-cloud-storage~=1.10",
-        "google-api-python-client~=1.6",
+        "google-api-python-client==1.11.0",
         "google-auth~=1.4",
         "google-auth-httplib2>=0.0.3",
     ],
