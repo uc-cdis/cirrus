@@ -587,9 +587,10 @@ def test_create_group(test_cloud_manager):
     assert group["name"] == new_group_name
 
     # check if new name and email are somewhere in the args to insert
-    args, kwargs = (
-        test_cloud_manager._admin_service.groups.return_value.insert.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.groups.return_value.insert.call_args
     assert any(new_group_name in str(arg) for arg in args) or any(
         new_group_name in str(kwarg) for kwarg in kwargs.values()
     )
@@ -639,9 +640,10 @@ def test_create_group_already_exists(test_cloud_manager):
     assert group["name"] == new_group_name
 
     # check if new name and email are somewhere in the args to insert
-    args, kwargs = (
-        test_cloud_manager._admin_service.groups.return_value.insert.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.groups.return_value.insert.call_args
     assert any(new_group_name in str(arg) for arg in args) or any(
         new_group_name in str(kwarg) for kwarg in kwargs.values()
     )
@@ -800,9 +802,10 @@ def test_add_member_to_group(test_cloud_manager):
     assert group["id"] == new_member_id
 
     # check if ngroup id and email are somewhere in the args to insert
-    args, kwargs = (
-        test_cloud_manager._admin_service.members.return_value.insert.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.members.return_value.insert.call_args
     assert any(new_member_email in str(arg) for arg in args) or any(
         new_member_email in str(kwarg) for kwarg in kwargs.values()
     )
@@ -831,9 +834,10 @@ def test_remove_member_from_group(test_cloud_manager):
     assert not response
 
     # check if group id and email are somewhere in the args to delete
-    args, kwargs = (
-        test_cloud_manager._admin_service.members.return_value.delete.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.members.return_value.delete.call_args
     assert any(new_member_email in str(arg) for arg in args) or any(
         new_member_email in str(kwarg) for kwarg in kwargs.values()
     )
@@ -1034,9 +1038,10 @@ def test_delete_group(test_cloud_manager, google_return_value):
 
     # Test #
     assert response == {}
-    args, kwargs = (
-        test_cloud_manager._admin_service.groups.return_value.delete.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.groups.return_value.delete.call_args
     assert any((group_id == arg) for arg in args) or any(
         (group_id == kwarg) for kwarg in kwargs.values()
     )
@@ -1060,9 +1065,10 @@ def test_delete_group_doesnt_exist(test_cloud_manager):
 
     # Test #
     assert response == {}
-    args, kwargs = (
-        test_cloud_manager._admin_service.groups.return_value.delete.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.groups.return_value.delete.call_args
     assert any((group_id == arg) for arg in args) or any(
         (group_id == kwarg) for kwarg in kwargs.values()
     )
@@ -1549,6 +1555,89 @@ def test_authorized_session_unhandled_exception_retry(test_cloud_manager):
             )
         assert logger_warn.call_count >= BACKOFF_SETTINGS["max_tries"] - 1
         assert logger_error.call_count >= 1
+
+
+def test_delete_data_file(test_cloud_manager):
+    """
+    Test that deleting an object actually calls the google API with
+    given bucket and object name
+    """
+    # Setup #
+    test_cloud_manager._authed_session.delete.return_value = _fake_response(200)
+
+    bucket = "some_bucket"
+    object_name = "some_object"
+
+    # Call #
+    test_cloud_manager.delete_data_file(bucket, object_name)
+
+    # Test #
+    assert test_cloud_manager._authed_session.delete.called is True
+
+    # Naive check to see if the object appears in the call to delete
+    args, kwargs = test_cloud_manager._authed_session.delete.call_args
+    assert any(bucket in str(arg) for arg in args) or any(
+        bucket in str(kwarg) for kwarg in kwargs.values()
+    )
+    assert any(object_name in str(arg) for arg in args) or any(
+        object_name in str(kwarg) for kwarg in kwargs.values()
+    )
+
+
+def test_delete_data_file_doesnt_exist(test_cloud_manager):
+    """
+    Test that deleting an object actually calls the google API with
+    given bucket and object_name and if it DOES NOT exist, this is still successful
+    """
+    # Setup #
+    test_cloud_manager._authed_session.delete.return_value = _fake_response(404)
+
+    bucket = "some_bucket"
+    object_name = "some_object"
+
+    # Call #
+    test_cloud_manager.delete_data_file(bucket, object_name)
+
+    # Test #
+    assert test_cloud_manager._authed_session.delete.called is True
+
+    # Naive check to see if the object appears in the call to delete
+    args, kwargs = test_cloud_manager._authed_session.delete.call_args
+    assert any(bucket in str(arg) for arg in args) or any(
+        bucket in str(kwarg) for kwarg in kwargs.values()
+    )
+    assert any(object_name in str(arg) for arg in args) or any(
+        object_name in str(kwarg) for kwarg in kwargs.values()
+    )
+
+
+def test_delete_data_file_error_handling(test_cloud_manager):
+    """
+    Test that errors are thrown by cirrus appropriately if Google returns with
+    uncaught status code.
+    """
+    # Setup #
+
+    bucket = "some_bucket"
+    object_name = "some_object"
+
+    class FakeResponseWithStatusNotStatusCode:
+        def __init__(self, status_numeral):
+            self.status = status_numeral
+            self.reason = "reason goes here"
+
+    # Call #
+    with patch(
+        "cirrus.google_cloud.manager.GoogleCloudManager._authed_request",
+        side_effect=HttpError(
+            resp=FakeResponseWithStatusNotStatusCode(500),
+            content=bytes("Failed to delete for unknown reason", "utf-8"),
+        ),
+    ):
+        with pytest.raises(Exception) as execinfo:
+            test_cloud_manager.delete_data_file(bucket, object_name)
+
+    assert str(execinfo.value) == '<HttpError 500 "reason goes here">'
 
 
 if __name__ == "__main__":

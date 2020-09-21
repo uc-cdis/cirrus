@@ -22,6 +22,7 @@ from google.cloud import storage
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 from googleapiclient.errors import HttpError as GoogleHttpError
 from requests.exceptions import HTTPError as requestsHttpError
+from urllib.parse import quote as urlquote
 
 from cirrus.config import config
 from cirrus.core import CloudManager
@@ -53,6 +54,7 @@ logger = get_logger(__name__)
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
+GOOGLE_STORAGE_API_URL = "https://storage.googleapis.com/storage/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
 GOOGLE_LOGGING_EMAIL = "cloud-storage-analytics@google.com"
 
@@ -660,6 +662,37 @@ class GoogleCloudManager(CloudManager):
         bucket.set_iam_policy(policy)
 
         bucket.update()
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    def delete_data_file(self, bucket_name, object_name):
+        """
+        Delete a file within the provided bucket with the provided file ID.
+
+        Args:
+            bucket_name (str): name of Google Cloud Storage bucket containing file to delete
+            object_name (str): name of file to delete
+
+        Returns:
+            status (int): the status code of the response returned by the Google Storage API
+        """
+        encoded_object_name = urlquote(object_name, safe="")
+        api_url = _get_google_api_url(
+            "b/" + bucket_name + "/o/" + encoded_object_name, GOOGLE_STORAGE_API_URL
+        )
+
+        try:
+            response = self._authed_request("DELETE", api_url)
+        except GoogleHttpError as err:
+            logger.error(err)
+            raise
+
+        print(
+            "DELETE method to {} returned status {}".format(
+                api_url, response.status_code
+            )
+        )
+
+        return response.status_code
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_service_account(self, account):
@@ -1753,7 +1786,7 @@ class GoogleCloudManager(CloudManager):
 
 def _get_google_api_url(relative_path, root_api_url):
     """
-    Return the url for a Gooel API given the root url, relative path.
+    Return the url for a Google API given the root url, relative path.
     Add the config.GOOGLE_API_KEY from the environment to the request.
 
     Args:
