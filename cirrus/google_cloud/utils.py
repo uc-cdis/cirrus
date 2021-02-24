@@ -276,9 +276,9 @@ def get_signed_url(
 
     client_id = creds.service_account_email
 
-    path_to_resource = path_to_resource.strip("/")
+    path_to_resource = "/" + path_to_resource.strip("/")
 
-    datetime_now = datetime.datetime.now()
+    datetime_now = datetime.datetime.utcnow()
     request_timestamp = datetime_now.strftime("%Y%m%dT%H%M%SZ")
     datestamp = datetime_now.strftime("%Y%m%d")
 
