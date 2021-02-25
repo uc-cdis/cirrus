@@ -273,12 +273,12 @@ def get_signed_url(
     print("DEBUG: requester_pays_user_project:", requester_pays_user_project)
 
     if service_account_creds:
-        creds = service_account.Credentials.from_service_account_file(
+        creds = service_account.Credentials.from_service_account_info(
             service_account_creds
         )
     else:
         # Default creds
-        creds = service_account.Credentials.from_service_account_file(
+        creds = service_account.Credentials.from_service_account_info(
             config.GOOGLE_APPLICATION_CREDENTIALS
         )
     bucket_name = path_to_resource.split("/")[0]
