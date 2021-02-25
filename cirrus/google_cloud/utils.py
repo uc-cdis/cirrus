@@ -8,6 +8,9 @@ import re
 from urllib.parse import quote
 
 from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2 import service_account
+import six
+from six.moves.urllib.parse import quote as six_quote
 
 from cirrus.config import config
 from cirrus.google_cloud.errors import GoogleNamingError
@@ -270,13 +273,18 @@ def get_signed_url(
     print("DEBUG: requester_pays_user_project:", requester_pays_user_project)
 
     if service_account_creds:
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(service_account_creds)
+        creds = service_account.Credentials.from_service_account_file(service_account_creds)
     else:
-        creds = get_default_service_account_credentials()
+        # Default creds
+        creds = service_account.Credentials.from_service_account_file(config.GOOGLE_APPLICATION_CREDENTIALS)
 
     client_id = creds.service_account_email
+    bucket_name = path_to_resource.split("/")[0]
+    object_name = "/".join(path_to_resource.split("/")[1:])
+    escaped_object_name = six_quote(six.ensure_binary(object_name), safe=b'/~')
+    canonical_uri = '/{}'.format(escaped_object_name)
 
-    path_to_resource = "/" + path_to_resource.strip("/")
+    # path_to_resource = "/" + path_to_resource.strip("/")
 
     datetime_now = datetime.datetime.utcnow()
     request_timestamp = datetime_now.strftime("%Y%m%dT%H%M%SZ")
@@ -287,7 +295,7 @@ def get_signed_url(
 
     if extension_headers is None:
         extension_headers = dict()
-    host = "storage.googleapis.com"
+    host = "{}.storage.googleapis.com".format(bucket_name)
     extension_headers["host"] = host
 
     canonical_headers = ""
@@ -327,7 +335,7 @@ def get_signed_url(
     canonical_request = "\n".join(
         [
             http_verb,
-            path_to_resource,
+            canonical_uri,
             canonical_query_string,
             canonical_headers,
             signed_headers,
@@ -341,12 +349,12 @@ def get_signed_url(
         ["GOOG4-RSA-SHA256", request_timestamp, cred_scope, canonical_request_hash]
     )
 
-    # signature = binascii.hexlify(creds.signer.sign(string_to_sign)).decode()
-    signature = binascii.hexlify(creds.sign_blob(string_to_sign)[1]).decode()
+    signature = binascii.hexlify(creds.signer.sign(string_to_sign)).decode()
+    # signature = binascii.hexlify(creds.sign_blob(string_to_sign)[1]).decode()
 
     scheme_and_host = "{}://{}".format("https", host)
     signed_url = "{}{}?{}&x-goog-signature={}".format(
-        scheme_and_host, path_to_resource, canonical_query_string, signature
+        scheme_and_host, canonical_uri, canonical_query_string, signature
     )
 
     return signed_url

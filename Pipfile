@@ -9,9 +9,13 @@ pytest = ">=3.6"
 pytest-cov = "*"
 codacy-coverage = "*"
 Sphinx = "~=1.6"
+google-auth = "*"
+six = "*"
 
 [packages]
 gen3cirrus = {editable = true,path = "."}
+google-auth = "*"
+six = "*"
 
 [requires]
 python_version = "3.6"
