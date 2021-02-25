@@ -22,8 +22,7 @@ from cirrus.google_cloud.utils import (
 )
 @pytest.mark.parametrize("prefix", ["", "testenv"])
 def test_get_valid_service_account_id_for_user_prefix(username, prefix):
-    """
-    """
+    """"""
     user_id = 54
     result = get_valid_service_account_id_for_user(user_id, username, prefix=prefix)
     assert prefix in result
