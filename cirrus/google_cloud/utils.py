@@ -273,88 +273,98 @@ def get_signed_url(
     print("DEBUG: requester_pays_user_project:", requester_pays_user_project)
 
     if service_account_creds:
-        creds = service_account.Credentials.from_service_account_file(service_account_creds)
+        creds = service_account.Credentials.from_service_account_file(
+            service_account_creds
+        )
     else:
         # Default creds
-        creds = service_account.Credentials.from_service_account_file(config.GOOGLE_APPLICATION_CREDENTIALS)
+        creds = service_account.Credentials.from_service_account_file(
+            config.GOOGLE_APPLICATION_CREDENTIALS
+        )
     bucket_name = path_to_resource.split("/")[0]
     object_name = "/".join(path_to_resource.split("/")[1:])
-    escaped_object_name = six_quote(six.ensure_binary(object_name), safe=b'/~')
-    canonical_uri = '/{}'.format(escaped_object_name)
-    
-    datetime_now = datetime.datetime.utcnow()
-    request_timestamp = datetime_now.strftime('%Y%m%dT%H%M%SZ')
-    datestamp = datetime_now.strftime('%Y%m%d')
+    escaped_object_name = six_quote(six.ensure_binary(object_name), safe=b"/~")
+    canonical_uri = "/{}".format(escaped_object_name)
 
+    datetime_now = datetime.datetime.utcnow()
+    request_timestamp = datetime_now.strftime("%Y%m%dT%H%M%SZ")
+    datestamp = datetime_now.strftime("%Y%m%d")
 
     client_email = creds.service_account_email
-    credential_scope = '{}/auto/storage/goog4_request'.format(datestamp)
-    credential = '{}/{}'.format(client_email, credential_scope)
+    credential_scope = "{}/auto/storage/goog4_request".format(datestamp)
+    credential = "{}/{}".format(client_email, credential_scope)
 
     if extension_headers is None:
         extension_headers = dict()
-    host = '{}.storage.googleapis.com'.format(bucket_name)
-    extension_headers['host'] = host
+    host = "{}.storage.googleapis.com".format(bucket_name)
+    extension_headers["host"] = host
 
-    canonical_headers = ''
+    canonical_headers = ""
     ordered_headers = collections.OrderedDict(sorted(extension_headers.items()))
     for k, v in ordered_headers.items():
         lower_k = str(k).lower()
         strip_v = str(v).lower()
-        canonical_headers += '{}:{}\n'.format(lower_k, strip_v)
+        canonical_headers += "{}:{}\n".format(lower_k, strip_v)
 
-    signed_headers = ''
+    signed_headers = ""
     for k, _ in ordered_headers.items():
         lower_k = str(k).lower()
-        signed_headers += '{};'.format(lower_k)
+        signed_headers += "{};".format(lower_k)
     signed_headers = signed_headers[:-1]  # remove trailing ';'
 
     if canonical_query_params is None:
         canonical_query_params = dict()
-    canonical_query_params['X-Goog-Algorithm'] = 'GOOG4-RSA-SHA256'
-    canonical_query_params['X-Goog-Credential'] = credential
-    canonical_query_params['X-Goog-Date'] = request_timestamp
-    canonical_query_params['X-Goog-Expires'] = expires
-    canonical_query_params['X-Goog-SignedHeaders'] = signed_headers
+    canonical_query_params["X-Goog-Algorithm"] = "GOOG4-RSA-SHA256"
+    canonical_query_params["X-Goog-Credential"] = credential
+    canonical_query_params["X-Goog-Date"] = request_timestamp
+    canonical_query_params["X-Goog-Expires"] = 9999
+    canonical_query_params["X-Goog-SignedHeaders"] = signed_headers
 
-    canonical_query_string = ''
+    canonical_query_string = ""
     ordered_query_parameters = collections.OrderedDict(
-        sorted(canonical_query_params.items()))
+        sorted(canonical_query_params.items())
+    )
     for k, v in ordered_query_parameters.items():
-        encoded_k = quote(str(k), safe='')
-        encoded_v = quote(str(v), safe='')
-        canonical_query_string += '{}={}&'.format(encoded_k, encoded_v)
+        encoded_k = quote(str(k), safe="")
+        encoded_v = quote(str(v), safe="")
+        canonical_query_string += "{}={}&".format(encoded_k, encoded_v)
     canonical_query_string = canonical_query_string[:-1]  # remove trailing '&'
 
     if requester_pays_user_project:
         canonical_query_string += "&userProject={}".format(requester_pays_user_project)
 
-    canonical_request = '\n'.join([http_verb,
-                                   canonical_uri,
-                                   canonical_query_string,
-                                   canonical_headers,
-                                   signed_headers,
-                                   'UNSIGNED-PAYLOAD'])
+    canonical_request = "\n".join(
+        [
+            http_verb,
+            canonical_uri,
+            canonical_query_string,
+            canonical_headers,
+            signed_headers,
+            "UNSIGNED-PAYLOAD",
+        ]
+    )
 
-    canonical_request_hash = hashlib.sha256(
-        canonical_request.encode()).hexdigest()
+    canonical_request_hash = hashlib.sha256(canonical_request.encode()).hexdigest()
 
-    string_to_sign = '\n'.join(['GOOG4-RSA-SHA256',
-                                request_timestamp,
-                                credential_scope,
-                                canonical_request_hash])
+    string_to_sign = "\n".join(
+        [
+            "GOOG4-RSA-SHA256",
+            request_timestamp,
+            credential_scope,
+            canonical_request_hash,
+        ]
+    )
 
     # signer.sign() signs using RSA-SHA256 with PKCS1v15 padding
-    signature = binascii.hexlify(
-        creds.signer.sign(string_to_sign)
-    ).decode()
+    signature = binascii.hexlify(creds.signer.sign(string_to_sign)).decode()
 
-    scheme_and_host = '{}://{}'.format('https', host)
-    signed_url = '{}{}?{}&x-goog-signature={}'.format(
-        scheme_and_host, canonical_uri, canonical_query_string, signature)
+    scheme_and_host = "{}://{}".format("https", host)
+    signed_url = "{}{}?{}&x-goog-signature={}".format(
+        scheme_and_host, canonical_uri, canonical_query_string, signature
+    )
 
     return signed_url
-    
+
 
 def get_service_account_cred_from_key_response(key_response):
     """
