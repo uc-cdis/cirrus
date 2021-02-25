@@ -13,7 +13,9 @@ class GoogleNamingError(CirrusError):
 
 
 class GoogleAuthError(CirrusError):
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         super(GoogleAuthError, self).__init__(
             "This action requires an authed session. Please use "
             "Python's `with <Class> as <name>` syntax for a context manager "
