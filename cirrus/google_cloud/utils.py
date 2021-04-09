@@ -314,11 +314,11 @@ def get_signed_url(
 
     if canonical_query_params is None:
         canonical_query_params = dict()
-    canonical_query_params["X-Goog-Algorithm"] = "GOOG4-RSA-SHA256"
-    canonical_query_params["X-Goog-Credential"] = credential
-    canonical_query_params["X-Goog-Date"] = request_timestamp
-    canonical_query_params["X-Goog-Expires"] = 222
-    canonical_query_params["X-Goog-SignedHeaders"] = signed_headers
+    canonical_query_params["x-goog-algorithm"] = "GOOG4-RSA-SHA256"
+    canonical_query_params["x-goog-credential"] = credential
+    canonical_query_params["x-goog-date"] = request_timestamp
+    canonical_query_params["x-goog-expires"] = 222
+    canonical_query_params["x-goog-signedHeaders"] = signed_headers
 
     if requester_pays_user_project is not None:
         canonical_query_params["userProject"] = requester_pays_user_project
