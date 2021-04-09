@@ -317,7 +317,7 @@ def get_signed_url(
     canonical_query_params["X-Goog-Algorithm"] = "GOOG4-RSA-SHA256"
     canonical_query_params["X-Goog-Credential"] = credential
     canonical_query_params["X-Goog-Date"] = request_timestamp
-    canonical_query_params["X-Goog-Expires"] = expires
+    canonical_query_params["X-Goog-Expires"] = 222
     canonical_query_params["X-Goog-SignedHeaders"] = signed_headers
 
     if requester_pays_user_project is not None:
