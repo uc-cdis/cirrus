@@ -317,7 +317,7 @@ def get_signed_url(
     canonical_query_params["X-Goog-Algorithm"] = "GOOG4-RSA-SHA256"
     canonical_query_params["X-Goog-Credential"] = credential
     canonical_query_params["X-Goog-Date"] = request_timestamp
-    canonical_query_params["X-Goog-Expires"] = 9999
+    canonical_query_params["X-Goog-Expires"] = expires
     canonical_query_params["X-Goog-SignedHeaders"] = signed_headers
 
     canonical_query_string = ""
@@ -330,8 +330,8 @@ def get_signed_url(
         canonical_query_string += "{}={}&".format(encoded_k, encoded_v)
     canonical_query_string = canonical_query_string[:-1]  # remove trailing '&'
 
-    if requester_pays_user_project:
-        canonical_query_string += "&userProject={}".format(requester_pays_user_project)
+    # if requester_pays_user_project:
+    #     canonical_query_string += "&userProject={}".format(requester_pays_user_project)
 
     canonical_request = "\n".join(
         [
@@ -362,6 +362,8 @@ def get_signed_url(
     signed_url = "{}{}?{}&x-goog-signature={}".format(
         scheme_and_host, canonical_uri, canonical_query_string, signature
     )
+    if requester_pays_user_project:
+        signed_url += "&userProject={}".format(requester_pays_user_project)
 
     return signed_url
 
