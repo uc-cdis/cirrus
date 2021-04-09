@@ -320,6 +320,9 @@ def get_signed_url(
     canonical_query_params["X-Goog-Expires"] = expires
     canonical_query_params["X-Goog-SignedHeaders"] = signed_headers
 
+    if requester_pays_user_project is not None:
+        canonical_query_params["userProject"] = requester_pays_user_project
+
     canonical_query_string = ""
     ordered_query_parameters = collections.OrderedDict(
         sorted(canonical_query_params.items())
@@ -362,8 +365,6 @@ def get_signed_url(
     signed_url = "{}{}?{}&x-goog-signature={}".format(
         scheme_and_host, canonical_uri, canonical_query_string, signature
     )
-    if requester_pays_user_project:
-        signed_url += "&userProject={}".format(requester_pays_user_project)
 
     return signed_url
 
