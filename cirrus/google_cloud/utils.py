@@ -317,11 +317,11 @@ def get_signed_url(
     canonical_query_params["x-goog-algorithm"] = "GOOG4-RSA-SHA256"
     canonical_query_params["x-goog-credential"] = credential
     canonical_query_params["x-goog-date"] = request_timestamp
-    canonical_query_params["x-goog-expires"] = 222
+    canonical_query_params["x-goog-expires"] = 1000
     canonical_query_params["x-goog-signedHeaders"] = signed_headers
 
     if requester_pays_user_project is not None:
-        canonical_query_params["userProject"] = requester_pays_user_project
+        canonical_query_params["x-goog-user-project"] = requester_pays_user_project
 
     canonical_query_string = ""
     ordered_query_parameters = collections.OrderedDict(
