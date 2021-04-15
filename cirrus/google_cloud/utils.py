@@ -296,7 +296,13 @@ def get_signed_url(
 
     if extension_headers is None:
         extension_headers = dict()
-    host = "{}.storage.googleapis.com".format(bucket_name)
+
+    host = (
+        "{}.storage.googleapis.com".format(bucket_name)
+        if bucket_name
+        else "storage.googleapis.com"
+    )
+
     extension_headers["host"] = host
 
     canonical_headers = ""
