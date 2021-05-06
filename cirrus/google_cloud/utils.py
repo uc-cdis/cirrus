@@ -269,8 +269,6 @@ def get_signed_url(
     Returns:
         str: Completed signed URL
     """
-    print("DEBUG: in get_signed_url (V4 signing)")
-    print("DEBUG: requester_pays_user_project:", requester_pays_user_project)
 
     if service_account_creds:
         creds = service_account.Credentials.from_service_account_info(
@@ -302,7 +300,8 @@ def get_signed_url(
         if bucket_name
         else "storage.googleapis.com"
     )
-
+    print("##### Host: ", host)
+    print("Bucket ", bucket_name)
     extension_headers["host"] = host
 
     canonical_headers = ""
