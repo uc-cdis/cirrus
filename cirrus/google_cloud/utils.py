@@ -304,6 +304,9 @@ def get_signed_url(
     print("Bucket ", bucket_name)
     extension_headers["host"] = host
 
+    if requester_pays_user_project is not None:
+        canonical_query_params["x-goog-user-project"] = requester_pays_user_project
+
     canonical_headers = ""
     ordered_headers = collections.OrderedDict(sorted(extension_headers.items()))
     for k, v in ordered_headers.items():
@@ -322,11 +325,11 @@ def get_signed_url(
     canonical_query_params["x-goog-algorithm"] = "GOOG4-RSA-SHA256"
     canonical_query_params["x-goog-credential"] = credential
     canonical_query_params["x-goog-date"] = request_timestamp
-    canonical_query_params["x-goog-expires"] = 1000
-    canonical_query_params["x-goog-signedHeaders"] = signed_headers
+    canonical_query_params["x-goog-expires"] = 600
+    canonical_query_params["x-goog-signedheaders"] = signed_headers
 
-    if requester_pays_user_project is not None:
-        canonical_query_params["x-goog-user-project"] = requester_pays_user_project
+    # if requester_pays_user_project is not None:
+    #     canonical_query_params["userProject"] = requester_pays_user_project
 
     canonical_query_string = ""
     ordered_query_parameters = collections.OrderedDict(
