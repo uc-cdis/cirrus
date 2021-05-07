@@ -305,7 +305,7 @@ def get_signed_url(
     extension_headers["host"] = host
 
     if requester_pays_user_project is not None:
-        canonical_query_params["x-goog-user-project"] = requester_pays_user_project
+        extension_headers["x-goog-user-project"] = requester_pays_user_project
 
     canonical_headers = ""
     ordered_headers = collections.OrderedDict(sorted(extension_headers.items()))
