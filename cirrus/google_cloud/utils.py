@@ -5,7 +5,7 @@ import datetime
 import json
 import hashlib
 import re
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from oauth2client.service_account import ServiceAccountCredentials
 from google.oauth2 import service_account
@@ -270,18 +270,20 @@ def get_signed_url(
         str: Completed signed URL
     """
 
-    if service_account_creds:
-        creds = service_account.Credentials.from_service_account_info(
-            service_account_creds
-        )
-    else:
-        # Default creds
-        creds = service_account.Credentials.from_service_account_info(
-            config.GOOGLE_APPLICATION_CREDENTIALS
-        )
+    creds = service_account_creds or config.GOOGLE_APPLICATION_CREDENTIALS
+    # if service_account_creds:
+    #     creds = service_account.Credentials.from_service_account_info(
+    #         service_account_creds
+    #     )
+    # else:
+    #     # Default creds
+    #     creds = service_account.Credentials.from_service_account_info(
+    #         config.GOOGLE_APPLICATION_CREDENTIALS
+    #     )
     bucket_name = path_to_resource.split("/")[0]
     object_name = "/".join(path_to_resource.split("/")[1:])
-    escaped_object_name = six_quote(six.ensure_binary(object_name), safe=b"/~")
+    escaped_object_name = quote(object_name.encode(), safe=b"/~")
+    # escaped_object_name = six_quote(six.ensure_binary(object_name), safe=b"/~")
     canonical_uri = "/{}".format(escaped_object_name)
 
     datetime_now = datetime.datetime.utcnow()
@@ -295,15 +297,13 @@ def get_signed_url(
     if extension_headers is None:
         extension_headers = dict()
 
-    host = (
-        "{}.storage.googleapis.com".format(bucket_name)
-        if bucket_name
-        else "storage.googleapis.com"
-    )
+    host = "{}.storage.googleapis.com".format(bucket_name)
+
     extension_headers["host"] = host
 
     canonical_headers = ""
     ordered_headers = collections.OrderedDict(sorted(extension_headers.items()))
+
     for k, v in ordered_headers.items():
         lower_k = str(k).lower()
         strip_v = str(v).lower()
@@ -330,11 +330,12 @@ def get_signed_url(
     ordered_query_parameters = collections.OrderedDict(
         sorted(canonical_query_params.items())
     )
-    for k, v in ordered_query_parameters.items():
-        encoded_k = quote(str(k), safe="")
-        encoded_v = quote(str(v), safe="")
-        canonical_query_string += "{}={}&".format(encoded_k, encoded_v)
-    canonical_query_string = canonical_query_string[:-1]  # remove trailing '&'
+    canonical_query_string = urlencode(ordered_query_parameters)
+    # for k, v in ordered_query_parameters.items():
+    #     encoded_k = quote(str(k), safe="")
+    #     encoded_v = quote(str(v), safe="")
+    #     canonical_query_string += "{}={}&".format(encoded_k, encoded_v)
+    # canonical_query_string = canonical_query_string[:-1]  # remove trailing '&'
 
     canonical_request = "\n".join(
         [
