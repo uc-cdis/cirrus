@@ -9,8 +9,6 @@ from urllib.parse import quote, urlencode
 
 from oauth2client.service_account import ServiceAccountCredentials
 from google.oauth2 import service_account
-import six
-from six.moves.urllib.parse import quote as six_quote
 
 from cirrus.config import config
 from cirrus.google_cloud.errors import GoogleNamingError
@@ -269,20 +267,14 @@ def get_signed_url(
     Returns:
         str: Completed signed URL
     """
+    service_account_creds = (
+        service_account_creds or config.GOOGLE_APPLICATION_CREDENTIALS
+    )
+    creds = service_account.Credentials.from_service_account_info(service_account_creds)
 
-    if service_account_creds:
-        creds = service_account.Credentials.from_service_account_info(
-            service_account_creds
-        )
-    else:
-        # Default creds
-        creds = service_account.Credentials.from_service_account_info(
-            config.GOOGLE_APPLICATION_CREDENTIALS
-        )
     bucket_name = path_to_resource.split("/")[0]
     object_name = "/".join(path_to_resource.split("/")[1:])
     escaped_object_name = quote(object_name.encode(), safe=b"/~")
-    # escaped_object_name = six_quote(six.ensure_binary(object_name), safe=b"/~")
     canonical_uri = "/{}".format(escaped_object_name)
 
     datetime_now = datetime.datetime.utcnow()
@@ -301,12 +293,7 @@ def get_signed_url(
         if bucket_name
         else "storage.googleapis.com"
     )
-    print("##### Host: ", host)
-    print("Bucket ", bucket_name)
     extension_headers["host"] = host
-
-    # if requester_pays_user_project is not None:
-    #     extension_headers["x-goog-user-project"] = requester_pays_user_project
 
     canonical_headers = ""
     ordered_headers = collections.OrderedDict(sorted(extension_headers.items()))
@@ -327,7 +314,7 @@ def get_signed_url(
     canonical_query_params["x-goog-algorithm"] = "GOOG4-RSA-SHA256"
     canonical_query_params["x-goog-credential"] = credential
     canonical_query_params["x-goog-date"] = request_timestamp
-    canonical_query_params["x-goog-expires"] = 600
+    canonical_query_params["x-goog-expires"] = expires
     canonical_query_params["x-goog-signedheaders"] = signed_headers
 
     if requester_pays_user_project is not None:
@@ -338,14 +325,6 @@ def get_signed_url(
         sorted(canonical_query_params.items())
     )
     canonical_query_string = urlencode(ordered_query_parameters)
-    # for k, v in ordered_query_parameters.items():
-    #     encoded_k = quote(str(k), safe="")
-    #     encoded_v = quote(str(v), safe="")
-    #     canonical_query_string += "{}={}&".format(encoded_k, encoded_v)
-    # canonical_query_string = canonical_query_string[:-1]  # remove trailing '&'
-
-    # if requester_pays_user_project:
-    #     canonical_query_string += "&userProject={}".format(requester_pays_user_project)
 
     canonical_request = "\n".join(
         [
