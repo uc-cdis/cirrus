@@ -296,9 +296,17 @@ def get_signed_url(
     if extension_headers is None:
         extension_headers = dict()
 
-    host = "{}.storage.googleapis.com".format(bucket_name)
-
+    host = (
+        "{}.storage.googleapis.com".format(bucket_name)
+        if bucket_name
+        else "storage.googleapis.com"
+    )
+    print("##### Host: ", host)
+    print("Bucket ", bucket_name)
     extension_headers["host"] = host
+
+    # if requester_pays_user_project is not None:
+    #     extension_headers["x-goog-user-project"] = requester_pays_user_project
 
     canonical_headers = ""
     ordered_headers = collections.OrderedDict(sorted(extension_headers.items()))
@@ -319,7 +327,7 @@ def get_signed_url(
     canonical_query_params["x-goog-algorithm"] = "GOOG4-RSA-SHA256"
     canonical_query_params["x-goog-credential"] = credential
     canonical_query_params["x-goog-date"] = request_timestamp
-    canonical_query_params["x-goog-expires"] = expires
+    canonical_query_params["x-goog-expires"] = 600
     canonical_query_params["x-goog-signedheaders"] = signed_headers
 
     if requester_pays_user_project is not None:
@@ -335,6 +343,9 @@ def get_signed_url(
     #     encoded_v = quote(str(v), safe="")
     #     canonical_query_string += "{}={}&".format(encoded_k, encoded_v)
     # canonical_query_string = canonical_query_string[:-1]  # remove trailing '&'
+
+    # if requester_pays_user_project:
+    #     canonical_query_string += "&userProject={}".format(requester_pays_user_project)
 
     canonical_request = "\n".join(
         [
