@@ -270,16 +270,15 @@ def get_signed_url(
         str: Completed signed URL
     """
 
-    creds = service_account_creds or config.GOOGLE_APPLICATION_CREDENTIALS
-    # if service_account_creds:
-    #     creds = service_account.Credentials.from_service_account_info(
-    #         service_account_creds
-    #     )
-    # else:
-    #     # Default creds
-    #     creds = service_account.Credentials.from_service_account_info(
-    #         config.GOOGLE_APPLICATION_CREDENTIALS
-    #     )
+    if service_account_creds:
+        creds = service_account.Credentials.from_service_account_info(
+            service_account_creds
+        )
+    else:
+        # Default creds
+        creds = service_account.Credentials.from_service_account_info(
+            config.GOOGLE_APPLICATION_CREDENTIALS
+        )
     bucket_name = path_to_resource.split("/")[0]
     object_name = "/".join(path_to_resource.split("/")[1:])
     escaped_object_name = quote(object_name.encode(), safe=b"/~")
