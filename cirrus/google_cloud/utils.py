@@ -303,24 +303,21 @@ def get_signed_url(
         strip_v = str(v).lower()
         canonical_headers += "{}:{}\n".format(lower_k, strip_v)
 
-    signed_headers = ""
-    for k, _ in ordered_headers.items():
-        lower_k = str(k).lower()
-        signed_headers += "{};".format(lower_k)
-    signed_headers = signed_headers[:-1]  # remove trailing ';'
+    signed_headers = ";".join([str(k).lower() for k in ordered_headers])
 
     if canonical_query_params is None:
         canonical_query_params = dict()
+
+    if requester_pays_user_project is not None:
+        canonical_query_params["userProject"] = requester_pays_user_project
+
     canonical_query_params["x-goog-algorithm"] = "GOOG4-RSA-SHA256"
     canonical_query_params["x-goog-credential"] = credential
     canonical_query_params["x-goog-date"] = request_timestamp
     canonical_query_params["x-goog-expires"] = expires
     canonical_query_params["x-goog-signedheaders"] = signed_headers
 
-    if requester_pays_user_project is not None:
-        canonical_query_params["userProject"] = requester_pays_user_project
-
-    canonical_query_string = ""
+    # sort params for deterministic hashing
     ordered_query_parameters = collections.OrderedDict(
         sorted(canonical_query_params.items())
     )
