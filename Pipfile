@@ -12,7 +12,7 @@ Sphinx = "~=1.6"
 
 [packages]
 gen3cirrus = {editable = true,path = "."}
-google-auth = "*"
+google-auth = "~=1.30"
 
 [requires]
 python_version = "3.6"
