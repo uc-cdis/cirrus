@@ -1,7 +1,6 @@
 """
 Module to consolidate exponential backoff settings and functions
 """
-import backoff
 from cdislogging import get_logger
 from googleapiclient.errors import HttpError as GoogleHttpError
 import json
