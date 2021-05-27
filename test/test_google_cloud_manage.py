@@ -1376,10 +1376,10 @@ def test_add_member_backoff_giveup(test_cloud_manager):
 
     mock_config = {"members.side_effect": HttpError(MagicMock(), b"test")}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = cirrus.backoff.logger.warning
+    error = cirrus.backoff.logger.error
+    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
+        "cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1402,10 +1402,10 @@ def test_authorized_session_retry(test_cloud_manager):
 
     mock_config = {"get.side_effect": HttpError(MagicMock(), b"test")}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = cirrus.backoff.logger.warning
+    error = cirrus.backoff.logger.error
+    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
+        "cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1427,10 +1427,10 @@ def test_handled_exception_no_retry(test_cloud_manager):
 
     mock_config = {"members.side_effect": CirrusError(MagicMock(), b"test")}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = cirrus.backoff.logger.warning
+    error = cirrus.backoff.logger.error
+    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
+        "cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1459,10 +1459,10 @@ def test_handled_exception_403_no_retry(test_cloud_manager):
     http_error = HttpError(resp=response, content=b"")
     mock_config = {"get.side_effect": http_error}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = cirrus.backoff.logger.warning
+    error = cirrus.backoff.logger.error
+    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
+        "cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1490,10 +1490,10 @@ def test_unhandled_exception_403_ratelimit_retry(test_cloud_manager):
     http_error = HttpError(resp=response, content=b"")
     mock_config = {"get.side_effect": http_error}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = cirrus.backoff.logger.warning
+    error = cirrus.backoff.logger.error
+    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
+        "cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1515,10 +1515,10 @@ def test_unhandled_exception_retry(test_cloud_manager):
 
     mock_config = {"members.side_effect": IndexError()}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = cirrus.backoff.logger.warning
+    error = cirrus.backoff.logger.error
+    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
+        "cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1541,10 +1541,10 @@ def test_authorized_session_unhandled_exception_retry(test_cloud_manager):
 
     mock_config = {"get.side_effect": Exception(MagicMock(), b"test")}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = cirrus.backoff.logger.warning
+    error = cirrus.backoff.logger.error
+    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
+        "cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
