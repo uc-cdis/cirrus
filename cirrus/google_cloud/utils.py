@@ -272,7 +272,7 @@ def get_signed_url(
     )
     creds = service_account.Credentials.from_service_account_info(service_account_creds)
 
-    bucket_name = path_to_resource.split("/")[0]
+    # bucket_name = path_to_resource.split("/")[0]
     object_name = "/".join(path_to_resource.split("/")[1:])
     escaped_object_name = quote(object_name.encode(), safe=b"/~")
     canonical_uri = "/{}".format(escaped_object_name)
@@ -288,11 +288,12 @@ def get_signed_url(
     if extension_headers is None:
         extension_headers = dict()
 
-    host = (
-        "{}.storage.googleapis.com".format(bucket_name)
-        if bucket_name
-        else "storage.googleapis.com"
-    )
+    host = "storage.googleapis.com"
+    # host = (
+    #     "{}.storage.googleapis.com".format(bucket_name)
+    #     if bucket_name
+    #     else "storage.googleapis.com"
+    # )
     extension_headers["host"] = host
 
     canonical_headers = ""
