@@ -4,7 +4,10 @@ Google services for interacting with APIs.
 See README for details on different ways to interact with Google's API(s)
 """
 from googleapiclient.discovery import build
+import backoff
+
 from cirrus.config import config
+from cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
 
 class GoogleService(object):
@@ -41,6 +44,7 @@ class GoogleService(object):
         delegated_credentials = self.creds.with_subject(user_to_become)
         self.creds = delegated_credentials
 
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def build_service(self):
         """
         Combines service, version, and creds to give a resource that
