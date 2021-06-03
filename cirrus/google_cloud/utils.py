@@ -10,14 +10,13 @@ import logging
 
 from oauth2client.service_account import ServiceAccountCredentials
 from google.oauth2 import service_account
-from cdislogging import get_logger
 
 
 from cirrus.config import config
 from cirrus.google_cloud.errors import GoogleNamingError
 
-logger = get_logger(__name__)
 GOOGLE_SERVICE_ACCOUNT_REGEX = "[a-z][a-z\d\-]*[a-z\d]"
+logging.basicConfig(level=logging.INFO)
 
 
 def get_valid_service_account_id_for_user(user_id, username, prefix=""):
@@ -276,10 +275,7 @@ def get_signed_url(
     creds = service_account.Credentials.from_service_account_info(service_account_creds)
 
     bucket_name = path_to_resource.split("/")[0]
-    # debug which one of these work
-    print("Generating PRINT URL for bucket name: {}".format(bucket_name))
-    logger.info("Generating CDIS LOG URL for bucket name: {}".format(bucket_name))
-    logging.debug("Generating LOGGER URL for bucket name: {}".format(bucket_name))
+    logging.info("Generating URL for bucket name: {}".format(bucket_name))
     object_name = "/".join(path_to_resource.split("/")[1:])
     escaped_object_name = quote(object_name.encode(), safe=b"/~")
     canonical_uri = "/{}".format(escaped_object_name)
