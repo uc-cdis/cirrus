@@ -6,8 +6,8 @@ See README for details on different ways to interact with Google's API(s)
 from googleapiclient.discovery import build
 import backoff
 
-from cirrus.config import config
-from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+from gen3cirrus.config import config
+from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
 
 class GoogleService(object):

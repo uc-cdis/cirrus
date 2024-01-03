@@ -24,24 +24,24 @@ from googleapiclient.errors import HttpError as GoogleHttpError
 from requests.exceptions import HTTPError as requestsHttpError
 from urllib.parse import quote as urlquote
 
-from cirrus.backoff import BACKOFF_SETTINGS
-from cirrus.config import config
-from cirrus.core import CloudManager
-from cirrus.errors import CirrusError, CirrusUserError, CirrusNotFound
-from cirrus.google_cloud.errors import (
+from gen3cirrus.backoff import BACKOFF_SETTINGS
+from gen3cirrus.config import config
+from gen3cirrus.core import CloudManager
+from gen3cirrus.errors import CirrusError, CirrusUserError, CirrusNotFound
+from gen3cirrus.google_cloud.errors import (
     GoogleAuthError,
     GoogleAPIError,
     GoogleNamingError,
 )
-from cirrus.google_cloud.iam import (
+from gen3cirrus.google_cloud.iam import (
     GooglePolicy,
     GooglePolicyBinding,
     GooglePolicyMember,
     GooglePolicyRole,
     get_iam_service_account_email,
 )
-from cirrus.google_cloud.services import GoogleAdminService, GoogleService
-from cirrus.google_cloud.utils import (
+from gen3cirrus.google_cloud.services import GoogleAdminService, GoogleService
+from gen3cirrus.google_cloud.utils import (
     get_valid_service_account_id_for_user,
     get_service_account_cred_from_key_response,
     get_proxy_group_name_for_user,
@@ -515,7 +515,7 @@ class GoogleCloudManager(CloudManager):
             bucket_name (str): Bucket to provide access to
 
         Raises:
-            cirrus.google_cloud.errors.CirrusNotFound: No bucket found with given name
+            gen3cirrus.google_cloud.errors.CirrusNotFound: No bucket found with given name
         """
         access = access or ["read"]
         try:
@@ -542,7 +542,7 @@ class GoogleCloudManager(CloudManager):
             else:
                 raise CirrusUserError(
                     "Unable to grant {access_level} access to {group_email} "
-                    "on bucket {bucket_name}. cirrus "
+                    "on bucket {bucket_name}. gen3cirrus "
                     "does not support the access level {access_level}.".format(
                         access_level=access_level,
                         group_email=group_email,

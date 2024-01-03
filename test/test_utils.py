@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from urllib.parse import quote
 
-from cirrus.google_cloud.utils import (
+from gen3cirrus.google_cloud.utils import (
     _get_string_to_sign,
     get_valid_service_account_id_for_client,
     get_valid_service_account_id_for_user,
