@@ -6,6 +6,8 @@ on:
       - '*'
     tags:
       - '*'
+  pull_request:
+    types: [opened, synchronize]
 jobs:
   PyPIPoetryPublish:
     name: PyPI Poetry Publish
