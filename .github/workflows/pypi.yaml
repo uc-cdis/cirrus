@@ -14,5 +14,6 @@ jobs:
     with:
         PYTHON_VERSION: '3.9'
         IS_TEST_PUBLISH: false
-        PYPI_TEST_API_TOKEN: ${{ secrets.PYPI_TEST_API_TOKEN }}
-        PYPI_PROD_API_TOKEN: ${{ secrets.PYPI_PROD_API_TOKEN }}
+    secrets:
+      PYPI_TEST_API_TOKEN: ${{ secrets.PYPI_TEST_API_TOKEN }}
+      PYPI_PROD_API_TOKEN: ${{ secrets.PYPI_PROD_API_TOKEN }}
