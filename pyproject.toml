@@ -9,18 +9,18 @@ packages = [{include = "gen3cirrus"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-backoff = "^2.2.1"
+backoff = "*"
 cdislogging = "*"
-oauth2client = "^4.1.3"
-google-cloud-storage = "^2.14.0"
-google-api-python-client = "^2.111.0"
-google-auth = "^2.26.0"
-google-auth-httplib2 = "^0.2.0"
+oauth2client = "*"
+google-cloud-storage = "*"
+google-api-python-client = "*"
+google-auth = "*"
+google-auth-httplib2 = "*"
 
 [tool.poetry.group.dev.dependencies]
-mock = "^5.1.0"
-pytest = "^7.4.4"
-Sphinx = "^7.2.6"
+mock = "*"
+pytest = "*"
+Sphinx = "*"
 
 [build-system]
 requires = ["poetry-core"]
