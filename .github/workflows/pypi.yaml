@@ -10,7 +10,7 @@ jobs:
     uses: uc-cdis/.github/.github/workflows/python_package_index_publish.yaml@fix/pypi
     with:
         PYTHON_VERSION: '3.9'
-        # this will attempt push to test PyPI first and only push to prod if it works
+        # This will attempt push to test PyPI first and only push to prod if it works
         DO_TEST_PUBLISH_FIRST: true
     secrets:
       PYPI_TEST_API_TOKEN: ${{ secrets.PYPI_TEST_API_TOKEN }}
