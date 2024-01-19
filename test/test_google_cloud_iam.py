@@ -1,4 +1,4 @@
-from cirrus.google_cloud.iam import (
+from gen3cirrus.google_cloud.iam import (
     GooglePolicyMember,
     GooglePolicyRole,
     GooglePolicyBinding,

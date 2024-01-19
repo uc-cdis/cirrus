@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from cirrus import GoogleCloudManager
-from cirrus.google_cloud.utils import get_valid_service_account_id_for_user
+from gen3cirrus import GoogleCloudManager
+from gen3cirrus.google_cloud.utils import get_valid_service_account_id_for_user
 
 
 def get_test_cloud_manager():
@@ -21,7 +21,7 @@ def get_test_cloud_manager():
 @pytest.fixture
 def test_cloud_manager():
     patcher = patch(
-        "cirrus.google_cloud.manager.ServiceAccountCredentials.from_service_account_file"
+        "gen3cirrus.google_cloud.manager.ServiceAccountCredentials.from_service_account_file"
     )
     patcher.start()
     yield get_test_cloud_manager()

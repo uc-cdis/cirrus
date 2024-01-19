@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# cirrus documentation build configuration file, created by
+# gen3cirrus documentation build configuration file, created by
 # sphinx-quickstart on Thu Jan  4 12:06:39 2018.
 #
 # This file is execfile()d with the current directory set to its
@@ -55,7 +55,7 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = "cirrus"
+project = "gen3cirrus"
 copyright = "2018, avantol"
 author = "avantol"
 
@@ -145,7 +145,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, "cirrus.tex", "cirrus Documentation", "avantol", "manual")
+    (master_doc, "gen3cirrus.tex", "gen3cirrus Documentation", "avantol", "manual")
 ]
 
 
@@ -153,7 +153,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "cirrus", "cirrus Documentation", [author], 1)]
+man_pages = [(master_doc, "gen3cirrus", "gen3cirrus Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -164,10 +164,10 @@ man_pages = [(master_doc, "cirrus", "cirrus Documentation", [author], 1)]
 texinfo_documents = [
     (
         master_doc,
-        "cirrus",
-        "cirrus Documentation",
+        "gen3cirrus",
+        "gen3cirrus Documentation",
         author,
-        "cirrus",
+        "gen3cirrus",
         "One line description of project.",
         "Miscellaneous",
     )

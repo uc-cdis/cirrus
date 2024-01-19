@@ -9,18 +9,18 @@ import pytest
 from requests import Response
 import httplib2
 
-from cirrus.google_cloud.utils import (
+from gen3cirrus.google_cloud.utils import (
     get_proxy_group_name_for_user,
     get_prefix_from_proxy_group,
     get_user_name_from_proxy_group,
     get_user_id_from_proxy_group,
     get_valid_service_account_id_for_user,
 )
-import cirrus.google_cloud.manager
-from cirrus.config import config
-from cirrus.errors import CirrusError
-from cirrus.google_cloud.errors import GoogleAuthError
-from cirrus.google_cloud.iam import GooglePolicyMember
+import gen3cirrus.google_cloud.manager
+from gen3cirrus.config import config
+from gen3cirrus.errors import CirrusError
+from gen3cirrus.google_cloud.errors import GoogleAuthError
+from gen3cirrus.google_cloud.iam import GooglePolicyMember
 
 from test.conftest import mock_get_group
 from test.conftest import mock_get_service_accounts_from_group
@@ -587,9 +587,10 @@ def test_create_group(test_cloud_manager):
     assert group["name"] == new_group_name
 
     # check if new name and email are somewhere in the args to insert
-    args, kwargs = (
-        test_cloud_manager._admin_service.groups.return_value.insert.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.groups.return_value.insert.call_args
     assert any(new_group_name in str(arg) for arg in args) or any(
         new_group_name in str(kwarg) for kwarg in kwargs.values()
     )
@@ -639,9 +640,10 @@ def test_create_group_already_exists(test_cloud_manager):
     assert group["name"] == new_group_name
 
     # check if new name and email are somewhere in the args to insert
-    args, kwargs = (
-        test_cloud_manager._admin_service.groups.return_value.insert.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.groups.return_value.insert.call_args
     assert any(new_group_name in str(arg) for arg in args) or any(
         new_group_name in str(kwarg) for kwarg in kwargs.values()
     )
@@ -800,9 +802,10 @@ def test_add_member_to_group(test_cloud_manager):
     assert group["id"] == new_member_id
 
     # check if ngroup id and email are somewhere in the args to insert
-    args, kwargs = (
-        test_cloud_manager._admin_service.members.return_value.insert.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.members.return_value.insert.call_args
     assert any(new_member_email in str(arg) for arg in args) or any(
         new_member_email in str(kwarg) for kwarg in kwargs.values()
     )
@@ -831,9 +834,10 @@ def test_remove_member_from_group(test_cloud_manager):
     assert not response
 
     # check if group id and email are somewhere in the args to delete
-    args, kwargs = (
-        test_cloud_manager._admin_service.members.return_value.delete.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.members.return_value.delete.call_args
     assert any(new_member_email in str(arg) for arg in args) or any(
         new_member_email in str(kwarg) for kwarg in kwargs.values()
     )
@@ -1034,9 +1038,10 @@ def test_delete_group(test_cloud_manager, google_return_value):
 
     # Test #
     assert response == {}
-    args, kwargs = (
-        test_cloud_manager._admin_service.groups.return_value.delete.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.groups.return_value.delete.call_args
     assert any((group_id == arg) for arg in args) or any(
         (group_id == kwarg) for kwarg in kwargs.values()
     )
@@ -1060,9 +1065,10 @@ def test_delete_group_doesnt_exist(test_cloud_manager):
 
     # Test #
     assert response == {}
-    args, kwargs = (
-        test_cloud_manager._admin_service.groups.return_value.delete.call_args
-    )
+    (
+        args,
+        kwargs,
+    ) = test_cloud_manager._admin_service.groups.return_value.delete.call_args
     assert any((group_id == arg) for arg in args) or any(
         (group_id == kwarg) for kwarg in kwargs.values()
     )
@@ -1075,7 +1081,7 @@ class NewDatetime(datetime.datetime):
         return datetime.datetime.__new__(datetime.datetime, *args, **kwargs)
 
 
-@patch("cirrus.google_cloud.manager.datetime", NewDatetime)
+@patch("gen3cirrus.google_cloud.manager.datetime", NewDatetime)
 def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
     # Setup #
     # Make now a specific time by faking out datetime class with custom class
@@ -1167,7 +1173,6 @@ def test_service_account_keys_when_empty(test_cloud_manager):
 
 
 def test_get_service_account_type_compute_engine_default(test_cloud_manager):
-
     service_account = {"email": "test@compute-system.iam.gserviceaccount.com"}
     test_cloud_manager._authed_session.get.return_value = _fake_response(
         200, service_account
@@ -1179,7 +1184,6 @@ def test_get_service_account_type_compute_engine_default(test_cloud_manager):
 
 
 def test_get_service_account_type_google_api(test_cloud_manager):
-
     service_account = {"email": "test@cloudservices.gserviceaccount.com"}
     test_cloud_manager._authed_session.get.return_value = _fake_response(
         200, service_account
@@ -1191,7 +1195,6 @@ def test_get_service_account_type_google_api(test_cloud_manager):
 
 
 def test_get_service_account_type_compute_engine_api(test_cloud_manager):
-
     service_account = {"email": "test@developer.gserviceaccount.com"}
     test_cloud_manager._authed_session.get.return_value = _fake_response(
         200, service_account
@@ -1203,7 +1206,6 @@ def test_get_service_account_type_compute_engine_api(test_cloud_manager):
 
 
 def test_get_service_account_type_user_managed(test_cloud_manager):
-
     service_account = {"email": "test@1234.iam.gserviceaccount.com'"}
     test_cloud_manager._authed_session.get.return_value = _fake_response(
         200, service_account
@@ -1366,14 +1368,14 @@ def test_add_member_backoff_giveup(test_cloud_manager):
     Test that when we get an HttpError from a Google library, we retry
     the API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     mock_config = {"members.side_effect": HttpError(MagicMock(), b"test")}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1392,14 +1394,14 @@ def test_authorized_session_retry(test_cloud_manager):
     in a call to their REST API (using AuthorizedSession),
     we retry the API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     mock_config = {"get.side_effect": HttpError(MagicMock(), b"test")}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1414,17 +1416,17 @@ def test_authorized_session_retry(test_cloud_manager):
 
 def test_handled_exception_no_retry(test_cloud_manager):
     """
-    Test that when a handled exception is raised (e.g. a cirrus error), we
+    Test that when a handled exception is raised (e.g. a gen3cirrus error), we
     do NOT retry the Google API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     mock_config = {"members.side_effect": CirrusError(MagicMock(), b"test")}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1444,7 +1446,7 @@ def test_handled_exception_403_no_retry(test_cloud_manager):
     (e.g. a 403 HttpError unrelated to rate limiting),
     we do NOT retry the Google API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     response = httplib2.Response(
         {"status": "403", "reason": "forbidden", "content-type": "application/json"}
@@ -1453,10 +1455,10 @@ def test_handled_exception_403_no_retry(test_cloud_manager):
     http_error = HttpError(resp=response, content=b"")
     mock_config = {"get.side_effect": http_error}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1475,7 +1477,7 @@ def test_unhandled_exception_403_ratelimit_retry(test_cloud_manager):
     (in particular a 403 HttpError that is related to rate limiting),
     we retry the Google API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     response = httplib2.Response(
         {"status": "403", "reason": "quotaExceeded", "content-type": "application/json"}
@@ -1484,10 +1486,10 @@ def test_unhandled_exception_403_ratelimit_retry(test_cloud_manager):
     http_error = HttpError(resp=response, content=b"")
     mock_config = {"get.side_effect": http_error}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1505,14 +1507,14 @@ def test_unhandled_exception_retry(test_cloud_manager):
     Test that when an unhandled exception is raised,
     we retry the Google API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     mock_config = {"members.side_effect": IndexError()}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1531,14 +1533,14 @@ def test_authorized_session_unhandled_exception_retry(test_cloud_manager):
     in a call to their REST API (using AuthorizedSession),
     we retry the API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     mock_config = {"get.side_effect": Exception(MagicMock(), b"test")}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
-    warn = cirrus.google_cloud.manager.logger.warn
-    error = cirrus.google_cloud.manager.logger.error
-    with patch("cirrus.google_cloud.manager.logger.warn") as logger_warn, patch(
-        "cirrus.google_cloud.manager.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1549,6 +1551,90 @@ def test_authorized_session_unhandled_exception_retry(test_cloud_manager):
             )
         assert logger_warn.call_count >= BACKOFF_SETTINGS["max_tries"] - 1
         assert logger_error.call_count >= 1
+
+
+def test_delete_data_file(test_cloud_manager):
+    """
+    Test that deleting an object actually calls the google API with
+    given bucket and object name
+    """
+    # Setup #
+    test_cloud_manager._authed_session.delete.return_value = _fake_response(200)
+
+    bucket = "some_bucket"
+    object_name = "some_object"
+
+    # Call #
+    test_cloud_manager.delete_data_file(bucket, object_name)
+
+    # Test #
+    assert test_cloud_manager._authed_session.delete.called is True
+
+    # Naive check to see if the object appears in the call to delete
+    args, kwargs = test_cloud_manager._authed_session.delete.call_args
+    assert any(bucket in str(arg) for arg in args) or any(
+        bucket in str(kwarg) for kwarg in kwargs.values()
+    )
+    assert any(object_name in str(arg) for arg in args) or any(
+        object_name in str(kwarg) for kwarg in kwargs.values()
+    )
+
+
+def test_delete_data_file_doesnt_exist(test_cloud_manager):
+    """
+    Test that deleting an object actually calls the google API with
+    given bucket and object_name and if it DOES NOT exist, this is still successful
+    """
+    # Setup #
+    test_cloud_manager._authed_session.delete.return_value = _fake_response(404)
+
+    bucket = "some_bucket"
+    object_name = "some_object"
+
+    # Call #
+    test_cloud_manager.delete_data_file(bucket, object_name)
+
+    # Test #
+    assert test_cloud_manager._authed_session.delete.called is True
+
+    # Naive check to see if the object appears in the call to delete
+    args, kwargs = test_cloud_manager._authed_session.delete.call_args
+    assert any(bucket in str(arg) for arg in args) or any(
+        bucket in str(kwarg) for kwarg in kwargs.values()
+    )
+    assert any(object_name in str(arg) for arg in args) or any(
+        object_name in str(kwarg) for kwarg in kwargs.values()
+    )
+
+
+def test_delete_data_file_error_handling(test_cloud_manager):
+    """
+    Test that errors are thrown by gen3cirrus appropriately if Google returns with
+    uncaught status code.
+    """
+    # Setup #
+
+    bucket = "some_bucket"
+    object_name = "some_object"
+
+    class FakeResponseWithStatusNotStatusCode:
+        def __init__(self, status_numeral):
+            self.status = status_numeral
+            self.reason = "reason goes here"
+
+    # Call #
+    with patch(
+        "gen3cirrus.google_cloud.manager.GoogleCloudManager._authed_request",
+        side_effect=HttpError(
+            resp=FakeResponseWithStatusNotStatusCode(500),
+            content=bytes("Failed to delete for unknown reason", "utf-8"),
+        ),
+    ):
+        with pytest.raises(Exception) as execinfo:
+            test_cloud_manager.delete_data_file(bucket, object_name)
+
+    assert 500 == execinfo.value.status_code
+    assert "Failed to delete for unknown reason" in str(execinfo.value)
 
 
 if __name__ == "__main__":

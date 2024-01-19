@@ -1,15 +1,21 @@
-import re
 import base64
+import binascii
+import collections
+import datetime
 import json
-from urllib.parse import quote
+import hashlib
+import re
+from urllib.parse import quote, urlencode
 
 from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2 import service_account
+from cdislogging import get_logger
 
-from cirrus.config import config
-from cirrus.google_cloud.errors import GoogleNamingError
-
+from gen3cirrus.config import config
+from gen3cirrus.google_cloud.errors import GoogleNamingError
 
 GOOGLE_SERVICE_ACCOUNT_REGEX = "[a-z][a-z\d\-]*[a-z\d]"
+logger = get_logger(__name__, log_level="info")
 
 
 def get_valid_service_account_id_for_user(user_id, username, prefix=""):
@@ -134,7 +140,7 @@ def get_default_service_account_credentials():
     )
 
 
-def get_signed_url(
+def get_signed_url_v2(
     path_to_resource,
     http_verb,
     expires,
@@ -145,6 +151,7 @@ def get_signed_url(
     requester_pays_user_project=None,
 ):
     """
+    Deprecated in favor of "get_signed_url()" (V4 signing).
 
     Requirements/process:
         https://cloud.google.com/storage/docs/access-control/create-signed-urls-program
@@ -228,6 +235,122 @@ def _get_string_to_sign(
     string_to_sign += "/" + str(path_to_resource)
 
     return string_to_sign
+
+
+def get_signed_url(
+    path_to_resource,
+    http_verb,
+    expires,
+    extension_headers=None,
+    canonical_query_params=None,
+    service_account_creds=None,
+    requester_pays_user_project=None,
+):
+    """
+    V4 signing.
+
+    Requirements/process:
+        https://cloud.google.com/storage/docs/access-control/signing-urls-manually
+
+    Args:
+        path_to_resource (str): The path/url to the resources/google bucket. This is
+            everything that follows the host name but precedes any query strings.
+        http_verb (str): The HTTP verb. Includes DELETE, GET, HEAD, POST*, PUT.
+            Signed URLs do not support POST requests, except when working with
+            resumable uploads.
+        expires (int): The amount of time (in seconds) before the signed url will expire.
+        extension_headers (dict, optional): Optional request headers.
+        canonical_query_params(dict, optional): Optional query strings to add to the request
+        service_account_creds (dict, optional): JSON keyfile dict for Google
+            Service Account (can be obtained by calling `get_access_key`)
+        requester_pays_user_project (optional): User's Google project for billing
+
+    Returns:
+        str: Completed signed URL
+    """
+    service_account_creds = (
+        service_account_creds or config.GOOGLE_APPLICATION_CREDENTIALS
+    )
+    creds = service_account.Credentials.from_service_account_info(service_account_creds)
+
+    bucket_name = path_to_resource.split("/")[0]
+    logger.info("Generating URL for bucket name: {}".format(bucket_name))
+    object_name = "/".join(path_to_resource.split("/")[1:])
+    escaped_object_name = quote(object_name.encode(), safe=b"/~")
+    canonical_uri = "/{}".format(escaped_object_name)
+
+    datetime_now = datetime.datetime.utcnow()
+    request_timestamp = datetime_now.strftime("%Y%m%dT%H%M%SZ")
+    datestamp = datetime_now.strftime("%Y%m%d")
+
+    client_email = creds.service_account_email
+    credential_scope = "{}/auto/storage/goog4_request".format(datestamp)
+    credential = "{}/{}".format(client_email, credential_scope)
+
+    if extension_headers is None:
+        extension_headers = dict()
+    host = "{}.storage.googleapis.com".format(bucket_name)
+    extension_headers["host"] = host
+
+    canonical_headers = ""
+    ordered_headers = collections.OrderedDict(sorted(extension_headers.items()))
+
+    for k, v in ordered_headers.items():
+        lower_k = str(k).lower()
+        strip_v = str(v).lower()
+        canonical_headers += "{}:{}\n".format(lower_k, strip_v)
+
+    signed_headers = ";".join([str(k).lower() for k in ordered_headers])
+
+    if canonical_query_params is None:
+        canonical_query_params = dict()
+
+    if requester_pays_user_project is not None:
+        canonical_query_params["userProject"] = requester_pays_user_project
+
+    canonical_query_params["x-goog-algorithm"] = "GOOG4-RSA-SHA256"
+    canonical_query_params["x-goog-credential"] = credential
+    canonical_query_params["x-goog-date"] = request_timestamp
+    canonical_query_params["x-goog-expires"] = expires
+    canonical_query_params["x-goog-signedheaders"] = signed_headers
+
+    # sort params for deterministic hashing
+    ordered_query_parameters = collections.OrderedDict(
+        sorted(canonical_query_params.items())
+    )
+    canonical_query_string = urlencode(ordered_query_parameters)
+
+    canonical_request = "\n".join(
+        [
+            http_verb,
+            canonical_uri,
+            canonical_query_string,
+            canonical_headers,
+            signed_headers,
+            "UNSIGNED-PAYLOAD",
+        ]
+    )
+
+    canonical_request_hash = hashlib.sha256(canonical_request.encode()).hexdigest()
+
+    string_to_sign = "\n".join(
+        [
+            "GOOG4-RSA-SHA256",
+            request_timestamp,
+            credential_scope,
+            canonical_request_hash,
+        ]
+    )
+
+    # signer.sign() signs using RSA-SHA256 with PKCS1v15 padding
+    signature = binascii.hexlify(creds.signer.sign(string_to_sign)).decode()
+
+    scheme_and_host = "{}://{}".format("https", host)
+    signed_url = "{}{}?{}&x-goog-signature={}".format(
+        scheme_and_host, canonical_uri, canonical_query_string, signature
+    )
+
+    return signed_url
 
 
 def get_service_account_cred_from_key_response(key_response):

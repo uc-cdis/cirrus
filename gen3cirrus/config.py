@@ -1,5 +1,5 @@
 """
-cirrus Configuration
+gen3cirrus Configuration
 
 - Contains the necessary information to manage a google project, including
   some info about it and credentials. Usually the credentials supplied

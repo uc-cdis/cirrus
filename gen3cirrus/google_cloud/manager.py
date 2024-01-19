@@ -22,24 +22,26 @@ from google.cloud import storage
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 from googleapiclient.errors import HttpError as GoogleHttpError
 from requests.exceptions import HTTPError as requestsHttpError
+from urllib.parse import quote as urlquote
 
-from cirrus.config import config
-from cirrus.core import CloudManager
-from cirrus.errors import CirrusError, CirrusUserError, CirrusNotFound
-from cirrus.google_cloud.errors import (
+from gen3cirrus.backoff import BACKOFF_SETTINGS
+from gen3cirrus.config import config
+from gen3cirrus.core import CloudManager
+from gen3cirrus.errors import CirrusError, CirrusUserError, CirrusNotFound
+from gen3cirrus.google_cloud.errors import (
     GoogleAuthError,
     GoogleAPIError,
     GoogleNamingError,
 )
-from cirrus.google_cloud.iam import (
+from gen3cirrus.google_cloud.iam import (
     GooglePolicy,
     GooglePolicyBinding,
     GooglePolicyMember,
     GooglePolicyRole,
     get_iam_service_account_email,
 )
-from cirrus.google_cloud.services import GoogleAdminService, GoogleService
-from cirrus.google_cloud.utils import (
+from gen3cirrus.google_cloud.services import GoogleAdminService, GoogleService
+from gen3cirrus.google_cloud.utils import (
     get_valid_service_account_id_for_user,
     get_service_account_cred_from_key_response,
     get_proxy_group_name_for_user,
@@ -53,6 +55,7 @@ logger = get_logger(__name__)
 
 GOOGLE_IAM_API_URL = "https://iam.googleapis.com/v1/"
 GOOGLE_CLOUD_RESOURCE_URL = "https://cloudresourcemanager.googleapis.com/v1/"
+GOOGLE_STORAGE_API_URL = "https://storage.googleapis.com/storage/v1/"
 GOOGLE_DIRECTORY_API_URL = "https://www.googleapis.com/admin/directory/v1/"
 GOOGLE_LOGGING_EMAIL = "cloud-storage-analytics@google.com"
 
@@ -76,111 +79,6 @@ GOOGLE_SERVICE_ACCOUNT_DOMAIN_TYPES = [
     "developer.gserviceaccount.com",
     "iam.gserviceaccount.com",
 ]
-
-
-def _print_func_name(function):
-    return "{}.{}".format(function.__module__, function.__name__)
-
-
-def _print_kwargs(kwargs):
-    return ", ".join("{}={}".format(k, repr(v)) for k, v in list(kwargs.items()))
-
-
-def log_backoff_retry(details):
-    args_str = ", ".join(map(str, details["args"]))
-    kwargs_str = (
-        (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
-    )
-    func_call_log = "{}({}{})".format(
-        _print_func_name(details["target"]), args_str, kwargs_str
-    )
-    logger.warn(
-        "backoff: call {func_call} delay {wait:0.1f} seconds after {tries} tries".format(
-            func_call=func_call_log, **details
-        )
-    )
-
-
-def log_backoff_giveup(details):
-    args_str = ", ".join(map(str, details["args"]))
-    kwargs_str = (
-        (", " + _print_kwargs(details["kwargs"])) if details.get("kwargs") else ""
-    )
-    func_call_log = "{}({}{})".format(
-        _print_func_name(details["target"]), args_str, kwargs_str
-    )
-    logger.error(
-        "backoff: gave up call {func_call} after {tries} tries; exception: {exc}".format(
-            func_call=func_call_log, exc=sys.exc_info(), **details
-        )
-    )
-
-
-def get_reason(http_error):
-    """
-    temporary solution to work around googleapiclient bug that doesn't
-    parse reason from server response
-    """
-    reason = http_error.resp.reason
-    try:
-        data = json.loads(http_error.content.decode("utf-8"))
-        if isinstance(data, dict):
-            reason = data["error"].get("reason")
-            if "errors" in data["error"] and len(data["error"]["errors"]) > 0:
-                reason = data["error"]["errors"][0]["reason"]
-    except (ValueError, KeyError, TypeError):
-        pass
-    if reason is None:
-        reason = ""
-    return reason
-
-
-def exception_do_not_retry(e):
-    """
-    True if we should not retry.
-    - We should not retry for errors that we raise (CirrusErrors)
-    - We should not retry for Google errors that are not temporary
-      and not recoverable by retry
-    """
-    if isinstance(e, GoogleHttpError):
-        if e.resp.status == 403:
-            # Then we should return True unless it's a rate limit error.
-            # Note: There is overlap in the reason codes for these APIs
-            # which is not ideal. e.g. userRateLimitExceeded is in both
-            # resource manager API and directory API.
-            # Fortunately both cases warrant retrying.
-            # Valid rate limit reasons from CLOUD RESOURCE MANAGER API:
-            # cloud.google.com/resource-manager/docs/core_errors#FORBIDDEN
-            # Many limit errors listed; only a few warrant retry.
-            resource_rlreasons = [
-                "concurrentLimitExceeded",
-                "limitExceeded",
-                "rateLimitExceeded",
-                "userRateLimitExceeded",
-            ]
-            # Valid rate limit reasons from DIRECTORY API:
-            # developers.google.com/admin-sdk/directory/v1/limits
-            directory_rlreasons = ["userRateLimitExceeded", "quotaExceeded"]
-            # Valid rate limit reasons from IAM API:
-            # IAM API doesn't seem to return rate-limit 403s.
-
-            reason = get_reason(e) or e.resp.reason
-            logger.info("Got 403 from google with reason {}".format(reason))
-            return (
-                reason not in resource_rlreasons and reason not in directory_rlreasons
-            )
-        return False
-
-    return isinstance(e, CirrusError)
-
-
-# Default settings to control usage of backoff library.
-BACKOFF_SETTINGS = {
-    "on_backoff": log_backoff_retry,
-    "on_giveup": log_backoff_giveup,
-    "max_tries": 5,
-    "giveup": exception_do_not_retry,
-}
 
 
 class GoogleCloudManager(CloudManager):
@@ -617,7 +515,7 @@ class GoogleCloudManager(CloudManager):
             bucket_name (str): Bucket to provide access to
 
         Raises:
-            cirrus.google_cloud.errors.CirrusNotFound: No bucket found with given name
+            gen3cirrus.google_cloud.errors.CirrusNotFound: No bucket found with given name
         """
         access = access or ["read"]
         try:
@@ -644,7 +542,7 @@ class GoogleCloudManager(CloudManager):
             else:
                 raise CirrusUserError(
                     "Unable to grant {access_level} access to {group_email} "
-                    "on bucket {bucket_name}. cirrus "
+                    "on bucket {bucket_name}. gen3cirrus "
                     "does not support the access level {access_level}.".format(
                         access_level=access_level,
                         group_email=group_email,
@@ -660,6 +558,37 @@ class GoogleCloudManager(CloudManager):
         bucket.set_iam_policy(policy)
 
         bucket.update()
+
+    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
+    def delete_data_file(self, bucket_name, object_name):
+        """
+        Delete a file within the provided bucket with the provided file ID.
+
+        Args:
+            bucket_name (str): name of Google Cloud Storage bucket containing file to delete
+            object_name (str): name of file to delete
+
+        Returns:
+            status (int): the status code of the response returned by the Google Storage API
+        """
+        encoded_object_name = urlquote(object_name, safe="")
+        api_url = _get_google_api_url(
+            "b/" + bucket_name + "/o/" + encoded_object_name, GOOGLE_STORAGE_API_URL
+        )
+
+        try:
+            response = self._authed_request("DELETE", api_url)
+        except GoogleHttpError as err:
+            logger.error(err)
+            raise
+
+        print(
+            "DELETE method to {} returned status {}".format(
+                api_url, response.status_code
+            )
+        )
+
+        return response.status_code
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_service_account(self, account):
@@ -1753,7 +1682,7 @@ class GoogleCloudManager(CloudManager):
 
 def _get_google_api_url(relative_path, root_api_url):
     """
-    Return the url for a Gooel API given the root url, relative path.
+    Return the url for a Google API given the root url, relative path.
     Add the config.GOOGLE_API_KEY from the environment to the request.
 
     Args:

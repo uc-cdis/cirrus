@@ -1,5 +1,5 @@
 """
-cirrus - Cloud API Wrapper Layer exposing easier Cloud Management
+gen3cirrus - Cloud API Wrapper Layer exposing easier Cloud Management
 
 Current Capabilities:
 - Manage Google resources, policies, and access (specific Google APIs
