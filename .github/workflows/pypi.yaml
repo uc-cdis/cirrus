@@ -9,7 +9,7 @@ on:
 jobs:
   PyPIPoetryPublish:
     name: PyPI Poetry Publish
-    uses: uc-cdis/.github/.github/workflows/python_package_index_publish.yaml@master
+    uses: uc-cdis/.github/.github/workflows/python_package_index_publish.yaml@fix/pypi
     with:
         PYTHON_VERSION: '3.9'
         DO_TEST_PUBLISH_FIRST: true
