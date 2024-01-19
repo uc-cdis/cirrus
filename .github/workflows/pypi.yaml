@@ -2,9 +2,6 @@ name: PyPI
 on:
   pull_request:
   push:
-    branches:
-      - main
-      - master
     tags:
       - '*'
 jobs:
