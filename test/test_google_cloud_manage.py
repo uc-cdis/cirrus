@@ -9,18 +9,18 @@ import pytest
 from requests import Response
 import httplib2
 
-from cirrus.google_cloud.utils import (
+from gen3cirrus.google_cloud.utils import (
     get_proxy_group_name_for_user,
     get_prefix_from_proxy_group,
     get_user_name_from_proxy_group,
     get_user_id_from_proxy_group,
     get_valid_service_account_id_for_user,
 )
-import cirrus.google_cloud.manager
-from cirrus.config import config
-from cirrus.errors import CirrusError
-from cirrus.google_cloud.errors import GoogleAuthError
-from cirrus.google_cloud.iam import GooglePolicyMember
+import gen3cirrus.google_cloud.manager
+from gen3cirrus.config import config
+from gen3cirrus.errors import CirrusError
+from gen3cirrus.google_cloud.errors import GoogleAuthError
+from gen3cirrus.google_cloud.iam import GooglePolicyMember
 
 from test.conftest import mock_get_group
 from test.conftest import mock_get_service_accounts_from_group
@@ -1081,7 +1081,7 @@ class NewDatetime(datetime.datetime):
         return datetime.datetime.__new__(datetime.datetime, *args, **kwargs)
 
 
-@patch("cirrus.google_cloud.manager.datetime", NewDatetime)
+@patch("gen3cirrus.google_cloud.manager.datetime", NewDatetime)
 def test_handle_expired_service_account_keys(monkeypatch, test_cloud_manager):
     # Setup #
     # Make now a specific time by faking out datetime class with custom class
@@ -1173,7 +1173,6 @@ def test_service_account_keys_when_empty(test_cloud_manager):
 
 
 def test_get_service_account_type_compute_engine_default(test_cloud_manager):
-
     service_account = {"email": "test@compute-system.iam.gserviceaccount.com"}
     test_cloud_manager._authed_session.get.return_value = _fake_response(
         200, service_account
@@ -1185,7 +1184,6 @@ def test_get_service_account_type_compute_engine_default(test_cloud_manager):
 
 
 def test_get_service_account_type_google_api(test_cloud_manager):
-
     service_account = {"email": "test@cloudservices.gserviceaccount.com"}
     test_cloud_manager._authed_session.get.return_value = _fake_response(
         200, service_account
@@ -1197,7 +1195,6 @@ def test_get_service_account_type_google_api(test_cloud_manager):
 
 
 def test_get_service_account_type_compute_engine_api(test_cloud_manager):
-
     service_account = {"email": "test@developer.gserviceaccount.com"}
     test_cloud_manager._authed_session.get.return_value = _fake_response(
         200, service_account
@@ -1209,7 +1206,6 @@ def test_get_service_account_type_compute_engine_api(test_cloud_manager):
 
 
 def test_get_service_account_type_user_managed(test_cloud_manager):
-
     service_account = {"email": "test@1234.iam.gserviceaccount.com'"}
     test_cloud_manager._authed_session.get.return_value = _fake_response(
         200, service_account
@@ -1372,14 +1368,14 @@ def test_add_member_backoff_giveup(test_cloud_manager):
     Test that when we get an HttpError from a Google library, we retry
     the API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     mock_config = {"members.side_effect": HttpError(MagicMock(), b"test")}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
-    warn = cirrus.backoff.logger.warning
-    error = cirrus.backoff.logger.error
-    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
-        "cirrus.backoff.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1398,14 +1394,14 @@ def test_authorized_session_retry(test_cloud_manager):
     in a call to their REST API (using AuthorizedSession),
     we retry the API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     mock_config = {"get.side_effect": HttpError(MagicMock(), b"test")}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
-    warn = cirrus.backoff.logger.warning
-    error = cirrus.backoff.logger.error
-    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
-        "cirrus.backoff.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1420,17 +1416,17 @@ def test_authorized_session_retry(test_cloud_manager):
 
 def test_handled_exception_no_retry(test_cloud_manager):
     """
-    Test that when a handled exception is raised (e.g. a cirrus error), we
+    Test that when a handled exception is raised (e.g. a gen3cirrus error), we
     do NOT retry the Google API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     mock_config = {"members.side_effect": CirrusError(MagicMock(), b"test")}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
-    warn = cirrus.backoff.logger.warning
-    error = cirrus.backoff.logger.error
-    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
-        "cirrus.backoff.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1450,7 +1446,7 @@ def test_handled_exception_403_no_retry(test_cloud_manager):
     (e.g. a 403 HttpError unrelated to rate limiting),
     we do NOT retry the Google API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     response = httplib2.Response(
         {"status": "403", "reason": "forbidden", "content-type": "application/json"}
@@ -1459,10 +1455,10 @@ def test_handled_exception_403_no_retry(test_cloud_manager):
     http_error = HttpError(resp=response, content=b"")
     mock_config = {"get.side_effect": http_error}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
-    warn = cirrus.backoff.logger.warning
-    error = cirrus.backoff.logger.error
-    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
-        "cirrus.backoff.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1481,7 +1477,7 @@ def test_unhandled_exception_403_ratelimit_retry(test_cloud_manager):
     (in particular a 403 HttpError that is related to rate limiting),
     we retry the Google API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     response = httplib2.Response(
         {"status": "403", "reason": "quotaExceeded", "content-type": "application/json"}
@@ -1490,10 +1486,10 @@ def test_unhandled_exception_403_ratelimit_retry(test_cloud_manager):
     http_error = HttpError(resp=response, content=b"")
     mock_config = {"get.side_effect": http_error}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
-    warn = cirrus.backoff.logger.warning
-    error = cirrus.backoff.logger.error
-    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
-        "cirrus.backoff.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1511,14 +1507,14 @@ def test_unhandled_exception_retry(test_cloud_manager):
     Test that when an unhandled exception is raised,
     we retry the Google API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     mock_config = {"members.side_effect": IndexError()}
     test_cloud_manager._admin_service.configure_mock(**mock_config)
-    warn = cirrus.backoff.logger.warning
-    error = cirrus.backoff.logger.error
-    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
-        "cirrus.backoff.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1537,14 +1533,14 @@ def test_authorized_session_unhandled_exception_retry(test_cloud_manager):
     in a call to their REST API (using AuthorizedSession),
     we retry the API call
     """
-    from cirrus.google_cloud.manager import BACKOFF_SETTINGS
+    from gen3cirrus.google_cloud.manager import BACKOFF_SETTINGS
 
     mock_config = {"get.side_effect": Exception(MagicMock(), b"test")}
     test_cloud_manager._authed_session.configure_mock(**mock_config)
-    warn = cirrus.backoff.logger.warning
-    error = cirrus.backoff.logger.error
-    with patch("cirrus.backoff.logger.warning") as logger_warn, patch(
-        "cirrus.backoff.logger.error"
+    warn = gen3cirrus.backoff.logger.warning
+    error = gen3cirrus.backoff.logger.error
+    with patch("gen3cirrus.backoff.logger.warning") as logger_warn, patch(
+        "gen3cirrus.backoff.logger.error"
     ) as logger_error:
         # keep the side effect to actually put logs, so you can see the format with `-s`
         logger_warn.side_effect = warn
@@ -1613,7 +1609,7 @@ def test_delete_data_file_doesnt_exist(test_cloud_manager):
 
 def test_delete_data_file_error_handling(test_cloud_manager):
     """
-    Test that errors are thrown by cirrus appropriately if Google returns with
+    Test that errors are thrown by gen3cirrus appropriately if Google returns with
     uncaught status code.
     """
     # Setup #
@@ -1628,7 +1624,7 @@ def test_delete_data_file_error_handling(test_cloud_manager):
 
     # Call #
     with patch(
-        "cirrus.google_cloud.manager.GoogleCloudManager._authed_request",
+        "gen3cirrus.google_cloud.manager.GoogleCloudManager._authed_request",
         side_effect=HttpError(
             resp=FakeResponseWithStatusNotStatusCode(500),
             content=bytes("Failed to delete for unknown reason", "utf-8"),
@@ -1637,7 +1633,8 @@ def test_delete_data_file_error_handling(test_cloud_manager):
         with pytest.raises(Exception) as execinfo:
             test_cloud_manager.delete_data_file(bucket, object_name)
 
-    assert str(execinfo.value) == '<HttpError 500 "reason goes here">'
+    assert 500 == execinfo.value.status_code
+    assert "Failed to delete for unknown reason" in str(execinfo.value)
 
 
 if __name__ == "__main__":

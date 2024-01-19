@@ -6,7 +6,7 @@ from googleapiclient.errors import HttpError as GoogleHttpError
 import json
 import sys
 
-from cirrus.errors import CirrusError
+from gen3cirrus.errors import CirrusError
 
 logger = get_logger(__name__)
 

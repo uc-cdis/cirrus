@@ -11,8 +11,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 from google.oauth2 import service_account
 from cdislogging import get_logger
 
-from cirrus.config import config
-from cirrus.google_cloud.errors import GoogleNamingError
+from gen3cirrus.config import config
+from gen3cirrus.google_cloud.errors import GoogleNamingError
 
 GOOGLE_SERVICE_ACCOUNT_REGEX = "[a-z][a-z\d\-]*[a-z\d]"
 logger = get_logger(__name__, log_level="info")

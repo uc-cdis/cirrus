@@ -1,3 +1,27 @@
+[tool.poetry]
+name = "gen3cirrus"
+version = "3.0.0"
+description = ""
+authors = ["Center for Translational Data Science at the University of Chicago <support@datacommons.io>"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [{include = "gen3cirrus"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+backoff = "*"
+cdislogging = "*"
+oauth2client = "*"
+google-cloud-storage = "*"
+google-api-python-client = "*"
+google-auth = "*"
+google-auth-httplib2 = "*"
+
+[tool.poetry.group.dev.dependencies]
+mock = "*"
+pytest = "*"
+Sphinx = "*"
+
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta:__legacy__"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
