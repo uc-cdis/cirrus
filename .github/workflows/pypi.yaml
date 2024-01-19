@@ -1,6 +1,5 @@
 name: PyPI
 on:
-  pull_request:
   push:
     tags:
       - '*'
