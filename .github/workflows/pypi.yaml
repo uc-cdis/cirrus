@@ -2,8 +2,9 @@ name: PyPI
 on:
   push:
     branches:
-      - main
-      - master
+      # - main
+      # - master
+      - '*'
     tags:
       - '*'
 jobs:
