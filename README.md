@@ -124,13 +124,47 @@ You [may need to wait](https://groups.google.com/forum/#!topic/google-apps-manag
 
 Once that's all done, you need to give `cirrus` information about the domain
 and an admin user we can delegate to. The admin email you use needs
-permissions to manage groups within your domain.
+privileges to manage groups within your domain.
+
+You can create a "custom role" in Cloud Identity for the admin email.
+
+> Note: This admin email should be a robo-user, e.g. not a real user that logs in.
+
+Create a new user with an email like `group-admin@mydomain.com`. Then create a custom role `Group Admin Manager` with following privileges:
+
+```
+Admin Console Privileges:
+    Organizational Units:
+        ✓ Read
+    Users:
+        ✓ Read
+    ✓ Groups
+    Security:
+        ✓ User Security Management
+
+Admin API privileges:
+    Organizational Units:
+        ✓ Read
+    Users:
+        ✓ Read
+    ✓ Groups:
+        ✓ Create
+        ✓ Read
+        ✓ Update
+        ✓ Delete
+    ✓ User Security Management
+```
+
+Then apply that new custom role to the `group-admin@mydomain.com` user.
+
+Config for cirrus will now include:
+
 ```
 # Domain for group management
 GOOGLE_IDENTITY_DOMAIN="mydomain.com"
 
 # Admin email for admin domain-wide service account to act for
-GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL="admin@mydomain.com"
+GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL="group-admin@mydomain.com"
 ```
 
 Last but not least, you'll need to set up an API key for your GCP project and
@@ -152,7 +186,7 @@ settings = {
     "GOOGLE_APPLICATION_CREDENTIALS": "full/path/to/creds",
     "GOOGLE_ADMIN_EMAIL": "some-project-id-123456789",
     "GOOGLE_IDENTITY_DOMAIN": "mydomain.com",
-    "GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL": "admin@mydomain.com",
+    "GOOGLE_CLOUD_IDENTITY_ADMIN_EMAIL": "group-admin@mydomain.com",
     "GOOGLE_API_KEY": "abcdefghijklmnopqrstuvwxyz"
 }
 
