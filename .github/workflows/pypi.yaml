@@ -7,12 +7,6 @@ on:
       - master
     tags:
       - '*'
-  workflow_dispatch:
-    inputs:
-      confirm:
-        description: 'Please confirm with Y that you intend to manually run this workflow.'     
-        required: true
-        default: 'Y'
 jobs:
   PyPIPoetryPublish:
     name: PyPI Poetry Publish
