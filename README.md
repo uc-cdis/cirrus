@@ -24,6 +24,23 @@ using the library like above.
 
 So... you should at least read how to set up your environment.
 
+For AWS functionality you can use an example like
+
+```
+import boto3
+from gen3cirrus import AwsService
+
+client = boto3.client()
+
+aws = AwsService(client)
+
+object = "test.txt"
+bucket = "testBucket"
+expiration = 3600
+
+url = aws.requestorPaysDownloadPresignedURL( bucket, object, expiration)
+```
+
 ## Setting up Environment for `cirrus`
 `cirrus`'s wispy clouds must dwell in the great blue expanse with other Clouds.
 Thus, you'll need to configure `cirrus` with necessary information about those Clouds
@@ -184,6 +201,14 @@ cirrus_config.update(**settings)
 - Relies less* on Google's libraries (double-edged sword)
 
 *Still uses Google libraries for auth*
+
+## AWS Specific Implentation Details
+
+### Method for communication with AWS's API(s)
+
+For AWS you must bring your own Boto3 client that you have configured.
+
+You can then setup the AWS service and your client will be passed as an argument to the AWS api.
 
 ## Building the Documentation
 - `pipenv install --dev`

@@ -9,6 +9,12 @@ from gen3cirrus.google_cloud.utils import (
     get_valid_service_account_id_for_user,
 )
 
+# for testing aws
+import boto3
+import botocore.session
+from botocore.stub import Stubber
+from gen3cirrus.aws.utils import generatePresignedURL, generatePresignedURLRequestorPays
+
 
 @pytest.mark.parametrize(
     "username",
@@ -121,3 +127,27 @@ def test_get_string_to_sign_no_optional_params():
     )
 
     assert result == ("GET\n" "\n" "\n" "1388534400\n" "/bucket/objectname")
+
+
+def test_aws_get_presigned_url():
+    s3 = boto3.client("s3", aws_access_key_id="", aws_secret_access_key="")
+
+    bucket = "test"
+    obj = "test-obj.txt"
+    expires = 3600
+
+    url = generatePresignedURL(s3, "get", bucket, obj, expires)
+
+    assert url != None
+
+
+def test_aws_get_presigned_url_requester_pays():
+    s3 = boto3.client("s3", aws_access_key_id="", aws_secret_access_key="")
+
+    bucket = "test"
+    obj = "test-obj.txt"
+    expires = 3600
+
+    url = generatePresignedURLRequestorPays(s3, bucket, obj, expires)
+
+    assert url != None
