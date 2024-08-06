@@ -34,12 +34,6 @@ class AwsService(object):
         """
         return generatePresignedURL(self.client, "put", bucket, key, expiration)
 
-    def uploadPresignedURL(self, bucket, key, expiration):
-        """
-        Wrapper function for generating a presingned url for uploading an object
-        """
-        return generatePresignedURL(self.client, "put", bucket, key, expiration)
-
     def multipartUploadPresignedURL(self, bucket, key, expiration, upload_id, part):
         """
         Wrapper function for generating a presingned url for uploading an object
@@ -53,3 +47,6 @@ class AwsService(object):
         Wrapper function for generating a presingned url for downloading an object from a requester pays bucket
         """
         return generatePresignedURLRequesterPays(self.client, bucket, key, expiration)
+
+    def _debug(self):
+        print("This is for debugging purposes -- REMOVE WHEN DONE")
