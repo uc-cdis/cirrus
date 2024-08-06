@@ -208,7 +208,7 @@ cirrus_config.update(**settings)
 
 For AWS you must bring your own Boto3 client that you have configured.
 
-You can then setup the AWS service and your client will be passed as an argument to the AWS api.
+You can then setup the AWS service and your client will be passed as an argument to the AWS API.
 
 ## Building the Documentation
 - `pipenv install --dev`

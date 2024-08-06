@@ -1,5 +1,8 @@
+import boto3
+import botocore.session
 import pytest
 
+from botocore.stub import Stubber
 from unittest.mock import MagicMock, patch
 from urllib.parse import quote
 
@@ -8,12 +11,10 @@ from gen3cirrus.google_cloud.utils import (
     get_valid_service_account_id_for_client,
     get_valid_service_account_id_for_user,
 )
-
-# for testing aws
-import boto3
-import botocore.session
-from botocore.stub import Stubber
-from gen3cirrus.aws.utils import generatePresignedURL, generatePresignedURLRequestorPays
+from gen3cirrus.aws.utils import (
+    generatePresignedURL,
+    generatePresignedURLRequesterPays,
+)
 
 
 @pytest.mark.parametrize(
@@ -130,6 +131,10 @@ def test_get_string_to_sign_no_optional_params():
 
 
 def test_aws_get_presigned_url():
+    """
+    Test that we can get a presigned url from a bucket
+    """
+
     s3 = boto3.client("s3", aws_access_key_id="", aws_secret_access_key="")
 
     bucket = "test"
@@ -142,12 +147,15 @@ def test_aws_get_presigned_url():
 
 
 def test_aws_get_presigned_url_requester_pays():
+    """
+    Test that we can get a presigned url from a requester pays bucket
+    """
     s3 = boto3.client("s3", aws_access_key_id="", aws_secret_access_key="")
 
     bucket = "test"
     obj = "test-obj.txt"
     expires = 3600
 
-    url = generatePresignedURLRequestorPays(s3, bucket, obj, expires)
+    url = generatePresignedURLRequesterPays(s3, bucket, obj, expires)
 
     assert url != None
