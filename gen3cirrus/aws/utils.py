@@ -45,7 +45,7 @@ def generatePresignedURL(client, method, bucket_name, object_name, expires):
     return response
 
 
-def generateMultipartUploadUrl(
+def generateMultipartUploadURL(
     client, bucket_name, object_name, expires, upload_id, part_no
 ):
     """
