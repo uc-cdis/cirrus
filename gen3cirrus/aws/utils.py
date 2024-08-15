@@ -109,7 +109,7 @@ def generatePresignedURLRequesterPays(
     params = {}
     params["Bucket"] = bucket_name
     params["Key"] = object_name
-    params["RequestPayer"]: "requester"
+    params["RequestPayer"] = "requester"
 
     for key in additional_info:
         params[key] = additional_info[key]
