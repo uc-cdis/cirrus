@@ -11,14 +11,14 @@ logger = get_logger(__name__, log_level="info")
 
 def generatePresignedURL(client, method, bucket_name, object_name, expires):
     """
-    Function for generating a presigned url for upload or download
+    Function for generating a presigned URL for upload or download
 
     Args:
         client: s3 boto client
         method: ["get", "put"] "get" for download and "put" for upload
         bucket_name: s3 bucket name
         object_name: s3 bucket object key
-        expires: time for presigned url to exist (in seconds)
+        expires: time for presigned URL to exist (in seconds)
     """
 
     s3_client = client
@@ -29,7 +29,7 @@ def generatePresignedURL(client, method, bucket_name, object_name, expires):
         m = "put_object"
     else:
         logger.error(
-            "method for generating presigned url must be 'get' for download or 'put' for upload"
+            "method for generating presigned URL must be 'get' for download or 'put' for upload"
         )
         return None
 
@@ -49,14 +49,14 @@ def generateMultipartUploadURL(
     client, bucket_name, object_name, expires, upload_id, part_no
 ):
     """
-    Function for generating a presigned url only for one part of multipart upload
+    Function for generating a presigned URL only for one part of multipart upload
 
     Args:
         client: s3 boto client
         method: ["get", "put"] "get" for download and "put" for upload
         bucket_name: s3 bucket name
         object_name: s3 bucket object key
-        expires: time for presigned url to exist (in seconds)
+        expires: time for presigned URL to exist (in seconds)
         upload_id: ID for upload to s3
         part_no: part number of multipart upload
     """
@@ -82,14 +82,14 @@ def generateMultipartUploadURL(
 
 def generatePresignedURLRequesterPays(client, bucket_name, object_name, expires):
     """
-    Function for generating a presigned url only for requester pays buckets
+    Function for generating a presigned URL only for requester pays buckets
 
     Args:
         client: s3 boto client
         method: ["get", "put"] "get" for download and "put" for upload
         bucket_name: s3 bucket name
         object_name: s3 bucket object key
-        expires: time for presigned url to exist (in seconds)
+        expires: time for presigned URL to exist (in seconds)
     """
     s3_client = client
     try:
