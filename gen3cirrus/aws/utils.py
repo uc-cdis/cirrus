@@ -9,7 +9,9 @@ from cdislogging import get_logger
 logger = get_logger(__name__, log_level="info")
 
 
-def generatePresignedURL(client, method, bucket_name, object_name, expires):
+def generatePresignedURL(
+    client, method, bucket_name, object_name, expires, additional_info={}
+):
     """
     Function for generating a presigned URL for upload or download
 
@@ -19,7 +21,15 @@ def generatePresignedURL(client, method, bucket_name, object_name, expires):
         bucket_name: s3 bucket name
         object_name: s3 bucket object key
         expires: time for presigned URL to exist (in seconds)
+        additional_info: dict of additional parameters to pass to s3 for signing
     """
+
+    params = {}
+    params["Bucket"] = bucket_name
+    params["Key"] = object_name
+
+    for key in additional_info:
+        params[key] = additional_info[key]
 
     s3_client = client
 
@@ -35,7 +45,9 @@ def generatePresignedURL(client, method, bucket_name, object_name, expires):
 
     try:
         response = s3_client.generate_presigned_url(
-            m, Params={"Bucket": bucket_name, "Key": object_name}, ExpiresIn=expires
+            m,
+            Params=params,
+            ExpiresIn=expires,
         )
 
     except ClientError as e:
@@ -80,7 +92,9 @@ def generateMultipartUploadURL(
     return response
 
 
-def generatePresignedURLRequesterPays(client, bucket_name, object_name, expires):
+def generatePresignedURLRequesterPays(
+    client, bucket_name, object_name, expires, additional_info={}
+):
     """
     Function for generating a presigned URL only for requester pays buckets
 
@@ -90,16 +104,22 @@ def generatePresignedURLRequesterPays(client, bucket_name, object_name, expires)
         bucket_name: s3 bucket name
         object_name: s3 bucket object key
         expires: time for presigned URL to exist (in seconds)
+        additional_info: dict of additional parameters to pass to s3 for signing
     """
+    params = {}
+    params["Bucket"] = bucket_name
+    params["Key"] = object_name
+    params["RequestPayer"]: "requester"
+
+    for key in additional_info:
+        params[key] = additional_info[key]
+
     s3_client = client
+
     try:
         response = s3_client.generate_presigned_url(
             "get_object",
-            Params={
-                "Bucket": bucket_name,
-                "Key": object_name,
-                "RequestPayer": "requester",
-            },
+            Params=params,
             ExpiresIn=expires,
         )
 
