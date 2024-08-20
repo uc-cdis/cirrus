@@ -591,34 +591,6 @@ class GoogleCloudManager(CloudManager):
         return response.status_code
 
     @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
-    @_require_authed_session
-    def get_groups_for_user(self, user_email):
-        """
-        Retrieves all groups that a user is a member of using the Google Admin SDK.
-
-        Args:
-            user_email (str): The email of the user whose groups should be retrieved.
-
-        Returns:
-            list: List of group email addresses that the user is a member of.
-        """
-        try:
-            # Use the existing Admin SDK service to list groups for the user
-            response = self._admin_service.groups().list(userKey=user_email).execute()
-            groups = response.get('groups', [])
-
-            # Extract and return the group email addresses
-            group_emails = [group['email'] for group in groups]
-
-            return group_emails
-
-        except GoogleHttpError as exc:
-            logger.error(
-                f"ERROR: Failed to retrieve groups for user {user_email}. Exc: {exc}"
-            )
-            raise
-
-    @backoff.on_exception(backoff.expo, Exception, **BACKOFF_SETTINGS)
     def get_service_account(self, account):
         """
         GET a service account within the project with the provided account ID.
