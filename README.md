@@ -38,7 +38,7 @@ object = "test.txt"
 bucket = "testBucket"
 expiration = 3600
 
-url = aws.requester_pays_download_presigned_url( bucket, object, expiration)
+url = aws.requester_pays_download_presigned_url(bucket, object, expiration)
 ```
 
 ## Setting up Environment for `cirrus`
