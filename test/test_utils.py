@@ -1,9 +1,6 @@
 import boto3
-import botocore.session
 import pytest
 
-from botocore.stub import Stubber
-from unittest.mock import MagicMock, patch
 from urllib.parse import quote
 
 from gen3cirrus.google_cloud.utils import (
