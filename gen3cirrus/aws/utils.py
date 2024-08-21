@@ -6,7 +6,7 @@ logger = get_logger(__name__, log_level="info")
 
 
 def generate_presigned_url(
-    client, method, bucket_name, object_name, expires, additional_info={}
+    client, method, bucket_name, object_name, expires, additional_info=None
 ):
     """
     Function for generating a presigned URL for upload or download
@@ -24,6 +24,7 @@ def generate_presigned_url(
     params["Bucket"] = bucket_name
     params["Key"] = object_name
 
+    additional_info = additional_info or {}
     for key in additional_info:
         params[key] = additional_info[key]
 
@@ -89,7 +90,7 @@ def generate_multipart_upload_url(
 
 
 def generate_presigned_url_requester_pays(
-    client, bucket_name, object_name, expires, additional_info={}
+    client, bucket_name, object_name, expires, additional_info=None
 ):
     """
     Function for generating a presigned URL only for requester pays buckets
@@ -107,6 +108,7 @@ def generate_presigned_url_requester_pays(
     params["Key"] = object_name
     params["RequestPayer"] = "requester"
 
+    additional_info = additional_info or {}
     for key in additional_info:
         params[key] = additional_info[key]
 
