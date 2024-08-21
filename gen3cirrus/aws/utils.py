@@ -12,12 +12,12 @@ def generate_presigned_url(
     Function for generating a presigned URL for upload or download
 
     Args:
-        client: s3 boto client
-        method: ["get", "put"] "get" for download and "put" for upload
-        bucket_name: s3 bucket name
-        object_name: s3 bucket object key
-        expires: time for presigned URL to exist (in seconds)
-        additional_info: dict of additional parameters to pass to s3 for signing
+        client (S3.Client): boto3 S3 client
+        method (string): ["get", "put"] "get" for download and "put" for upload
+        bucket_name (string): s3 bucket name
+        object_name (string): s3 bucket object key
+        expires (int): time for presigned URL to exist (in seconds)
+        additional_info (dict): dict of additional parameters to pass to s3 for signing
     """
 
     params = {}
@@ -61,13 +61,13 @@ def generate_multipart_upload_url(
     Function for generating a presigned URL only for one part of multipart upload
 
     Args:
-        client: s3 boto client
-        method: ["get", "put"] "get" for download and "put" for upload
-        bucket_name: s3 bucket name
-        object_name: s3 bucket object key
-        expires: time for presigned URL to exist (in seconds)
-        upload_id: ID for upload to s3
-        part_no: part number of multipart upload
+        client (S3.Client): boto3 S3 client
+        method (string): ["get", "put"] "get" for download and "put" for upload
+        bucket_name (string): s3 bucket name
+        object_name (string): s3 bucket object key
+        expires (int): time for presigned URL to exist (in seconds)
+        upload_id (string): ID for upload to s3
+        part_no (int): part number of multipart upload
     """
     s3_client = client
     try:
@@ -96,12 +96,12 @@ def generate_presigned_url_requester_pays(
     Function for generating a presigned URL only for requester pays buckets
 
     Args:
-        client: s3 boto client
-        method: ["get", "put"] "get" for download and "put" for upload
-        bucket_name: s3 bucket name
-        object_name: s3 bucket object key
-        expires: time for presigned URL to exist (in seconds)
-        additional_info: dict of additional parameters to pass to s3 for signing
+        client (S3.Client): boto3 S3 client
+        method (string): ["get", "put"] "get" for download and "put" for upload
+        bucket_name (string): s3 bucket name
+        object_name (string): s3 bucket object key
+        expires (int): time for presigned URL to exist (in seconds)
+        additional_info (dict): dict of additional parameters to pass to s3 for signing
     """
     params = {}
     params["Bucket"] = bucket_name
