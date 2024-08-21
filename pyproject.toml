@@ -2,7 +2,7 @@
 name = "gen3cirrus"
 version = "3.0.1"
 description = ""
-authors = ["Center for Translational Data Science at the University of Chicago <support@datacommons.io>"]
+authors = ["Center for Translational Data Science at the University of Chicago <support@gen3.org>"]
 license = "Apache-2.0"
 readme = "README.md"
 packages = [{include = "gen3cirrus"}]
