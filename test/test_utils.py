@@ -12,8 +12,8 @@ from gen3cirrus.google_cloud.utils import (
     get_valid_service_account_id_for_user,
 )
 from gen3cirrus.aws.utils import (
-    generatePresignedURL,
-    generatePresignedURLRequesterPays,
+    generate_presigned_url,
+    generate_presigned_url_requester_pays,
 )
 
 
@@ -141,7 +141,7 @@ def test_aws_get_presigned_url():
     obj = "test-obj.txt"
     expires = 3600
 
-    url = generatePresignedURL(s3, "get", bucket, obj, expires)
+    url = generate_presigned_url(s3, "get", bucket, obj, expires)
 
     assert url != None
 
@@ -156,6 +156,6 @@ def test_aws_get_presigned_url_requester_pays():
     obj = "test-obj.txt"
     expires = 3600
 
-    url = generatePresignedURLRequesterPays(s3, bucket, obj, expires)
+    url = generate_presigned_url_requester_pays(s3, bucket, obj, expires)
 
     assert url != None

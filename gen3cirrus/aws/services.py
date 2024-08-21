@@ -8,9 +8,9 @@ import boto3
 from botocore.exceptions import ClientError
 from gen3cirrus.config import config
 from gen3cirrus.aws.utils import (
-    generatePresignedURL,
-    generatePresignedURLRequesterPays,
-    generateMultipartUploadURL,
+    generate_presigned_url,
+    generate_presigned_url_requester_pays,
+    generate_multipart_upload_url,
 )
 
 from cdislogging import get_logger
@@ -23,39 +23,39 @@ class AwsService(object):
     Generic Amazon servicing using Boto3
     """
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, boto3_client):
+        self.client = boto3_client
 
-    def download_presigned_url(self, bucket, key, expiration, additonal_info={}):
+    def download_presigned_url(self, bucket, key, expiration, additional_info={}):
         """
         Wrapper function for generating a presigned URL for downloading an object
         """
-        return generatePresignedURL(
-            self.client, "get", bucket, key, expiration, additonal_info
+        return generate_presigned_url(
+            self.client, "get", bucket, key, expiration, additional_info
         )
 
-    def upload_presigned_url(self, bucket, key, expiration, additonal_info={}):
+    def upload_presigned_url(self, bucket, key, expiration, additional_info={}):
         """
         Wrapper function for generating a presigned URL for uploading an object
         """
-        return generatePresignedURL(
-            self.client, "put", bucket, key, expiration, additonal_info
+        return generate_presigned_url(
+            self.client, "put", bucket, key, expiration, additional_info
         )
 
     def multipart_upload_presigned_url(self, bucket, key, expiration, upload_id, part):
         """
         Wrapper function for generating a presigned URL for uploading an object
         """
-        return generateMultipartUploadURL(
+        return generate_multipart_upload_url(
             self.client, bucket, key, expiration, upload_id, part
         )
 
     def requester_pays_download_presigned_url(
-        self, bucket, key, expiration, additonal_info={}
+        self, bucket, key, expiration, additional_info={}
     ):
         """
         Wrapper function for generating a presigned URL for downloading an object from a requester pays bucket
         """
-        return generatePresignedURLRequesterPays(
-            self.client, bucket, key, expiration, additonal_info
+        return generate_presigned_url_requester_pays(
+            self.client, bucket, key, expiration, additional_info
         )

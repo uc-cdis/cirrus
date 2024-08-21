@@ -9,7 +9,7 @@ from cdislogging import get_logger
 logger = get_logger(__name__, log_level="info")
 
 
-def generatePresignedURL(
+def generate_presigned_url(
     client, method, bucket_name, object_name, expires, additional_info={}
 ):
     """
@@ -57,7 +57,7 @@ def generatePresignedURL(
     return response
 
 
-def generateMultipartUploadURL(
+def generate_multipart_upload_url(
     client, bucket_name, object_name, expires, upload_id, part_no
 ):
     """
@@ -92,7 +92,7 @@ def generateMultipartUploadURL(
     return response
 
 
-def generatePresignedURLRequesterPays(
+def generate_presigned_url_requester_pays(
     client, bucket_name, object_name, expires, additional_info={}
 ):
     """

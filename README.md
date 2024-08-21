@@ -38,7 +38,7 @@ object = "test.txt"
 bucket = "testBucket"
 expiration = 3600
 
-url = aws.requestorPaysDownloadPresignedURL( bucket, object, expiration)
+url = aws.requester_pays_download_presigned_url( bucket, object, expiration)
 ```
 
 ## Setting up Environment for `cirrus`
@@ -49,7 +49,7 @@ before being able to bask in its beauty.
 You *should* only have to do this once so don't freak out.
 
 By default, all the configurations needed by `cirrus` are assumed to be environmental
-variables. You can also provide the configuration programatically in Python (instructions are later in the README).
+variables. You can also provide the configuration programmatically in Python (instructions are later in the README).
 
 **Note:** This guide should cover necessary configuration,
 but in the effort of not having to maintain everything in two places,
@@ -123,7 +123,7 @@ a few guides on settings that up, as it requires you to enable access to the
 Cloud Identity/GSuite API.
 
 Follow directions [here](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#delegatingauthority)
-to deletgate domain-wide authority for your service account that you're using
+to delegate domain-wide authority for your service account that you're using
 for `GOOGLE_APPLICATION_CREDENTIALS`.
 
 For the API scopes, authorize these:
@@ -158,7 +158,7 @@ GOOGLE_API_KEY="abcdefghijklmnopqrstuvwxyz"
 ```
 
 ### Setting Configuration Programatically
-`cirrus`, by default, reads in necessary configurations from environmental variables. You can, however, provide all these config vars programatically by calling the `update` function on the config object in `cirrus` and passing in a dictionary.
+`cirrus`, by default, reads in necessary configurations from environmental variables. You can, however, provide all these config vars programmatically by calling the `update` function on the config object in `cirrus` and passing in a dictionary.
 
 For example:
 ```
