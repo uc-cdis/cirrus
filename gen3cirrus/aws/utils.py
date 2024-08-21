@@ -34,9 +34,9 @@ def generate_presigned_url(
     s3_client = client
 
     if method == "get":
-        m = "get_object"
+        client_method = "get_object"
     elif method == "put":
-        m = "put_object"
+        client_method = "put_object"
     else:
         logger.error(
             "method for generating presigned URL must be 'get' for download or 'put' for upload"
@@ -45,7 +45,7 @@ def generate_presigned_url(
 
     try:
         response = s3_client.generate_presigned_url(
-            m,
+            client_method,
             Params=params,
             ExpiresIn=expires,
         )
