@@ -2,11 +2,7 @@
 Amazon service for interacting with APIs
 """
 
-import backoff
-import boto3
 
-from botocore.exceptions import ClientError
-from gen3cirrus.config import config
 from gen3cirrus.aws.utils import (
     generate_presigned_url,
     generate_presigned_url_requester_pays,
