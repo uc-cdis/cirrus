@@ -1360,6 +1360,35 @@ class GoogleCloudManager(CloudManager):
 
             return member_to_add
 
+
+    def get_groups_for_user(self, member_email):
+        """
+        Retrieves all groups that a user is a member of.
+
+        Args:
+            member_email (str): email for member to get groups for
+
+        Returns:
+            list: List of group email addresses that the user is a member of.
+        """
+        all_group_emails = []
+        response = self._admin_service.groups().list(userKey=member_email).execute()
+        groups = response.get('groups', [])
+
+        group_emails = [group['email'] for group in groups]
+        all_group_emails.extend(group_emails)
+
+        while response.get("nextPageToken"):
+            response = self._admin_service.groups().list(userKey=member_email, pageToken=response["nextPageToken"]).execute()
+            groups = response.get('groups', [])
+
+            group_emails = [group['email'] for group in groups]
+            all_group_emails.extend(group_emails)
+
+
+        return all_group_emails
+
+
     def _is_member_in_group(self, member_email, group_id):
         member_emails = [
             member.get("email", "") for member in self.get_group_members(group_id)
