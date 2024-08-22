@@ -140,7 +140,7 @@ def test_aws_get_presigned_url():
 
     url = generate_presigned_url(s3, "get", bucket, obj, expires)
 
-    assert url != None
+    assert url is not None
 
 
 def test_aws_get_presigned_url_requester_pays():
@@ -155,4 +155,21 @@ def test_aws_get_presigned_url_requester_pays():
 
     url = generate_presigned_url_requester_pays(s3, bucket, obj, expires)
 
-    assert url != None
+    assert url is not None
+
+
+def test_aws_get_presigned_url_with_invalid_method():
+    """
+    Test that we can not get a presigned url if the method is not valid
+    """
+
+    s3 = boto3.client("s3", aws_access_key_id="", aws_secret_access_key="")
+
+    bucket = "test"
+    obj = "test-obj.txt"
+    expires = 3600
+
+    url = generate_presigned_url(
+        s3, "something else than put or get", bucket, obj, expires
+    )
+    assert url is None
