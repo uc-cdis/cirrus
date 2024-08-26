@@ -1636,6 +1636,102 @@ def test_delete_data_file_error_handling(test_cloud_manager):
     assert 500 == execinfo.value.status_code
     assert "Failed to delete for unknown reason" in str(execinfo.value)
 
+import copy
+
+
+def test_get_groups_for_user(test_cloud_manager):
+    """
+    Test get groups for a user calls google API with provided info and that response is returned.
+    """
+    # Setup #
+    member_email = "user@example.com"
+    group_1_email = "group1@example.com"
+    group_2_email = "group2@example.com"
+    groups = [
+        {"email": group_1_email},
+        {"email": group_2_email},
+    ]
+    full_response = {
+        "groups": groups,
+        "nextPageToken": None,
+    }
+    mock_config = {
+        "groups.return_value.list.return_value.execute.return_value": full_response
+    }
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
+
+    # Call #
+    group_emails = test_cloud_manager.get_groups_for_user(member_email)
+
+    # Test #
+    assert len(group_emails) == 2
+    assert group_1_email in group_emails
+    assert group_2_email in group_emails
+
+    # Check if member email is somewhere in the args
+    args, kwargs = test_cloud_manager._admin_service.groups.return_value.list.call_args
+    assert any(member_email in str(arg) for arg in args) or any(
+        member_email in str(kwarg) for kwarg in kwargs.values()
+    )
+
+
+def test_get_groups_for_user_pagination(test_cloud_manager):
+    """
+    Test that getting all groups for a user actually gets them all, even when pagination is required.
+    """
+    # Setup #
+    member_email = "user@example.com"
+    group_1_email = "group1@example.com"
+    group_2_email = "group2@example.com"
+    group_3_email = "group3@example.com"
+    group_4_email = "group4@example.com"
+    groups_page_1 = [
+        {"email": group_1_email},
+        {"email": group_2_email},
+    ]
+    next_page_token = "abcdefg"
+    full_response = {
+        "groups": groups_page_1,
+        "nextPageToken": next_page_token,
+    }
+    groups_page_2 = [
+        {"email": group_3_email},
+        {"email": group_4_email},
+    ]
+    response_2 = {
+        "groups": groups_page_2,
+        "nextPageToken": None,
+    }
+
+    two_pages = [full_response, response_2]
+
+    mock_config = {
+        "groups.return_value.list.return_value.execute.side_effect": two_pages
+    }
+
+    test_cloud_manager._admin_service.configure_mock(**mock_config)
+
+    # Call #
+    group_emails = test_cloud_manager.get_groups_for_user(member_email)
+
+    # Test #
+    assert len(group_emails) == 4
+    assert group_1_email in group_emails
+    assert group_2_email in group_emails
+    assert group_3_email in group_emails
+    assert group_4_email in group_emails
+
+    # Check if nextPageToken was passed correctly
+    args, kwargs = test_cloud_manager._admin_service.groups.return_value.list.call_args
+    assert kwargs["pageToken"] == next_page_token
+
+    # Check if member email is somewhere in the args
+    args, kwargs = test_cloud_manager._admin_service.groups.return_value.list.call_args
+    assert any(member_email in str(arg) for arg in args) or any(
+        member_email in str(kwarg) for kwarg in kwargs.values()
+    )
+
+
 
 if __name__ == "__main__":
     pytest.main(["-x", "-v", "."])
