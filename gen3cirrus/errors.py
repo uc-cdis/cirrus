@@ -1,5 +1,7 @@
 class CirrusError(Exception):
-    def __init__(self, message="There was an error within the gen3cirrus library.", *args):
+    def __init__(
+        self, message="There was an error within the gen3cirrus library.", *args
+    ):
         super(CirrusError, self).__init__(message)
 
 

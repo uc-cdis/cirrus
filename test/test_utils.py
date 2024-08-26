@@ -1,12 +1,17 @@
+import boto3
 import pytest
 
-from unittest.mock import MagicMock, patch
 from urllib.parse import quote
+from botocore.exceptions import ParamValidationError
 
 from gen3cirrus.google_cloud.utils import (
     _get_string_to_sign,
     get_valid_service_account_id_for_client,
     get_valid_service_account_id_for_user,
+)
+from gen3cirrus.aws.utils import (
+    generate_presigned_url,
+    generate_presigned_url_requester_pays,
 )
 
 
@@ -121,3 +126,85 @@ def test_get_string_to_sign_no_optional_params():
     )
 
     assert result == ("GET\n" "\n" "\n" "1388534400\n" "/bucket/objectname")
+
+
+def test_aws_get_presigned_url():
+    """
+    Test that we can get a presigned url from a bucket
+    """
+
+    s3 = boto3.client("s3", aws_access_key_id="", aws_secret_access_key="")
+
+    bucket = "test"
+    obj = "test-obj.txt"
+    expires = 3600
+
+    url = generate_presigned_url(s3, "get", bucket, obj, expires)
+
+    assert url is not None
+
+
+def test_aws_get_presigned_url_with_valid_additional_info():
+    """
+    Test that we can get a presigned url from a bucket with some valid additional info
+    """
+
+    s3 = boto3.client("s3", aws_access_key_id="", aws_secret_access_key="")
+
+    bucket = "test"
+    obj = "test-obj.txt"
+    expires = 3600
+    additional_info = {"user_id": "test_user_id", "username": "test_username"}
+
+    url = generate_presigned_url(s3, "get", bucket, obj, expires, additional_info)
+
+    assert url is not None
+
+
+def test_aws_get_presigned_url_with_invalid_additional_info():
+    """
+    Test that we cannot get a presigned url from a bucket with invalid additional info
+    """
+
+    s3 = boto3.client("s3", aws_access_key_id="", aws_secret_access_key="")
+
+    bucket = "test"
+    obj = "test-obj.txt"
+    expires = 3600
+    additional_info = {"some_random_key": "some_random_value"}
+
+    with pytest.raises(ParamValidationError):
+        url = generate_presigned_url(s3, "get", bucket, obj, expires, additional_info)
+        assert url is None
+
+
+def test_aws_get_presigned_url_requester_pays():
+    """
+    Test that we can get a presigned url from a requester pays bucket
+    """
+    s3 = boto3.client("s3", aws_access_key_id="", aws_secret_access_key="")
+
+    bucket = "test"
+    obj = "test-obj.txt"
+    expires = 3600
+
+    url = generate_presigned_url_requester_pays(s3, bucket, obj, expires)
+
+    assert url is not None
+
+
+def test_aws_get_presigned_url_with_invalid_method():
+    """
+    Test that we cannot get a presigned url if the method is not valid
+    """
+
+    s3 = boto3.client("s3", aws_access_key_id="", aws_secret_access_key="")
+
+    bucket = "test"
+    obj = "test-obj.txt"
+    expires = 3600
+
+    url = generate_presigned_url(
+        s3, "something else than put or get", bucket, obj, expires
+    )
+    assert url is None

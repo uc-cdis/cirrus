@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "gen3cirrus"
-version = "3.0.1"
+version = "3.1.0"
 description = ""
-authors = ["Center for Translational Data Science at the University of Chicago <support@datacommons.io>"]
+authors = ["Center for Translational Data Science at the University of Chicago <support@gen3.org>"]
 license = "Apache-2.0"
 readme = "README.md"
 packages = [{include = "gen3cirrus"}]
@@ -16,6 +16,7 @@ google-cloud-storage = "*"
 google-api-python-client = "*"
 google-auth = "*"
 google-auth-httplib2 = "*"
+boto3 = "*"
 
 [tool.poetry.group.dev.dependencies]
 mock = "*"
