@@ -24,6 +24,23 @@ using the library like above.
 
 So... you should at least read how to set up your environment.
 
+For AWS functionality you can use an example like
+
+```
+import boto3
+from gen3cirrus import AwsService
+
+client = boto3.client()
+
+aws = AwsService(client)
+
+object = "test.txt"
+bucket = "testBucket"
+expiration = 3600
+
+url = aws.requester_pays_download_presigned_url(bucket, object, expiration)
+```
+
 ## Setting up Environment for `cirrus`
 `cirrus`'s wispy clouds must dwell in the great blue expanse with other Clouds.
 Thus, you'll need to configure `cirrus` with necessary information about those Clouds
@@ -32,7 +49,7 @@ before being able to bask in its beauty.
 You *should* only have to do this once so don't freak out.
 
 By default, all the configurations needed by `cirrus` are assumed to be environmental
-variables. You can also provide the configuration programatically in Python (instructions are later in the README).
+variables. You can also provide the configuration programmatically in Python (instructions are later in the README).
 
 **Note:** This guide should cover necessary configuration,
 but in the effort of not having to maintain everything in two places,
@@ -106,7 +123,7 @@ a few guides on settings that up, as it requires you to enable access to the
 Cloud Identity/GSuite API.
 
 Follow directions [here](https://developers.google.com/identity/protocols/OAuth2ServiceAccount#delegatingauthority)
-to deletgate domain-wide authority for your service account that you're using
+to delegate domain-wide authority for your service account that you're using
 for `GOOGLE_APPLICATION_CREDENTIALS`.
 
 For the API scopes, authorize these:
@@ -141,7 +158,7 @@ GOOGLE_API_KEY="abcdefghijklmnopqrstuvwxyz"
 ```
 
 ### Setting Configuration Programatically
-`cirrus`, by default, reads in necessary configurations from environmental variables. You can, however, provide all these config vars programatically by calling the `update` function on the config object in `cirrus` and passing in a dictionary.
+`cirrus`, by default, reads in necessary configurations from environmental variables. You can, however, provide all these config vars programmatically by calling the `update` function on the config object in `cirrus` and passing in a dictionary.
 
 For example:
 ```
@@ -184,6 +201,14 @@ cirrus_config.update(**settings)
 - Relies less* on Google's libraries (double-edged sword)
 
 *Still uses Google libraries for auth*
+
+## AWS Specific Implentation Details
+
+### Method for communication with AWS's API(s)
+
+For AWS you must bring your own Boto3 client that you have configured.
+
+You can then setup the AWS service and your client will be passed as an argument to the AWS API.
 
 ## Building the Documentation
 - `pipenv install --dev`
