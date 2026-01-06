@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gen3cirrus"
-version = "4.2.0"
+version = "4.0.0"
 description = ""
 authors = ["Center for Translational Data Science at the University of Chicago <support@gen3.org>"]
 license = "Apache-2.0"
