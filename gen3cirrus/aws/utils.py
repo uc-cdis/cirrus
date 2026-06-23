@@ -1,3 +1,6 @@
+import requests
+import json
+
 from urllib.parse import urlencode
 from botocore.exceptions import ClientError
 
@@ -189,3 +192,33 @@ def generate_presigned_url_requester_pays(
         return None
 
     return response
+
+
+def upload_data_to_presigned_url(
+    self, bucket, key, expiration, data_as_json, additional_info=None
+):
+    """
+    Wrapper function for uploading data to a presigned URL generated for upload.
+    Data recevied as json for upload but must be in bytes for upload.
+    If string value or string representing a local file name is required for data in future,...
+    ...can add params/hanlding at that time.
+    """
+
+    # Convert data from JSON -> json string -> bytes
+    data_as_string = json.dumps(data_as_json)
+    data_as_bytes = data_as_string.encode("utf-8")
+
+    # Get response with presigned url
+    response = generate_presigned_url(
+        self.client, "put", bucket, key, expiration, additional_info
+    )
+
+    # Add data to url
+    # current timestamp serves as object name (key) for upload
+    current_timestamp = str(datetime.datetime.now())
+    http_response = requests.post(
+        response["url"],
+        data=response["fields"],
+        files={"file": (current_timestamp, data_as_bytes)},
+    )
+    return http_response
