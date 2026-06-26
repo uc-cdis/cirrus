@@ -12,7 +12,11 @@ from gen3cirrus.google_cloud.utils import (
 from gen3cirrus.aws.utils import (
     generate_presigned_url,
     generate_presigned_url_requester_pays,
+    upload_data_to_presigned_url,
 )
+from unittest.mock import patch, MagicMock, Mock
+import requests
+from gen3cirrus.aws.services import AwsService
 
 
 @pytest.mark.parametrize(
@@ -208,3 +212,51 @@ def test_aws_get_presigned_url_with_invalid_method():
         s3, "something else than put or get", bucket, obj, expires
     )
     assert url is None
+
+
+def test_upload_data_to_presigned_url():
+    """
+    Test services to 1. get url for upload and 2. upload json data
+    """
+
+    # Set up mocked response
+    mock_presigned_url = "mock/some/path/"
+    mocked_json = {
+        "url": mock_presigned_url,
+        "fields": {"key_a": "value_a", "key_b": "value_b"},
+    }
+    mocked_response = MagicMock(requests.Response)
+    mocked_response.status_code = 200
+    mocked_response.json.return_value = mocked_json
+
+    # Apply mocked response to url generation
+    with patch(
+        "gen3cirrus.aws.AwsService.upload_presigned_url", return_value=mocked_response
+    ):
+        test_res = AwsService.upload_presigned_url()
+        assert test_res.status_code == 200
+        test_res_json = test_res.json()
+        test_res_json_keys = test_res_json.keys()
+        assert "url" in test_res_json
+        assert "fields" in test_res_json
+
+    # Confirm no action taken if empty data is provided
+    test_res = AwsService.upload_data_to_presigned_url(
+        url=test_res_json["url"], fields=test_res_json["fields"], data_as_json={}
+    )
+    assert test_res is None
+
+    # Confirm mocked response to subsequent post request
+    mocked_res_json = {"mocked_res_key": "mocked_res_value"}
+    mocked_res = MagicMock(requests.Response)
+    mocked_res.status_code = 204
+    mocked_res.json.return_value = mocked_res_json
+    with patch("requests.post", return_value=mocked_res):
+        mock_data_to_upload = {"guid": "g123", "description": "This is a description."}
+        test_res = AwsService.upload_data_to_presigned_url(
+            url=test_res_json["url"],
+            fields=test_res_json["fields"],
+            data_as_json=mock_data_to_upload,
+        )
+        assert test_res.status_code == 204
+        assert test_res.json() == mocked_res_json

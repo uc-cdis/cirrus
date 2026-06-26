@@ -1,6 +1,7 @@
+import datetime
 import requests
 import json
-
+from typing import Any
 from urllib.parse import urlencode
 from botocore.exceptions import ClientError
 
@@ -72,7 +73,7 @@ def customize_s3_client_param_events(s3_client):
 
 
 def generate_presigned_url(
-    client, method, bucket_name, object_name, expires, additional_info=None
+    client, method, bucket_name, object_name, expires=3600, additional_info=None
 ):
     """
     Function for generating a presigned URL for upload or download
@@ -82,7 +83,7 @@ def generate_presigned_url(
         method (string): ["get", "put"] "get" for download and "put" for upload
         bucket_name (string): s3 bucket name
         object_name (string): s3 bucket object key
-        expires (int): time for presigned URL to exist (in seconds)
+        expires (int): time for presigned URL to exist (in seconds), default to 3600 seconds
         additional_info (dict): dict of additional parameters to pass to s3 for signing
     """
 
@@ -194,31 +195,26 @@ def generate_presigned_url_requester_pays(
     return response
 
 
-def upload_data_to_presigned_url(
-    self, bucket, key, expiration, data_as_json, additional_info=None
-):
+def upload_data_to_presigned_url(url: str, fields: dict[str, Any], data_as_json):
     """
-    Wrapper function for uploading data to a presigned URL generated for upload.
-    Data recevied as json for upload but must be in bytes for upload.
-    If string value or string representing a local file name is required for data in future,...
-    ...can add params/hanlding at that time.
+    Wrapper function for uploading json data to a presigned URL generated for upload.
     """
+
+    # Take no action if data for upload is empty
+    if data_as_json == {}:
+        return None
 
     # Convert data from JSON -> json string -> bytes
     data_as_string = json.dumps(data_as_json)
     data_as_bytes = data_as_string.encode("utf-8")
 
-    # Get response with presigned url
-    response = generate_presigned_url(
-        self.client, "put", bucket, key, expiration, additional_info
-    )
-
     # Add data to url
-    # current timestamp serves as object name (key) for upload
+    # Current timestamp serves as object name (key) for upload
     current_timestamp = str(datetime.datetime.now())
-    http_response = requests.post(
-        response["url"],
-        data=response["fields"],
+    response = requests.post(
+        url=url,
+        data=fields,
         files={"file": (current_timestamp, data_as_bytes)},
     )
-    return http_response
+
+    return response

@@ -38,16 +38,12 @@ class AwsService(object):
             self.client, "put", bucket, key, expiration, additional_info
         )
 
-    def get_presigned_url_for_upload_and_add_data(
-        self, bucket, key, expiration, data_as_json, additional_info=None
-    ):
+    def upload_data_to_presigned_url(url, fields, data_as_json):
         """
         Wrapper function for uploading data to a presigned URL generated for upload.
         Data received as json.
         """
-        return upload_data_to_presigned_url(
-            self.client, "put", bucket, key, expiration, data_as_json, additional_info
-        )
+        return upload_data_to_presigned_url(url, fields, data_as_json)
 
     def multipart_upload_presigned_url(self, bucket, key, expiration, upload_id, part):
         """
