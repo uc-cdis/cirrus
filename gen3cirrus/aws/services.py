@@ -2,11 +2,11 @@
 Amazon service for interacting with APIs
 """
 
-
 from gen3cirrus.aws.utils import (
     generate_presigned_url,
     generate_presigned_url_requester_pays,
     generate_multipart_upload_url,
+    upload_data_to_presigned_url,
 )
 
 from cdislogging import get_logger
@@ -37,6 +37,13 @@ class AwsService(object):
         return generate_presigned_url(
             self.client, "put", bucket, key, expiration, additional_info
         )
+
+    def upload_data_to_presigned_url(url, fields, data_as_json):
+        """
+        Wrapper function for uploading data to a presigned URL generated for upload.
+        Data received as json.
+        """
+        return upload_data_to_presigned_url(url, fields, data_as_json)
 
     def multipart_upload_presigned_url(self, bucket, key, expiration, upload_id, part):
         """
